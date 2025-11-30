@@ -56,8 +56,8 @@ Application web moderne pour gérer les inscriptions de bénévoles avec authent
 1. **Authentication** → **Providers** → **Email**
 2. Activez "Enable Email provider"
 3. **Authentication** → **URL Configuration**
-   - **Site URL** : `https://votre-username.github.io/appel-benevole`
-   - **Redirect URLs** : Ajoutez la même URL
+   - **Site URL** : `https://votre-username.github.io/appel-benevoles`
+   - **Redirect URLs** : Ajoutez `https://votre-username.github.io/appel-benevoles/**` (avec wildcard)
 
 #### D. Ajouter des postes de test
 
@@ -72,12 +72,24 @@ INSERT INTO postes (titre, periode_debut, periode_fin, categorie, description, n
 
 ### 2. Configuration du Frontend
 
-Modifiez le fichier `index.html` :
+#### A. Créer le fichier `.env`
 
-```javascript
-// Ligne 222-223 : Remplacez par vos propres identifiants
-const SUPABASE_URL = 'https://VOTRE_PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = 'VOTRE_ANON_KEY';
+Créez un fichier `.env` à la racine du projet :
+
+```env
+# Frontend Configuration (VITE_ prefix = exposé au client)
+VITE_SUPABASE_URL=https://VOTRE_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=VOTRE_ANON_KEY
+VITE_APP_URL_LOCAL=http://localhost:5500
+VITE_APP_URL_PRODUCTION=https://VOTRE_USERNAME.github.io/appel-benevoles
+```
+
+⚠️ **ATTENTION** : Vérifiez bien l'orthographe du nom de votre repo GitHub (avec ou sans "s") !
+
+#### B. Installer les dépendances
+
+```bash
+npm install
 ```
 
 ### 3. Déploiement sur GitHub Pages
@@ -88,21 +100,31 @@ const SUPABASE_ANON_KEY = 'VOTRE_ANON_KEY';
 git init
 git add .
 git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/VOTRE_USERNAME/appel-benevole.git
-git push -u origin main
+git branch -M master
+git remote add origin https://github.com/VOTRE_USERNAME/appel-benevoles.git
+git push -u origin master
 ```
 
-#### B. Activer GitHub Pages
+#### B. Configurer les GitHub Secrets
+
+1. Allez dans **Settings** → **Secrets and variables** → **Actions**
+2. Cliquez sur **New repository secret**
+3. Ajoutez ces 3 secrets :
+   - `VITE_SUPABASE_URL` : `https://VOTRE_PROJECT.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY` : `VOTRE_ANON_KEY`
+   - `VITE_APP_URL_PRODUCTION` : `https://VOTRE_USERNAME.github.io/appel-benevoles`
+
+⚠️ **ATTENTION** : Vérifiez bien l'orthographe du nom de votre repo dans `VITE_APP_URL_PRODUCTION` !
+
+#### C. Activer GitHub Pages
 
 1. Allez dans **Settings** → **Pages**
-2. Source : **Deploy from a branch**
-3. Branch : **main** / **/ (root)**
-4. Cliquez sur **Save**
+2. Source : **GitHub Actions**
+3. Le workflow `.github/workflows/deploy.yml` se déclenchera automatiquement
 
-Votre site sera disponible à : `https://VOTRE_USERNAME.github.io/appel-benevole`
+Votre site sera disponible à : `https://VOTRE_USERNAME.github.io/appel-benevoles`
 
-⚠️ **Important** : Retournez dans Supabase → Authentication → URL Configuration et mettez à jour les URLs avec votre URL GitHub Pages finale.
+⚠️ **Important** : Retournez dans Supabase → Authentication → URL Configuration et vérifiez que l'URL correspond exactement au nom de votre repo GitHub.
 
 ## 🎨 Personnalisation
 
