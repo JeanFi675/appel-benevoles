@@ -450,6 +450,11 @@
         },
 
         async init() {
+          // Nettoyer l'URL si tokens présents
+          if (window.location.hash.includes('access_token')) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+
           // Vérifier la session
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
