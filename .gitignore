@@ -43,10 +43,6 @@ coverage/
 # Supabase
 .supabase/
 
-# Documentation inutile pour le repo
-TEST_LOCAL.md
-DEPLOIEMENT.md
-DEPLOY_GITHUB_ACTIONS.md
-QUICKSTART.md
-SYNTHESE.md
-Cahier des Charges.md
+# Documentation (sauf README.md)
+*.md
+!README.md
