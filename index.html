@@ -427,11 +427,12 @@
 
   <!-- Application Logic -->
   <script>
-    // Utilise la configuration partagée depuis window.appConfig
-    const getMagicLinkRedirectUrl = window.appConfig.getMagicLinkRedirectUrl;
-    const supabase = window.appConfig.supabase;
-
     function app() {
+      // Accès direct à window.appConfig
+      const supabase = window.appConfig.supabase;
+      const getMagicLinkRedirectUrl = window.appConfig.getMagicLinkRedirectUrl;
+
+
       return {
         user: null,
         profile: null,

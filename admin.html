@@ -550,11 +550,11 @@
 
   <!-- Application Logic -->
   <script>
-    // Utilise la configuration partagée depuis window.appConfig
-    const getMagicLinkRedirectUrl = window.appConfig.getMagicLinkRedirectUrl;
-    const supabase = window.appConfig.supabase;
-
     function adminApp() {
+      // Accès direct à window.appConfig
+      const supabase = window.appConfig.supabase;
+
+
       return {
         isAdmin: false,
         loading: true,
