@@ -450,11 +450,6 @@
         },
 
         async init() {
-          // Nettoyer l'URL si tokens présents
-          if (window.location.hash.includes('access_token')) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
-
           // Vérifier la session
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
@@ -469,6 +464,11 @@
             this.user = session?.user || null;
 
             if (event === 'SIGNED_IN') {
+              // Nettoyer l'URL APRÈS que Supabase ait traité le token
+              if (window.location.hash.includes('access_token')) {
+                window.history.replaceState(null, '', window.location.pathname);
+              }
+
               await this.loadProfile();
               await this.loadPostes();
               await this.loadUserInscriptions();
