@@ -178,13 +178,25 @@
         <div>
           <p class="text-sm font-bold text-gray-600">Bienvenue,</p>
           <p class="text-2xl font-black" x-text="profile ? profile.prenom : user?.email"></p>
+          <span x-show="profile && profile.role === 'admin'" class="inline-block mt-2 px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
+            🔐 Administrateur
+          </span>
         </div>
-        <button
-          @click="logout()"
-          class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm"
-        >
-          Se déconnecter
-        </button>
+        <div class="flex gap-3">
+          <a
+            x-show="profile && profile.role === 'admin'"
+            href="admin.html"
+            class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm"
+          >
+            🔐 Admin
+          </a>
+          <button
+            @click="logout()"
+            class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm"
+          >
+            Se déconnecter
+          </button>
+        </div>
       </div>
 
       <!-- Formulaire Profil (Première connexion) -->
@@ -258,10 +270,22 @@
       <div x-show="profile">
         <h2 class="text-4xl font-black mb-8 text-brutal-black">📋 Postes disponibles</h2>
 
-        <!-- Groupement par catégorie -->
-        <template x-for="(postes, categorie) in groupedPostes" :key="categorie">
+        <!-- Groupement par période -->
+        <template x-for="(postes, periode) in groupedPostes" :key="periode">
           <div class="mb-12">
-            <h3 class="text-2xl font-black mb-6 pb-2 border-b-4 border-brutal-black" x-text="categorie"></h3>
+            <!-- Period Header with Neo-Brutalist Style -->
+            <div class="brutal-card bg-brutal-black text-brutal-white p-6 mb-6">
+              <h3 class="text-3xl font-black uppercase tracking-wide" x-text="periode"></h3>
+              <div class="mt-2 flex items-center gap-4">
+                <span class="font-bold text-lg">
+                  📊 <span x-text="postes.length"></span> poste<span x-show="postes.length > 1">s</span>
+                </span>
+                <span class="font-bold text-lg">
+                  👥 <span x-text="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0)"></span> /
+                  <span x-text="postes.reduce((sum, p) => sum + p.nb_max, 0)"></span> inscrit<span x-show="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0) > 1">s</span>
+                </span>
+              </div>
+            </div>
 
             <div class="grid gap-6">
               <template x-for="poste in postes" :key="poste.poste_id">
@@ -388,13 +412,23 @@
   <!-- Supabase Client via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Variables d'environnement Vite -->
+  <script>
+    window.ENV = {
+      VITE_SUPABASE_URL: '%VITE_SUPABASE_URL%',
+      VITE_SUPABASE_ANON_KEY: '%VITE_SUPABASE_ANON_KEY%',
+      VITE_APP_URL_LOCAL: '%VITE_APP_URL_LOCAL%',
+      VITE_APP_URL_PRODUCTION: '%VITE_APP_URL_PRODUCTION%'
+    };
+  </script>
+
+  <!-- Configuration Partagée -->
+  <script src="/config.js"></script>
+
   <!-- Application Logic -->
   <script>
-    // Configuration Supabase
-    const SUPABASE_URL = 'https://pulrflaantftaogvgtnc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1bHJmbGFhbnRmdGFvZ3ZndG5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0OTM5NTksImV4cCI6MjA4MDA2OTk1OX0.84g8YuQq9xEVoS5jtaSgdgpiaiZVL4JzvzYxUUkf1hs';
-
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Utilise la configuration partagée depuis config.js
+    const { supabase, getMagicLinkRedirectUrl } = window.appConfig;
 
     function app() {
       return {
@@ -443,7 +477,7 @@
             const { error } = await supabase.auth.signInWithOtp({
               email: this.loginEmail,
               options: {
-                emailRedirectTo: window.location.href
+                emailRedirectTo: getMagicLinkRedirectUrl('index.html')
               }
             });
 
@@ -617,11 +651,16 @@
         get groupedPostes() {
           const groups = {};
 
-          this.postes.forEach(poste => {
-            if (!groups[poste.categorie]) {
-              groups[poste.categorie] = [];
+          // Sort postes by periode_ordre first
+          const sortedPostes = [...this.postes].sort((a, b) => {
+            return (a.periode_ordre || 0) - (b.periode_ordre || 0);
+          });
+
+          sortedPostes.forEach(poste => {
+            if (!groups[poste.periode]) {
+              groups[poste.periode] = [];
             }
-            groups[poste.categorie].push(poste);
+            groups[poste.periode].push(poste);
           });
 
           return groups;
