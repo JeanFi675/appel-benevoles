@@ -23,7 +23,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // Initialisation du client Supabase (via CDN window.supabase)
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // URLs d'application pour redirections Magic Link
 const APP_URLS = {
@@ -42,7 +42,7 @@ const getMagicLinkRedirectUrl = (page = '') => {
 
 // Export vers window pour Alpine.js
 window.appConfig = {
-  supabase: supabaseClient,
+  supabase,
   isDevelopment,
   SUPABASE_URL,
   getAppUrl,

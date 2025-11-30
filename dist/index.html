@@ -1,0 +1,288 @@
+<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bénévoles Escalade - Inscription</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script>tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brutal-black': '#000000',
+            'brutal-ice': '#8bbfd5',
+            'brutal-white': '#ffffff',
+          },
+          fontFamily: {
+            'body': ['Space Grotesk', 'sans-serif'],
+            'heading': ['Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            'brutal': '6px 6px 0px #000000',
+            'brutal-sm': '4px 4px 0px #000000',
+            'brutal-hover': '3px 3px 0px #000000',
+          }
+        }
+      }
+    }</script><style>body{font-family:'Space Grotesk',sans-serif}h1,h2,h3,h4,h5,h6{font-family:Inter,sans-serif}.brutal-btn{border:4px solid #000;font-weight:700;transition:all .1s ease}.brutal-btn:hover:not(:disabled){box-shadow:3px 3px 0 #000;transform:translate(3px,3px)}.brutal-btn:active:not(:disabled){box-shadow:1px 1px 0 #000;transform:translate(5px,5px)}.brutal-btn:disabled{opacity:.5;cursor:not-allowed}.brutal-card{border:4px solid #000;box-shadow:6px 6px 0 #000}.brutal-input{border:3px solid #000;font-weight:600}.brutal-input:focus{outline:0;box-shadow:0 0 0 3px #8bbfd5}.progress-bar{height:12px;border:3px solid #000;background:#fff}.progress-fill{height:100%;transition:width .3s ease}.toast{animation:slideIn .3s ease}@keyframes slideIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}</style></head><body class="bg-brutal-ice min-h-screen" x-data="app()" x-init="init()"><div class="fixed top-4 right-4 z-50 space-y-2"><template x-for="toast in toasts" :key="toast.id"><div class="toast brutal-card px-6 py-4 max-w-md" :class="toast.type === 'error' ? 'bg-brutal-black text-brutal-ice' : 'bg-brutal-ice text-brutal-black'"><p class="font-bold" x-text="toast.message"></p></div></template></div><header class="bg-brutal-black text-brutal-white py-8 mb-8 border-b-8 border-brutal-black"><div class="container mx-auto px-4"><h1 class="text-5xl font-black text-center tracking-tight">🧗 BÉNÉVOLES ESCALADE</h1><p class="text-center mt-2 text-xl font-body">Inscrivez-vous pour aider la compétition</p></div></header><main class="container mx-auto px-4 pb-12"><section class="mb-12" x-show="!user"><div class="max-w-md mx-auto"><div class="brutal-card bg-brutal-white p-8"><h2 class="text-3xl font-black mb-6">Connexion</h2><form @submit.prevent="sendMagicLink()"><div class="mb-4"><label for="email" class="block font-bold mb-2 text-lg">Votre email</label> <input type="email" id="email" x-model="loginEmail" required placeholder="jean.dupont@example.com" class="brutal-input w-full px-4 py-3 text-lg"/></div><button type="submit" :disabled="loading" class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal"><span x-show="!loading">📧 Recevoir le lien de connexion</span> <span x-show="loading">⏳ Envoi en cours...</span></button></form><p class="mt-4 text-sm text-center">Vous recevrez un email avec un lien magique pour vous connecter sans mot de passe.</p></div></div></section><section x-show="user"><div class="brutal-card bg-brutal-white p-6 mb-8 flex justify-between items-center"><div><p class="text-sm font-bold text-gray-600">Bienvenue,</p><p class="text-2xl font-black" x-text="profile ? profile.prenom : user?.email"></p><span x-show="profile && profile.role === 'admin'" class="inline-block mt-2 px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">🔐 Administrateur</span></div><div class="flex gap-3"><a x-show="profile && profile.role === 'admin'" href="admin.html" class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm">🔐 Admin </a><button @click="logout()" class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm">Se déconnecter</button></div></div><div x-show="user && !profile" class="brutal-card bg-brutal-white p-8 mb-8"><h2 class="text-3xl font-black mb-6">Complétez votre profil</h2><form @submit.prevent="saveProfile()"><div class="grid md:grid-cols-2 gap-4 mb-4"><div><label class="block font-bold mb-2">Prénom *</label> <input x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-3" placeholder="Jean"/></div><div><label class="block font-bold mb-2">Nom *</label> <input x-model="profileForm.nom" required class="brutal-input w-full px-4 py-3" placeholder="Dupont"/></div></div><div class="mb-4"><label class="block font-bold mb-2">Téléphone</label> <input type="tel" x-model="profileForm.telephone" class="brutal-input w-full px-4 py-3" placeholder="06 12 34 56 78"/></div><div class="mb-6"><label class="block font-bold mb-2">Taille T-shirt *</label> <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-3 font-bold"><option value="">-- Sélectionnez --</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option></select></div><button type="submit" :disabled="loading" class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal"><span x-show="!loading">✅ Enregistrer mon profil</span> <span x-show="loading">⏳ Enregistrement...</span></button></form></div><div x-show="profile"><h2 class="text-4xl font-black mb-8 text-brutal-black">📋 Postes disponibles</h2><template x-for="(postes, periode) in groupedPostes" :key="periode"><div class="mb-12"><div class="brutal-card bg-brutal-black text-brutal-white p-6 mb-6"><h3 class="text-3xl font-black uppercase tracking-wide" x-text="periode"></h3><div class="mt-2 flex items-center gap-4"><span class="font-bold text-lg">📊 <span x-text="postes.length"></span> poste<span x-show="postes.length > 1">s</span> </span><span class="font-bold text-lg">👥 <span x-text="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0)"></span> / <span x-text="postes.reduce((sum, p) => sum + p.nb_max, 0)"></span> inscrit<span x-show="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0) > 1">s</span></span></div></div><div class="grid gap-6"><template x-for="poste in postes" :key="poste.poste_id"><div class="brutal-card bg-brutal-white p-6"><div class="mb-4"><h4 class="text-2xl font-black mb-2" x-text="poste.titre"></h4><p class="text-lg font-bold text-gray-700">📅 <span x-text="formatDate(poste.periode_debut)"></span> - <span x-text="formatTime(poste.periode_debut)"></span> à <span x-text="formatTime(poste.periode_fin)"></span></p></div><div x-show="poste.description" class="mb-4 p-4 bg-gray-100 border-3 border-brutal-black"><p class="font-bold" x-text="poste.description"></p></div><div x-show="poste.referent_nom" class="mb-4"><p class="font-bold">👤 Référent : <span x-text="poste.referent_nom"></span></p></div><div class="mb-4"><div class="flex justify-between mb-2"><span class="font-bold">Inscrits</span> <span class="font-black" x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span></div><div class="progress-bar"><div class="progress-fill" :class="{
+                          'bg-green-500': (poste.inscrits_actuels / poste.nb_max) < 0.7,
+                          'bg-orange-500': (poste.inscrits_actuels / poste.nb_max) >= 0.7 && (poste.inscrits_actuels / poste.nb_max) < 0.9,
+                          'bg-red-500': (poste.inscrits_actuels / poste.nb_max) >= 0.9
+                        }" :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"></div></div></div><div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0" class="mb-4"><p class="font-bold mb-2">Bénévoles inscrits :</p><div class="flex flex-wrap gap-2"><template x-for="benevole in poste.liste_benevoles" :key="benevole"><span class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black"><span x-text="benevole"></span></span></template></div></div><div><template x-if="isUserRegistered(poste.poste_id)"><button @click="unregister(poste.poste_id)" class="brutal-btn bg-red-500 text-brutal-white px-6 py-3 shadow-brutal-sm">❌ Se désinscrire</button></template><template x-if="!isUserRegistered(poste.poste_id)"><div><template x-if="hasTimeConflict(poste)"><div><button disabled="disabled" class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed w-full md:w-auto">⚠️ Conflit horaire</button><p class="text-sm text-red-600 font-bold mt-2">Vous êtes déjà inscrit sur un créneau qui chevauche cette période</p></div></template><template x-if="!hasTimeConflict(poste) && poste.inscrits_actuels >= poste.nb_max"><button disabled="disabled" class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed">🚫 Complet</button></template><template x-if="!hasTimeConflict(poste) && poste.inscrits_actuels < poste.nb_max"><button @click="register(poste.poste_id)" class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal">✅ Je m'inscris</button></template></div></template></div></div></template></div></div></template></div></section></main><script defer="defer" src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>window.ENV = {
+      VITE_SUPABASE_URL: 'https://pulrflaantftaogvgtnc.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1bHJmbGFhbnRmdGFvZ3ZndG5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0OTM5NTksImV4cCI6MjA4MDA2OTk1OX0.84g8YuQq9xEVoS5jtaSgdgpiaiZVL4JzvzYxUUkf1hs',
+      VITE_APP_URL_LOCAL: 'http://localhost:5500',
+      VITE_APP_URL_PRODUCTION: 'https://JeanFi675.github.io/appel-benevole'
+    };</script><script src="/config.js"></script><script>// Utilise la configuration partagée depuis config.js
+    const { supabase, getMagicLinkRedirectUrl } = window.appConfig;
+
+    function app() {
+      return {
+        user: null,
+        profile: null,
+        postes: [],
+        userInscriptions: [],
+        loading: false,
+        loginEmail: '',
+        toasts: [],
+
+        profileForm: {
+          prenom: '',
+          nom: '',
+          telephone: '',
+          taille_tshirt: ''
+        },
+
+        async init() {
+          // Vérifier la session
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            this.user = session.user;
+            await this.loadProfile();
+            await this.loadPostes();
+            await this.loadUserInscriptions();
+          }
+
+          // Écouter les changements d'auth
+          supabase.auth.onAuthStateChange(async (event, session) => {
+            this.user = session?.user || null;
+
+            if (event === 'SIGNED_IN') {
+              await this.loadProfile();
+              await this.loadPostes();
+              await this.loadUserInscriptions();
+            }
+          });
+        },
+
+        async sendMagicLink() {
+          if (!this.loginEmail) return;
+
+          this.loading = true;
+          try {
+            const { error } = await supabase.auth.signInWithOtp({
+              email: this.loginEmail,
+              options: {
+                emailRedirectTo: getMagicLinkRedirectUrl('index.html')
+              }
+            });
+
+            if (error) throw error;
+
+            this.showToast('📧 Vérifiez votre boîte mail !', 'success');
+            this.loginEmail = '';
+          } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async logout() {
+          await supabase.auth.signOut();
+          this.user = null;
+          this.profile = null;
+          this.postes = [];
+          this.userInscriptions = [];
+        },
+
+        async loadProfile() {
+          if (!this.user) return;
+
+          try {
+            const { data, error } = await supabase
+              .from('benevoles')
+              .select('*')
+              .eq('id', this.user.id)
+              .single();
+
+            if (error && error.code !== 'PGRST116') throw error;
+
+            this.profile = data;
+
+            // Pré-remplir le formulaire si pas de profil
+            if (!data) {
+              this.profileForm.prenom = '';
+              this.profileForm.nom = '';
+            }
+          } catch (error) {
+            console.error('Erreur chargement profil:', error);
+          }
+        },
+
+        async saveProfile() {
+          if (!this.user) return;
+
+          this.loading = true;
+          try {
+            const { data, error } = await supabase
+              .from('benevoles')
+              .upsert({
+                id: this.user.id,
+                email: this.user.email,
+                ...this.profileForm
+              })
+              .select()
+              .single();
+
+            if (error) throw error;
+
+            this.profile = data;
+            this.showToast('✅ Profil enregistré !', 'success');
+
+            await this.loadPostes();
+            await this.loadUserInscriptions();
+          } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async loadPostes() {
+          try {
+            const { data, error } = await supabase
+              .from('public_planning')
+              .select('*')
+              .order('periode_debut');
+
+            if (error) throw error;
+
+            this.postes = data || [];
+          } catch (error) {
+            this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
+          }
+        },
+
+        async loadUserInscriptions() {
+          if (!this.user) return;
+
+          try {
+            const { data, error } = await supabase
+              .from('inscriptions')
+              .select('*, postes(*)')
+              .eq('benevole_id', this.user.id);
+
+            if (error) throw error;
+
+            this.userInscriptions = data || [];
+          } catch (error) {
+            console.error('Erreur chargement inscriptions:', error);
+          }
+        },
+
+        async register(posteId) {
+          if (!this.user) return;
+
+          this.loading = true;
+          try {
+            const { error } = await supabase
+              .from('inscriptions')
+              .insert({
+                poste_id: posteId,
+                benevole_id: this.user.id
+              });
+
+            if (error) throw error;
+
+            this.showToast('✅ Inscription réussie !', 'success');
+            await this.loadPostes();
+            await this.loadUserInscriptions();
+          } catch (error) {
+            this.showToast('❌ ' + error.message, 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async unregister(posteId) {
+          if (!this.user) return;
+
+          this.loading = true;
+          try {
+            const { error } = await supabase
+              .from('inscriptions')
+              .delete()
+              .eq('poste_id', posteId)
+              .eq('benevole_id', this.user.id);
+
+            if (error) throw error;
+
+            this.showToast('✅ Désinscription réussie', 'success');
+            await this.loadPostes();
+            await this.loadUserInscriptions();
+          } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        isUserRegistered(posteId) {
+          return this.userInscriptions.some(i => i.poste_id === posteId);
+        },
+
+        hasTimeConflict(poste) {
+          const posteDebut = new Date(poste.periode_debut);
+          const posteFin = new Date(poste.periode_fin);
+
+          return this.userInscriptions.some(inscription => {
+            const inscriptionDebut = new Date(inscription.postes.periode_debut);
+            const inscriptionFin = new Date(inscription.postes.periode_fin);
+
+            return (posteDebut < inscriptionFin) && (posteFin > inscriptionDebut);
+          });
+        },
+
+        get groupedPostes() {
+          const groups = {};
+
+          // Sort postes by periode_ordre first
+          const sortedPostes = [...this.postes].sort((a, b) => {
+            return (a.periode_ordre || 0) - (b.periode_ordre || 0);
+          });
+
+          sortedPostes.forEach(poste => {
+            if (!groups[poste.periode]) {
+              groups[poste.periode] = [];
+            }
+            groups[poste.periode].push(poste);
+          });
+
+          return groups;
+        },
+
+        formatDate(dateString) {
+          const date = new Date(dateString);
+          const options = { weekday: 'short', day: 'numeric', month: 'short' };
+          return date.toLocaleDateString('fr-FR', options);
+        },
+
+        formatTime(dateString) {
+          const date = new Date(dateString);
+          return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        },
+
+        showToast(message, type = 'success') {
+          const id = Date.now();
+          this.toasts.push({ id, message, type });
+
+          setTimeout(() => {
+            this.toasts = this.toasts.filter(t => t.id !== id);
+          }, 5000);
+        }
+      }
+    }</script></body></html>
