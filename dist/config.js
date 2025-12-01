@@ -23,12 +23,12 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // Initialisation du client Supabase (via CDN window.supabase)
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // URLs d'application pour redirections Magic Link
 const APP_URLS = {
   local: window.ENV?.VITE_APP_URL_LOCAL || 'http://localhost:5500',
-  production: window.ENV?.VITE_APP_URL_PRODUCTION || window.location.origin
+  production: (window.ENV?.VITE_APP_URL_PRODUCTION || window.location.origin).toLowerCase()
 };
 
 // Obtenir l'URL actuelle selon l'environnement
@@ -42,7 +42,7 @@ const getMagicLinkRedirectUrl = (page = '') => {
 
 // Export vers window pour Alpine.js
 window.appConfig = {
-  supabase,
+  supabase: supabaseClient,
   isDevelopment,
   SUPABASE_URL,
   getAppUrl,
