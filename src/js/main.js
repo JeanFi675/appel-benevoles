@@ -22,6 +22,9 @@ document.addEventListener('alpine:init', () => {
             taille_tshirt: ''
         },
 
+        showOnlyAvailable: false,
+        showMyInscriptions: false,
+
         async init() {
             // Vérifier la session
             const { data: { session } } = await supabase.auth.getSession();
@@ -192,6 +195,9 @@ document.addEventListener('alpine:init', () => {
         async unregister(posteId) {
             if (!this.user) return;
 
+            // Confirmation simple pour commencer
+            if (!confirm("Êtes-vous sûr de vouloir vous désinscrire de ce poste ?")) return;
+
             this.loading = true;
             try {
                 const { error } = await supabase
@@ -213,14 +219,22 @@ document.addEventListener('alpine:init', () => {
         },
 
         isUserRegistered(posteId) {
-            return this.userInscriptions.some(i => i.poste_id === posteId);
+            const isReg = this.userInscriptions.some(i => i.poste_id == posteId);
+            if (isReg) console.log('User registered for:', posteId);
+            return isReg;
         },
 
         hasTimeConflict(poste) {
+            // Si on est déjà inscrit à ce poste, ce n'est pas un "conflit" à afficher
+            if (this.isUserRegistered(poste.poste_id)) return false;
+
             const posteDebut = new Date(poste.periode_debut);
             const posteFin = new Date(poste.periode_fin);
 
             return this.userInscriptions.some(inscription => {
+                // On ne compare pas avec le poste lui-même (même si le check isUserRegistered au dessus le couvre déjà, double sécurité)
+                if (inscription.poste_id == poste.poste_id) return false;
+
                 const inscriptionDebut = new Date(inscription.postes.periode_debut);
                 const inscriptionFin = new Date(inscription.postes.periode_fin);
 
@@ -228,22 +242,46 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        get groupedPostes() {
-            const groups = {};
+        get filteredPostes() {
+            return this.postes.filter(poste => {
+                // Filtre 1: Postes disponibles uniquement
+                if (this.showOnlyAvailable) {
+                    const isFull = poste.inscrits_actuels >= poste.nb_max;
+                    const isRegistered = this.isUserRegistered(poste.poste_id);
+                    // On affiche si pas complet OU si je suis inscrit (pour pouvoir me désinscrire)
+                    if (isFull && !isRegistered) return false;
+                }
 
-            // Sort postes by periode_ordre first
-            const sortedPostes = [...this.postes].sort((a, b) => {
-                return (a.periode_ordre || 0) - (b.periode_ordre || 0);
+                // Filtre 2: Mes inscriptions uniquement
+                if (this.showMyInscriptions) {
+                    if (!this.isUserRegistered(poste.poste_id)) return false;
+                }
+
+                return true;
             });
+        },
 
-            sortedPostes.forEach(poste => {
+        get groupedPostes() {
+            // 1. Group by periode
+            const groups = {};
+            this.filteredPostes.forEach(poste => {
                 if (!groups[poste.periode]) {
                     groups[poste.periode] = [];
                 }
                 groups[poste.periode].push(poste);
             });
 
-            return groups;
+            // 2. Convert to array and sort by periode_ordre of the first element
+            return Object.keys(groups).map(periode => {
+                const postes = groups[periode];
+                // On suppose que tous les postes d'une période ont le même periode_ordre
+                const ordre = postes.length > 0 ? (postes[0].periode_ordre || 0) : 0;
+                return {
+                    name: periode,
+                    postes: postes,
+                    order: ordre
+                };
+            }).sort((a, b) => a.order - b.order);
         },
 
         formatDate,
