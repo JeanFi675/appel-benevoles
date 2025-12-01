@@ -28,7 +28,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 // URLs d'application pour redirections Magic Link
 const APP_URLS = {
   local: window.ENV?.VITE_APP_URL_LOCAL || 'http://localhost:5500',
-  production: window.ENV?.VITE_APP_URL_PRODUCTION || window.location.origin
+  production: (window.ENV?.VITE_APP_URL_PRODUCTION || window.location.origin).toLowerCase()
 };
 
 // Obtenir l'URL actuelle selon l'environnement
