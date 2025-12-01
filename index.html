@@ -484,7 +484,7 @@
             const { error } = await supabase.auth.signInWithOtp({
               email: this.loginEmail,
               options: {
-                emailRedirectTo: getMagicLinkRedirectUrl('index.html')
+                emailRedirectTo: window.location.href
               }
             });
 
