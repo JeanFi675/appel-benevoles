@@ -1,0 +1,133 @@
+<!-- Tab: Postes -->
+<div x-show="activeTab === 'postes'">
+    <div class="brutal-card bg-brutal-white p-8 mb-8">
+        <h2 class="text-3xl font-black mb-6" x-text="editingPoste ? 'Modifier un poste' : 'Ajouter un poste'"></h2>
+
+        <form @submit.prevent="savePoste()">
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-bold mb-2">Titre *</label>
+                    <input type="text" x-model="posteForm.titre" required class="brutal-input w-full px-4 py-3"
+                        placeholder="Juge de bloc" />
+                </div>
+
+                <div>
+                    <label class="block font-bold mb-2">Période *</label>
+                    <select x-model="posteForm.periode_id" required class="brutal-input w-full px-4 py-3 font-bold">
+                        <option value="">-- Sélectionnez une période --</option>
+                        <template x-for="periode in periodes" :key="periode.id">
+                            <option :value="periode.id" x-text="periode.nom"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-bold mb-2">Début *</label>
+                    <input type="datetime-local" x-model="posteForm.periode_debut" required
+                        class="brutal-input w-full px-4 py-3" />
+                </div>
+
+                <div>
+                    <label class="block font-bold mb-2">Fin *</label>
+                    <input type="datetime-local" x-model="posteForm.periode_fin" required
+                        class="brutal-input w-full px-4 py-3" />
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-bold mb-2">Minimum *</label>
+                    <input type="number" x-model.number="posteForm.nb_min" required min="1"
+                        class="brutal-input w-full px-4 py-3" />
+                </div>
+
+                <div>
+                    <label class="block font-bold mb-2">Maximum *</label>
+                    <input type="number" x-model.number="posteForm.nb_max" required min="1"
+                        class="brutal-input w-full px-4 py-3" />
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block font-bold mb-2">Référent</label>
+                <select x-model="posteForm.referent_id" class="brutal-input w-full px-4 py-3 font-bold">
+                    <option value="">-- Aucun référent --</option>
+                    <template x-for="benevole in referents" :key="benevole.id">
+                        <option :value="benevole.id" x-text="benevole.prenom + ' ' + benevole.nom"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label class="block font-bold mb-2">Description</label>
+                <textarea x-model="posteForm.description" class="brutal-input w-full px-4 py-3" rows="3"
+                    placeholder="Détails du poste..."></textarea>
+            </div>
+
+            <div class="flex gap-4">
+                <button type="submit" :disabled="loading"
+                    class="brutal-btn bg-brutal-ice flex-1 py-4 text-xl shadow-brutal">
+                    <span x-show="!loading" x-text="editingPoste ? '💾 Enregistrer' : '✅ Créer le poste'"></span>
+                    <span x-show="loading">⏳ Enregistrement...</span>
+                </button>
+
+                <button x-show="editingPoste" type="button" @click="cancelEdit()"
+                    class="brutal-btn bg-gray-300 px-6 py-4 text-xl shadow-brutal">
+                    ❌ Annuler
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des postes -->
+    <div class="brutal-card bg-brutal-white p-8">
+        <h2 class="text-3xl font-black mb-6">Liste des postes</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b-4 border-brutal-black">
+                        <th class="text-left py-3 px-2 font-black">Titre</th>
+                        <th class="text-left py-3 px-2 font-black">Période</th>
+                        <th class="text-left py-3 px-2 font-black">Horaires</th>
+                        <th class="text-left py-3 px-2 font-black">Min / Max</th>
+                        <th class="text-left py-3 px-2 font-black">Inscrits</th>
+                        <th class="text-left py-3 px-2 font-black">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="poste in postes" :key="poste.id">
+                        <tr class="border-b-2 border-gray-300">
+                            <td class="py-3 px-2 font-bold" x-text="poste.titre"></td>
+                            <td class="py-3 px-2 font-bold" x-text="poste.periode_nom"></td>
+                            <td class="py-3 px-2 font-bold text-sm">
+                                <span x-text="formatDateTime(poste.periode_debut)"></span><br>
+                                <span x-text="formatDateTime(poste.periode_fin)"></span>
+                            </td>
+                            <td class="py-3 px-2 font-bold text-center">
+                                <span x-text="poste.nb_min"></span> / <span x-text="poste.nb_max"></span>
+                            </td>
+                            <td class="py-3 px-2 font-bold text-center">
+                                <span x-text="poste.inscrits_actuels || 0"></span>
+                            </td>
+                            <td class="py-3 px-2">
+                                <div class="flex gap-2">
+                                    <button @click="editPoste(poste)"
+                                        class="brutal-btn bg-brutal-ice px-4 py-2 shadow-brutal-sm text-sm">
+                                        ✏️ Modifier
+                                    </button>
+                                    <button @click="deletePoste(poste.id)"
+                                        class="brutal-btn bg-red-500 text-white px-4 py-2 shadow-brutal-sm text-sm">
+                                        🗑️ Supprimer
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

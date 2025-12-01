@@ -1,0 +1,77 @@
+<!-- Tab: Périodes -->
+<div x-show="activeTab === 'periodes'">
+    <div class="brutal-card bg-brutal-white p-8 mb-8">
+        <h2 class="text-3xl font-black mb-6">Ajouter une période</h2>
+
+        <form @submit.prevent="createPeriode()">
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-bold mb-2">Nom *</label>
+                    <input type="text" x-model="periodeForm.nom" required class="brutal-input w-full px-4 py-3"
+                        placeholder="Qualifications Samedi" />
+                </div>
+
+                <div>
+                    <label class="block font-bold mb-2">Ordre d'affichage *</label>
+                    <input type="number" x-model.number="periodeForm.ordre" required min="1"
+                        class="brutal-input w-full px-4 py-3" />
+                    <p class="text-sm mt-1">Les périodes sont affichées dans l'ordre croissant</p>
+                </div>
+            </div>
+
+            <button type="submit" :disabled="loading"
+                class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
+                <span x-show="!loading">✅ Créer la période</span>
+                <span x-show="loading">⏳ Création...</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Liste des périodes -->
+    <div class="brutal-card bg-brutal-white p-8">
+        <h2 class="text-3xl font-black mb-6">Liste des périodes</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b-4 border-brutal-black">
+                        <th class="text-left py-3 px-2 font-black">Ordre</th>
+                        <th class="text-left py-3 px-2 font-black">Nom</th>
+                        <th class="text-left py-3 px-2 font-black">Nb postes</th>
+                        <th class="text-left py-3 px-2 font-black">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="periode in periodes" :key="periode.id">
+                        <tr class="border-b-2 border-gray-300">
+                            <td class="py-3 px-2">
+                                <input type="number" :value="periode.ordre"
+                                    @change="updatePeriodeOrder(periode.id, $event.target.value)"
+                                    class="brutal-input w-20 px-2 py-1 text-center font-black" min="1" />
+                            </td>
+                            <td class="py-3 px-2 font-bold" x-text="periode.nom"></td>
+                            <td class="py-3 px-2 font-bold text-center">
+                                <span x-text="getPostesCountForPeriode(periode.id)"></span>
+                            </td>
+                            <td class="py-3 px-2">
+                                <button @click="deletePeriode(periode.id)"
+                                    :disabled="getPostesCountForPeriode(periode.id) > 0"
+                                    class="brutal-btn px-4 py-2 shadow-brutal-sm text-sm"
+                                    :class="getPostesCountForPeriode(periode.id) > 0 ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-red-500 text-white'">
+                                    🗑️ Supprimer
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-6 p-4 bg-yellow-100 border-3 border-brutal-black">
+            <p class="font-bold">
+                💡 <strong>Note :</strong> Vous ne pouvez pas supprimer une période qui contient des postes. Supprimez
+                d'abord tous les postes de la période.
+            </p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,81 @@
+<!-- Modal Inscription -->
+<div x-show="selectedPosteForRegistration"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" x-transition.opacity>
+    <div class="brutal-card bg-brutal-white p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+        @click.outside="closeRegistrationModal()">
+
+        <button @click="closeRegistrationModal()"
+            class="absolute top-4 right-4 text-2xl font-black hover:text-red-500">✕</button>
+
+        <template x-if="selectedPosteForRegistration">
+            <div>
+                <h2 class="text-3xl font-black mb-2">Inscription</h2>
+                <p class="text-xl font-bold text-gray-600 mb-6" x-text="selectedPosteForRegistration.titre"></p>
+
+                <div class="mb-6 p-4 bg-gray-100 border-2 border-black">
+                    <p>📅 <span x-text="formatDate(selectedPosteForRegistration.periode_debut)"></span></p>
+                    <p>⏰ <span x-text="formatTime(selectedPosteForRegistration.periode_debut)"></span> - <span
+                            x-text="formatTime(selectedPosteForRegistration.periode_fin)"></span></p>
+                    <p class="mt-2">Places : <span
+                            x-text="selectedPosteForRegistration.inscrits_actuels + ' / ' + selectedPosteForRegistration.nb_max"></span>
+                    </p>
+                </div>
+
+                <h3 class="text-xl font-bold mb-4">Qui souhaitez-vous inscrire ?</h3>
+
+                <div class="space-y-4">
+                    <template x-for="profile in profiles" :key="profile.id">
+                        <div class="flex items-center justify-between p-4 border-2 border-black"
+                            :class="isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) ? 'bg-green-100' : (hasTimeConflict(selectedPosteForRegistration, profile.id) ? 'bg-gray-200 opacity-75' : 'bg-white')">
+
+                            <div>
+                                <p class="font-black text-lg" x-text="profile.prenom + ' ' + profile.nom"></p>
+
+                                <!-- Status Badges -->
+                                <div class="mt-1">
+                                    <span
+                                        x-show="isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id)"
+                                        class="text-xs font-bold text-green-700 bg-green-200 px-2 py-1">
+                                        ✅ Inscrit
+                                    </span>
+                                    <span
+                                        x-show="!isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) && hasTimeConflict(selectedPosteForRegistration, profile.id)"
+                                        class="text-xs font-bold text-red-700 bg-red-200 px-2 py-1">
+                                        ⚠️ Conflit horaire
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <!-- Unregister -->
+                                <button x-show="isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id)"
+                                    @click="unregister(selectedPosteForRegistration.poste_id, profile.id)"
+                                    class="brutal-btn bg-red-500 text-white px-4 py-2 text-sm shadow-brutal-sm">
+                                    Désinscrire
+                                </button>
+
+                                <!-- Register -->
+                                <button
+                                    x-show="!isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) && !hasTimeConflict(selectedPosteForRegistration, profile.id) && selectedPosteForRegistration.inscrits_actuels < selectedPosteForRegistration.nb_max"
+                                    @click="register(selectedPosteForRegistration.poste_id, profile.id)"
+                                    class="brutal-btn bg-brutal-ice px-4 py-2 text-sm shadow-brutal-sm">
+                                    Inscrire
+                                </button>
+
+                                <!-- Full / Conflict -->
+                                <button disabled
+                                    x-show="!isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) && (hasTimeConflict(selectedPosteForRegistration, profile.id) || selectedPosteForRegistration.inscrits_actuels >= selectedPosteForRegistration.nb_max)"
+                                    class="brutal-btn bg-gray-300 text-gray-500 px-4 py-2 text-sm cursor-not-allowed">
+                                    <span
+                                        x-show="hasTimeConflict(selectedPosteForRegistration, profile.id)">Indisponible</span>
+                                    <span
+                                        x-show="!hasTimeConflict(selectedPosteForRegistration, profile.id) && selectedPosteForRegistration.inscrits_actuels >= selectedPosteForRegistration.nb_max">Complet</span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>

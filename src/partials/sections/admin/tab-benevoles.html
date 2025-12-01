@@ -1,0 +1,67 @@
+<!-- Tab: Bénévoles -->
+<div x-show="activeTab === 'benevoles'">
+    <div class="brutal-card bg-brutal-white p-8">
+        <h2 class="text-3xl font-black mb-6">Liste des bénévoles</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b-4 border-brutal-black">
+                        <th class="text-left py-3 px-2 font-black">Nom</th>
+                        <th class="text-left py-3 px-2 font-black">Email</th>
+                        <th class="text-left py-3 px-2 font-black">Téléphone</th>
+                        <th class="text-left py-3 px-2 font-black">T-shirt</th>
+                        <th class="text-left py-3 px-2 font-black">Inscriptions</th>
+                        <th class="text-left py-3 px-2 font-black">Postes référent</th>
+                        <th class="text-left py-3 px-2 font-black">Rôle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="benevole in benevoles" :key="benevole.id">
+                        <tr class="border-b-2 border-gray-300">
+                            <td class="py-3 px-2 font-bold">
+                                <span x-text="benevole.prenom + ' ' + benevole.nom"></span>
+                            </td>
+                            <td class="py-3 px-2 font-bold text-sm" x-text="benevole.email"></td>
+                            <td class="py-3 px-2 font-bold" x-text="benevole.telephone || '-'"></td>
+                            <td class="py-3 px-2 font-bold" x-text="benevole.taille_tshirt"></td>
+                            <td class="py-3 px-2 font-bold text-center" x-text="benevole.nb_inscriptions"></td>
+                            <td class="py-3 px-2 font-bold text-center" x-text="benevole.nb_postes_referent || 0"></td>
+                            <td class="py-3 px-2">
+                                <template x-if="benevole.role === 'admin'">
+                                    <span
+                                        class="px-3 py-1 font-bold text-sm border-3 border-brutal-black bg-brutal-black text-brutal-white">
+                                        🔐 Admin
+                                    </span>
+                                </template>
+                                <template x-if="benevole.role !== 'admin'">
+                                    <select :value="benevole.role"
+                                        @change="updateBenevoleRole(benevole.id, $event.target.value)"
+                                        class="brutal-input px-3 py-1 text-sm font-bold" :class="{
+                        'bg-brutal-ice text-brutal-black': benevole.role === 'referent',
+                        'bg-gray-200 text-brutal-black': benevole.role === 'benevole'
+                      }">
+                                        <option value="benevole">👤 Bénévole</option>
+                                        <option value="referent">👔 Référent</option>
+                                    </select>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-6 p-4 bg-blue-100 border-3 border-brutal-black">
+            <p class="font-bold">
+                💡 <strong>Rôles :</strong>
+            </p>
+            <ul class="mt-2 list-disc list-inside font-bold text-sm">
+                <li><strong>👤 Bénévole :</strong> Peut s'inscrire aux postes</li>
+                <li><strong>👔 Référent :</strong> Peut être désigné comme référent d'un poste</li>
+                <li><strong>🔐 Admin :</strong> Accès complet à l'administration (à définir via Supabase SQL uniquement)
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

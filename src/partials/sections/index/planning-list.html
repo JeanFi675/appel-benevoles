@@ -1,0 +1,122 @@
+<!-- Liste des Postes -->
+<div x-show="profiles.length > 0 && !showProfileSection">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <h2 class="text-4xl font-black text-brutal-black">📋 Postes disponibles</h2>
+
+        <!-- Filtres -->
+        <div class="flex flex-wrap gap-3">
+            <button @click="showMyInscriptions = !showMyInscriptions"
+                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
+                :class="showMyInscriptions ? 'bg-brutal-black text-brutal-white' : 'bg-white text-brutal-black'">
+                <span x-text="showMyInscriptions ? '✅' : '⬜'"></span>
+                <span>Mes inscriptions</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Groupement par période -->
+    <template x-for="group in groupedPostes" :key="group.name">
+        <div class="mb-12" x-data="{ open: true }">
+            <!-- Period Header with Neo-Brutalist Style -->
+            <div @click="open = !open"
+                class="brutal-card bg-brutal-black text-brutal-white p-6 mb-6 cursor-pointer hover:bg-gray-900 transition-colors flex justify-between items-center select-none">
+                <div>
+                    <h3 class="text-3xl font-black uppercase tracking-wide" x-text="group.name"></h3>
+                    <div class="mt-2 flex items-center gap-4">
+                        <span class="font-bold text-lg">
+                            📊 <span x-text="group.postes.length"></span> poste<span
+                                x-show="group.postes.length > 1">s</span>
+                        </span>
+                        <span class="font-bold text-lg">
+                            👥 <span x-text="group.postes.reduce((sum, p) => sum + p.inscrits_actuels, 0)"></span> /
+                            <span x-text="group.postes.reduce((sum, p) => sum + p.nb_max, 0)"></span> inscrit<span
+                                x-show="group.postes.reduce((sum, p) => sum + p.inscrits_actuels, 0) > 1">s</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="text-4xl transform transition-transform duration-300" :class="open ? 'rotate-180' : ''">
+                    ▼
+                </div>
+            </div>
+
+            <div class="grid gap-6" x-show="open" x-transition>
+                <template x-for="poste in group.postes" :key="poste.poste_id">
+                    <div>
+                        <!-- VUE NORMALE -->
+                        <div class="brutal-card p-6"
+                            :class="isUserRegistered(poste.poste_id) ? 'bg-green-50' : 'bg-brutal-white'">
+
+                            <!-- Titre, Horaires et Référent -->
+                            <div class="mb-4 flex flex-col md:flex-row md:items-center md:gap-6">
+                                <h4 class="text-2xl font-black" x-text="poste.titre"></h4>
+                                <p class="text-lg font-bold text-gray-700">
+                                    📅 <span x-text="formatDate(poste.periode_debut)"></span>
+                                    -
+                                    <span x-text="formatTime(poste.periode_debut)"></span>
+                                    à
+                                    <span x-text="formatTime(poste.periode_fin)"></span>
+                                </p>
+
+                                <div x-show="poste.referent_nom" class="md:ml-auto">
+                                    <p class="font-bold">
+                                        👤 Référent : <span x-text="poste.referent_nom"></span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Description -->
+                            <div x-show="poste.description" class="mb-4 p-4 bg-gray-100 border-3 border-brutal-black">
+                                <p class="font-bold" x-text="poste.description"></p>
+                            </div>
+
+                            <!-- Barre de progression -->
+                            <div class="mb-4">
+                                <div class="flex justify-between mb-2">
+                                    <span class="font-bold">Inscrits</span>
+                                    <span class="font-black"
+                                        x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
+                                </div>
+
+                                <div class="progress-bar">
+                                    <div class="progress-fill" :class="{
+                        'bg-green-500': (poste.inscrits_actuels / poste.nb_max) < 0.7,
+                        'bg-orange-500': (poste.inscrits_actuels / poste.nb_max) >= 0.7 && (poste.inscrits_actuels / poste.nb_max) < 0.9,
+                        'bg-red-500': (poste.inscrits_actuels / poste.nb_max) >= 0.9
+                      }" :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"></div>
+                                </div>
+                            </div>
+
+                            <!-- Liste des bénévoles inscrits (Global) -->
+                            <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0" class="mb-4">
+                                <p class="font-bold mb-2">Bénévoles inscrits :</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <template x-for="benevole in poste.liste_benevoles" :key="benevole">
+                                        <span
+                                            class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
+                                            <span x-text="benevole"></span>
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex flex-col sm:flex-row gap-4 mt-6">
+                                <!-- Si l'utilisateur a des profils, on affiche le bouton d'inscription -->
+                                <button x-show="profiles.length > 0" @click="openRegistrationModal(poste)"
+                                    class="brutal-btn bg-brutal-ice w-full py-3 text-lg shadow-brutal-sm">
+                                    📝 Inscrire / Désinscrire
+                                </button>
+
+                                <!-- Si aucun profil, message -->
+                                <p x-show="profiles.length === 0" class="text-red-600 font-bold italic">
+                                    Créez un profil bénévole pour vous inscrire.
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+</div>

@@ -1,0 +1,15 @@
+<!-- Tabs -->
+<div class="brutal-card bg-brutal-white mb-8 flex overflow-x-auto">
+    <button @click="activeTab = 'postes'" class="tab-button px-8 py-4 font-black text-lg"
+        :class="{ 'active': activeTab === 'postes' }">
+        📋 Postes
+    </button>
+    <button @click="activeTab = 'periodes'" class="tab-button px-8 py-4 font-black text-lg"
+        :class="{ 'active': activeTab === 'periodes' }">
+        📅 Périodes
+    </button>
+    <button @click="activeTab = 'benevoles'" class="tab-button px-8 py-4 font-black text-lg"
+        :class="{ 'active': activeTab === 'benevoles' }">
+        👥 Bénévoles
+    </button>
+</div>
