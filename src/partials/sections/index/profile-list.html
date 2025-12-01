@@ -17,10 +17,16 @@
                     <p class="text-gray-600" x-text="p.email"></p>
                     <p class="text-sm mt-2">👕 Taille: <span x-text="p.taille_tshirt"></span></p>
 
-                    <button @click="editProfile(p.id)"
-                        class="mt-4 w-full brutal-btn bg-white border-2 border-black py-2 text-sm hover:bg-gray-100">
-                        ✏️ Modifier
-                    </button>
+                    <div class="flex gap-2 mt-4">
+                        <button @click="editProfile(p.id)"
+                            class="flex-1 brutal-btn bg-white border-2 border-black py-2 text-sm hover:bg-gray-100">
+                            ✏️ Modifier
+                        </button>
+                        <button @click="deleteProfile(p.id)"
+                            class="brutal-btn bg-red-500 text-white border-2 border-black py-2 px-4 text-sm hover:bg-red-600">
+                            🗑️
+                        </button>
+                    </div>
                 </div>
             </template>
 

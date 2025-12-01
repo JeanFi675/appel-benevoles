@@ -123,5 +123,30 @@ export const ProfilesModule = {
         } finally {
             this.loading = false;
         }
+    },
+
+    /**
+     * Deletes a profile.
+     * @param {string} profileId - The ID of the profile to delete.
+     */
+    async deleteProfile(profileId) {
+        if (!confirm("Êtes-vous sûr de vouloir supprimer ce profil ? Cette action est irréversible.")) return;
+
+        this.loading = true;
+        try {
+            const { error } = await ApiService.delete('benevoles', { id: profileId });
+
+            if (error) throw error;
+
+            this.showToast('✅ Profil supprimé', 'success');
+            await this.loadProfiles();
+
+            // Refresh postes to update counts
+            if (this.loadPostes) await this.loadPostes();
+        } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
     }
 };
