@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
 
   <!-- Main CSS (Tailwind) -->
   <link rel="stylesheet" href="./src/styles/main.css">
@@ -20,7 +23,7 @@
   <div class="fixed top-4 right-4 z-50 space-y-2">
     <template x-for="toast in toasts" :key="toast.id">
       <div class="toast brutal-card px-6 py-4 max-w-md"
-           :class="toast.type === 'error' ? 'bg-brutal-black text-brutal-ice' : 'bg-brutal-ice text-brutal-black'">
+        :class="toast.type === 'error' ? 'bg-brutal-black text-brutal-ice' : 'bg-brutal-ice text-brutal-black'">
         <p class="font-bold" x-text="toast.message"></p>
       </div>
     </template>
@@ -47,21 +50,12 @@
           <form @submit.prevent="sendMagicLink()">
             <div class="mb-4">
               <label for="email" class="block font-bold mb-2 text-lg">Votre email</label>
-              <input
-                type="email"
-                id="email"
-                x-model="loginEmail"
-                required
-                placeholder="jean.dupont@example.com"
-                class="brutal-input w-full px-4 py-3 text-lg"
-              />
+              <input type="email" id="email" x-model="loginEmail" required placeholder="jean.dupont@example.com"
+                class="brutal-input w-full px-4 py-3 text-lg" />
             </div>
 
-            <button
-              type="submit"
-              :disabled="loading"
-              class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal"
-            >
+            <button type="submit" :disabled="loading"
+              class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
               <span x-show="!loading">📧 Recevoir le lien de connexion</span>
               <span x-show="loading">⏳ Envoi en cours...</span>
             </button>
@@ -78,26 +72,23 @@
     <section x-show="user" style="display: none;">
 
       <!-- Barre Utilisateur -->
-      <div class="brutal-card bg-brutal-white p-6 mb-8 flex justify-between items-center">
+      <div
+        class="brutal-card bg-brutal-white p-6 mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <p class="text-sm font-bold text-gray-600">Bienvenue,</p>
           <p class="text-2xl font-black" x-text="profile ? profile.prenom : user?.email"></p>
-          <span x-show="profile && profile.role === 'admin'" class="inline-block mt-2 px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
+          <span x-show="profile && profile.role === 'admin'"
+            class="inline-block mt-2 px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
             🔐 Administrateur
           </span>
         </div>
-        <div class="flex gap-3">
-          <a
-            x-show="profile && profile.role === 'admin'"
-            href="admin.html"
-            class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm"
-          >
+        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <a x-show="profile && profile.role === 'admin'" href="admin.html"
+            class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm text-center">
             🔐 Admin
           </a>
-          <button
-            @click="logout()"
-            class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm"
-          >
+          <button @click="logout()"
+            class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm w-full sm:w-auto">
             Se déconnecter
           </button>
         </div>
@@ -111,44 +102,26 @@
           <div class="grid md:grid-cols-2 gap-4 mb-4">
             <div>
               <label class="block font-bold mb-2">Prénom *</label>
-              <input
-                type="text"
-                x-model="profileForm.prenom"
-                required
-                class="brutal-input w-full px-4 py-3"
-                placeholder="Jean"
-              />
+              <input type="text" x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-3"
+                placeholder="Jean" />
             </div>
 
             <div>
               <label class="block font-bold mb-2">Nom *</label>
-              <input
-                type="text"
-                x-model="profileForm.nom"
-                required
-                class="brutal-input w-full px-4 py-3"
-                placeholder="Dupont"
-              />
+              <input type="text" x-model="profileForm.nom" required class="brutal-input w-full px-4 py-3"
+                placeholder="Dupont" />
             </div>
           </div>
 
           <div class="mb-4">
             <label class="block font-bold mb-2">Téléphone</label>
-            <input
-              type="tel"
-              x-model="profileForm.telephone"
-              class="brutal-input w-full px-4 py-3"
-              placeholder="06 12 34 56 78"
-            />
+            <input type="tel" x-model="profileForm.telephone" class="brutal-input w-full px-4 py-3"
+              placeholder="06 12 34 56 78" />
           </div>
 
           <div class="mb-6">
             <label class="block font-bold mb-2">Taille T-shirt *</label>
-            <select
-              x-model="profileForm.taille_tshirt"
-              required
-              class="brutal-input w-full px-4 py-3 font-bold"
-            >
+            <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-3 font-bold">
               <option value="">-- Sélectionnez --</option>
               <option value="XS">XS</option>
               <option value="S">S</option>
@@ -159,11 +132,7 @@
             </select>
           </div>
 
-          <button
-            type="submit"
-            :disabled="loading"
-            class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal"
-          >
+          <button type="submit" :disabled="loading" class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
             <span x-show="!loading">✅ Enregistrer mon profil</span>
             <span x-show="loading">⏳ Enregistrement...</span>
           </button>
@@ -186,7 +155,8 @@
                 </span>
                 <span class="font-bold text-lg">
                   👥 <span x-text="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0)"></span> /
-                  <span x-text="postes.reduce((sum, p) => sum + p.nb_max, 0)"></span> inscrit<span x-show="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0) > 1">s</span>
+                  <span x-text="postes.reduce((sum, p) => sum + p.nb_max, 0)"></span> inscrit<span
+                    x-show="postes.reduce((sum, p) => sum + p.inscrits_actuels, 0) > 1">s</span>
                 </span>
               </div>
             </div>
@@ -195,9 +165,9 @@
               <template x-for="poste in postes" :key="poste.poste_id">
                 <div class="brutal-card bg-brutal-white p-6">
 
-                  <!-- Titre et Horaires -->
-                  <div class="mb-4">
-                    <h4 class="text-2xl font-black mb-2" x-text="poste.titre"></h4>
+                  <!-- Titre, Horaires et Référent -->
+                  <div class="mb-4 flex flex-col md:flex-row md:items-center md:gap-6">
+                    <h4 class="text-2xl font-black" x-text="poste.titre"></h4>
                     <p class="text-lg font-bold text-gray-700">
                       📅 <span x-text="formatDate(poste.periode_debut)"></span>
                       -
@@ -205,18 +175,17 @@
                       à
                       <span x-text="formatTime(poste.periode_fin)"></span>
                     </p>
+
+                    <div x-show="poste.referent_nom" class="md:ml-auto">
+                      <p class="font-bold">
+                        👤 Référent : <span x-text="poste.referent_nom"></span>
+                      </p>
+                    </div>
                   </div>
 
                   <!-- Description -->
                   <div x-show="poste.description" class="mb-4 p-4 bg-gray-100 border-3 border-brutal-black">
                     <p class="font-bold" x-text="poste.description"></p>
-                  </div>
-
-                  <!-- Référent -->
-                  <div x-show="poste.referent_nom" class="mb-4">
-                    <p class="font-bold">
-                      👤 Référent : <span x-text="poste.referent_nom"></span>
-                    </p>
                   </div>
 
                   <!-- Barre de progression -->
@@ -227,15 +196,11 @@
                     </div>
 
                     <div class="progress-bar">
-                      <div
-                        class="progress-fill"
-                        :class="{
+                      <div class="progress-fill" :class="{
                           'bg-green-500': (poste.inscrits_actuels / poste.nb_max) < 0.7,
                           'bg-orange-500': (poste.inscrits_actuels / poste.nb_max) >= 0.7 && (poste.inscrits_actuels / poste.nb_max) < 0.9,
                           'bg-red-500': (poste.inscrits_actuels / poste.nb_max) >= 0.9
-                        }"
-                        :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"
-                      ></div>
+                        }" :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"></div>
                     </div>
                   </div>
 
@@ -244,7 +209,8 @@
                     <p class="font-bold mb-2">Bénévoles inscrits :</p>
                     <div class="flex flex-wrap gap-2">
                       <template x-for="benevole in poste.liste_benevoles" :key="benevole">
-                        <span class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
+                        <span
+                          class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
                           <span x-text="benevole"></span>
                         </span>
                       </template>
@@ -254,10 +220,8 @@
                   <!-- Bouton d'inscription -->
                   <div>
                     <template x-if="isUserRegistered(poste.poste_id)">
-                      <button
-                        @click="unregister(poste.poste_id)"
-                        class="brutal-btn bg-red-500 text-brutal-white px-6 py-3 shadow-brutal-sm"
-                      >
+                      <button @click="unregister(poste.poste_id)"
+                        class="brutal-btn bg-red-500 text-brutal-white px-6 py-3 shadow-brutal-sm">
                         ❌ Se désinscrire
                       </button>
                     </template>
@@ -266,10 +230,8 @@
                       <div>
                         <template x-if="hasTimeConflict(poste)">
                           <div>
-                            <button
-                              disabled
-                              class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed w-full md:w-auto"
-                            >
+                            <button disabled
+                              class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed w-full md:w-auto">
                               ⚠️ Conflit horaire
                             </button>
                             <p class="text-sm text-red-600 font-bold mt-2">
@@ -279,19 +241,15 @@
                         </template>
 
                         <template x-if="!hasTimeConflict(poste) && poste.inscrits_actuels >= poste.nb_max">
-                          <button
-                            disabled
-                            class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed"
-                          >
+                          <button disabled
+                            class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed">
                             🚫 Complet
                           </button>
                         </template>
 
                         <template x-if="!hasTimeConflict(poste) && poste.inscrits_actuels < poste.nb_max">
-                          <button
-                            @click="register(poste.poste_id)"
-                            class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal"
-                          >
+                          <button @click="register(poste.poste_id)"
+                            class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal">
                             ✅ Je m'inscris
                           </button>
                         </template>
@@ -314,4 +272,5 @@
   <script type="module" src="./src/js/main.js"></script>
 
 </body>
+
 </html>
