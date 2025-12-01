@@ -15,7 +15,7 @@
     </div>
 
     <!-- Groupement par période -->
-    <template x-for="group in groupedPostes" :key="group.name">
+    <template x-for="group in groupedPostes()" :key="group.name">
         <div class="mb-12" x-data="{ open: true }">
             <!-- Period Header with Neo-Brutalist Style -->
             <div @click="open = !open"

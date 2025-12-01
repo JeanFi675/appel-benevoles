@@ -185,10 +185,10 @@ export const PlanningModule = {
     },
 
     /**
-     * Getter for filtered postes based on UI state.
+     * Method for filtered postes based on UI state.
      * @returns {object[]} Array of filtered postes.
      */
-    get filteredPostes() {
+    filteredPostes() {
         return this.postes.filter(poste => {
             if (this.showOnlyAvailable) {
                 const isFull = poste.inscrits_actuels >= poste.nb_max;
@@ -205,12 +205,12 @@ export const PlanningModule = {
     },
 
     /**
-     * Getter for grouping postes by period.
+     * Method for grouping postes by period.
      * @returns {object[]} Array of groups { name, postes, order }.
      */
-    get groupedPostes() {
+    groupedPostes() {
         const groups = {};
-        this.filteredPostes.forEach(poste => {
+        this.filteredPostes().forEach(poste => {
             if (!groups[poste.periode]) {
                 groups[poste.periode] = [];
             }
