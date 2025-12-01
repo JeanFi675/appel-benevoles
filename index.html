@@ -87,6 +87,10 @@
             class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm text-center">
             🔐 Admin
           </a>
+          <button @click="toggleProfile()"
+            class="brutal-btn bg-brutal-white text-brutal-black px-6 py-3 shadow-brutal-sm w-full sm:w-auto border-2 border-brutal-black">
+            👤 Mon Profil
+          </button>
           <button @click="logout()"
             class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm w-full sm:w-auto">
             Se déconnecter
@@ -94,9 +98,9 @@
         </div>
       </div>
 
-      <!-- Formulaire Profil (Première connexion) -->
-      <div x-show="user && !profile" class="brutal-card bg-brutal-white p-8 mb-8">
-        <h2 class="text-3xl font-black mb-6">Complétez votre profil</h2>
+      <!-- Formulaire Profil (Première connexion OU Edition) -->
+      <div x-show="user && (!profile || showProfileEdit)" class="brutal-card bg-brutal-white p-8 mb-8">
+        <h2 class="text-3xl font-black mb-6" x-text="profile ? 'Mon Profil' : 'Complétez votre profil'"></h2>
 
         <form @submit.prevent="saveProfile()">
           <div class="grid md:grid-cols-2 gap-4 mb-4">
@@ -132,15 +136,23 @@
             </select>
           </div>
 
-          <button type="submit" :disabled="loading" class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
-            <span x-show="!loading">✅ Enregistrer mon profil</span>
-            <span x-show="loading">⏳ Enregistrement...</span>
-          </button>
+          <div class="flex flex-col md:flex-row gap-4">
+            <button type="submit" :disabled="loading"
+              class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
+              <span x-show="!loading">✅ Enregistrer mon profil</span>
+              <span x-show="loading">⏳ Enregistrement...</span>
+            </button>
+
+            <button type="button" x-show="profile" @click="toggleProfile()"
+              class="brutal-btn bg-gray-200 text-black w-full md:w-auto py-4 text-xl shadow-brutal-sm">
+              Annuler
+            </button>
+          </div>
         </form>
       </div>
 
       <!-- Liste des Postes -->
-      <div x-show="profile">
+      <div x-show="profile && !showProfileEdit">
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <h2 class="text-4xl font-black text-brutal-black">📋 Postes disponibles</h2>
 

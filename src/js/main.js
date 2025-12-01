@@ -24,6 +24,26 @@ document.addEventListener('alpine:init', () => {
 
         showOnlyAvailable: false,
         showMyInscriptions: false,
+        showProfileEdit: false,
+
+        toggleProfile() {
+            this.showProfileEdit = !this.showProfileEdit;
+
+            // Si on ouvre le mode édition et qu'on a un profil, on pré-remplit le formulaire
+            if (this.showProfileEdit && this.profile) {
+                this.profileForm = {
+                    prenom: this.profile.prenom || '',
+                    nom: this.profile.nom || '',
+                    telephone: this.profile.telephone || '',
+                    taille_tshirt: this.profile.taille_tshirt || ''
+                };
+            }
+
+            // Si on ferme le profil, on recharge les données pour être sûr
+            if (!this.showProfileEdit) {
+                this.loadProfile();
+            }
+        },
 
         async init() {
             // Vérifier la session
@@ -126,6 +146,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.profile = data;
                 this.showToast('✅ Profil enregistré !', 'success');
+                this.showProfileEdit = false;
 
                 await this.loadPostes();
                 await this.loadUserInscriptions();
