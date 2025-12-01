@@ -8,7 +8,8 @@ import { formatDate, formatTime } from './utils.js';
 document.addEventListener('alpine:init', () => {
     Alpine.data('app', () => ({
         user: null,
-        profile: null,
+        profiles: [], // Array of profiles
+        activeProfileId: null, // For registration selection
         postes: [],
         userInscriptions: [],
         loading: false,
@@ -16,33 +17,56 @@ document.addEventListener('alpine:init', () => {
         toasts: [],
 
         profileForm: {
+            id: null, // Add ID to form to track if new or existing
             prenom: '',
             nom: '',
             telephone: '',
             taille_tshirt: ''
         },
 
-        showOnlyAvailable: false,
+        // State for UI
+        showProfileSection: false, // Replaces showProfileEdit for the main section visibility
+        isEditingProfile: false, // True if showing the form
         showMyInscriptions: false,
-        showProfileEdit: false,
+        showOnlyAvailable: false,
 
-        toggleProfile() {
-            this.showProfileEdit = !this.showProfileEdit;
+        toggleProfileSection() {
+            this.showProfileSection = !this.showProfileSection;
+            this.isEditingProfile = false; // Reset to list view
 
-            // Si on ouvre le mode édition et qu'on a un profil, on pré-remplit le formulaire
-            if (this.showProfileEdit && this.profile) {
+            if (!this.showProfileSection) {
+                this.loadProfiles(); // Reload when closing
+            }
+        },
+
+        editProfile(profileId) {
+            const profile = this.profiles.find(p => p.id === profileId);
+            if (profile) {
                 this.profileForm = {
-                    prenom: this.profile.prenom || '',
-                    nom: this.profile.nom || '',
-                    telephone: this.profile.telephone || '',
-                    taille_tshirt: this.profile.taille_tshirt || ''
+                    id: profile.id,
+                    prenom: profile.prenom || '',
+                    nom: profile.nom || '',
+                    telephone: profile.telephone || '',
+                    taille_tshirt: profile.taille_tshirt || ''
                 };
+                this.isEditingProfile = true;
             }
+        },
 
-            // Si on ferme le profil, on recharge les données pour être sûr
-            if (!this.showProfileEdit) {
-                this.loadProfile();
-            }
+        createProfile() {
+            this.profileForm = {
+                id: null,
+                prenom: '',
+                nom: '',
+                telephone: '',
+                taille_tshirt: ''
+            };
+            this.isEditingProfile = true;
+        },
+
+        cancelEdit() {
+            this.isEditingProfile = false;
+            this.profileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '' };
         },
 
         async init() {
@@ -50,7 +74,7 @@ document.addEventListener('alpine:init', () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 this.user = session.user;
-                await this.loadProfile();
+                await this.loadProfiles();
                 await this.loadPostes();
                 await this.loadUserInscriptions();
             }
@@ -65,11 +89,22 @@ document.addEventListener('alpine:init', () => {
                         window.history.replaceState(null, '', window.location.pathname);
                     }
 
-                    await this.loadProfile();
+                    await this.loadProfiles();
                     await this.loadPostes();
                     await this.loadUserInscriptions();
                 }
             });
+        },
+
+        // Registration Modal
+        selectedPosteForRegistration: null,
+
+        openRegistrationModal(poste) {
+            this.selectedPosteForRegistration = poste;
+        },
+
+        closeRegistrationModal() {
+            this.selectedPosteForRegistration = null;
         },
 
         async sendMagicLink() {
@@ -98,32 +133,26 @@ document.addEventListener('alpine:init', () => {
         async logout() {
             await supabase.auth.signOut();
             this.user = null;
-            this.profile = null;
+            this.profiles = [];
             this.postes = [];
             this.userInscriptions = [];
         },
 
-        async loadProfile() {
+        async loadProfiles() {
             if (!this.user) return;
 
             try {
                 const { data, error } = await supabase
                     .from('benevoles')
                     .select('*')
-                    .eq('id', this.user.id)
-                    .single();
+                    .eq('user_id', this.user.id)
+                    .order('created_at', { ascending: true });
 
-                if (error && error.code !== 'PGRST116') throw error;
+                if (error) throw error;
 
-                this.profile = data;
-
-                // Pré-remplir le formulaire si pas de profil
-                if (!data) {
-                    this.profileForm.prenom = '';
-                    this.profileForm.nom = '';
-                }
+                this.profiles = data || [];
             } catch (error) {
-                console.error('Erreur chargement profil:', error);
+                console.error('Erreur chargement profils:', error);
             }
         },
 
@@ -132,24 +161,33 @@ document.addEventListener('alpine:init', () => {
 
             this.loading = true;
             try {
+                const profileData = {
+                    user_id: this.user.id,
+                    email: this.user.email, // Keep email for reference, though user_id is the link
+                    prenom: this.profileForm.prenom,
+                    nom: this.profileForm.nom,
+                    telephone: this.profileForm.telephone,
+                    taille_tshirt: this.profileForm.taille_tshirt
+                };
+
+                // If updating existing
+                if (this.profileForm.id) {
+                    profileData.id = this.profileForm.id;
+                }
+
                 const { data, error } = await supabase
                     .from('benevoles')
-                    .upsert({
-                        id: this.user.id,
-                        email: this.user.email,
-                        ...this.profileForm
-                    })
+                    .upsert(profileData) // Upsert works if ID is present
                     .select()
                     .single();
 
                 if (error) throw error;
 
-                this.profile = data;
                 this.showToast('✅ Profil enregistré !', 'success');
-                this.showProfileEdit = false;
+                this.isEditingProfile = false; // Return to list view
 
-                await this.loadPostes();
-                await this.loadUserInscriptions();
+                await this.loadProfiles();
+                await this.loadPostes(); // Refresh to update names/counts if needed
             } catch (error) {
                 this.showToast('❌ Erreur : ' + error.message, 'error');
             } finally {
@@ -189,8 +227,8 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async register(posteId) {
-            if (!this.user) return;
+        async register(posteId, benevoleId) {
+            if (!this.user || !benevoleId) return;
 
             this.loading = true;
             try {
@@ -198,7 +236,7 @@ document.addEventListener('alpine:init', () => {
                     .from('inscriptions')
                     .insert({
                         poste_id: posteId,
-                        benevole_id: this.user.id
+                        benevole_id: benevoleId
                     });
 
                 if (error) throw error;
@@ -213,11 +251,11 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async unregister(posteId) {
-            if (!this.user) return;
+        async unregister(posteId, benevoleId) {
+            if (!this.user || !benevoleId) return;
 
             // Confirmation simple pour commencer
-            if (!confirm("Êtes-vous sûr de vouloir vous désinscrire de ce poste ?")) return;
+            if (!confirm("Êtes-vous sûr de vouloir désinscrire ce bénévole ?")) return;
 
             this.loading = true;
             try {
@@ -225,7 +263,7 @@ document.addEventListener('alpine:init', () => {
                     .from('inscriptions')
                     .delete()
                     .eq('poste_id', posteId)
-                    .eq('benevole_id', this.user.id);
+                    .eq('benevole_id', benevoleId);
 
                 if (error) throw error;
 
@@ -240,20 +278,30 @@ document.addEventListener('alpine:init', () => {
         },
 
         isUserRegistered(posteId) {
-            const isReg = this.userInscriptions.some(i => i.poste_id == posteId);
-            if (isReg) console.log('User registered for:', posteId);
-            return isReg;
+            // Returns true if ANY profile is registered
+            return this.userInscriptions.some(i => i.poste_id == posteId);
         },
 
-        hasTimeConflict(poste) {
-            // Si on est déjà inscrit à ce poste, ce n'est pas un "conflit" à afficher
-            if (this.isUserRegistered(poste.poste_id)) return false;
+        getRegisteredProfiles(posteId) {
+            // Returns array of profile IDs registered for this poste
+            return this.userInscriptions
+                .filter(i => i.poste_id == posteId)
+                .map(i => i.benevole_id);
+        },
 
+        isProfileRegistered(posteId, profileId) {
+            return this.userInscriptions.some(i => i.poste_id == posteId && i.benevole_id == profileId);
+        },
+
+        hasTimeConflict(poste, profileId = null) {
             const posteDebut = new Date(poste.periode_debut);
             const posteFin = new Date(poste.periode_fin);
 
             return this.userInscriptions.some(inscription => {
-                // On ne compare pas avec le poste lui-même (même si le check isUserRegistered au dessus le couvre déjà, double sécurité)
+                // Si on vérifie pour un profil spécifique, on ignore les autres
+                if (profileId && inscription.benevole_id !== profileId) return false;
+
+                // On ne compare pas avec le poste lui-même
                 if (inscription.poste_id == poste.poste_id) return false;
 
                 const inscriptionDebut = new Date(inscription.postes.periode_debut);

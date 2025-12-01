@@ -76,20 +76,20 @@
         class="sticky top-0 z-40 brutal-card bg-brutal-white p-6 mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4 shadow-brutal border-b-4 border-brutal-black">
         <div>
           <p class="text-sm font-bold text-gray-600">Bienvenue,</p>
-          <p class="text-2xl font-black" x-text="profile ? profile.prenom : user?.email"></p>
-          <span x-show="profile && profile.role === 'admin'"
+          <p class="text-2xl font-black" x-text="user?.email"></p>
+          <span x-show="profiles.some(p => p.role === 'admin')"
             class="inline-block mt-2 px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
             🔐 Administrateur
           </span>
         </div>
         <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <a x-show="profile && profile.role === 'admin'" href="admin.html"
+          <a x-show="profiles.some(p => p.role === 'admin')" href="admin.html"
             class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm text-center">
             🔐 Admin
           </a>
-          <button @click="toggleProfile()"
+          <button @click="toggleProfileSection()"
             class="brutal-btn bg-brutal-white text-brutal-black px-6 py-3 shadow-brutal-sm w-full sm:w-auto border-2 border-brutal-black">
-            👤 Mon Profil
+            👤 Gérer les profils
           </button>
           <button @click="logout()"
             class="brutal-btn bg-brutal-black text-brutal-white px-6 py-3 shadow-brutal-sm w-full sm:w-auto">
@@ -98,61 +98,101 @@
         </div>
       </div>
 
-      <!-- Formulaire Profil (Première connexion OU Edition) -->
-      <div x-show="user && (!profile || showProfileEdit)" class="brutal-card bg-brutal-white p-8 mb-8">
-        <h2 class="text-3xl font-black mb-6" x-text="profile ? 'Mon Profil' : 'Complétez votre profil'"></h2>
+      <!-- Section Gestion Profils -->
+      <div x-show="user && (profiles.length === 0 || showProfileSection)" class="brutal-card bg-brutal-white p-8 mb-8">
 
-        <form @submit.prevent="saveProfile()">
-          <div class="grid md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block font-bold mb-2">Prénom *</label>
-              <input type="text" x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-3"
-                placeholder="Jean" />
-            </div>
-
-            <div>
-              <label class="block font-bold mb-2">Nom *</label>
-              <input type="text" x-model="profileForm.nom" required class="brutal-input w-full px-4 py-3"
-                placeholder="Dupont" />
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label class="block font-bold mb-2">Téléphone</label>
-            <input type="tel" x-model="profileForm.telephone" class="brutal-input w-full px-4 py-3"
-              placeholder="06 12 34 56 78" />
-          </div>
-
-          <div class="mb-6">
-            <label class="block font-bold mb-2">Taille T-shirt *</label>
-            <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-3 font-bold">
-              <option value="">-- Sélectionnez --</option>
-              <option value="XS">XS</option>
-              <option value="S">S</option>
-              <option value="M">M</option>
-              <option value="L">L</option>
-              <option value="XL">XL</option>
-              <option value="XXL">XXL</option>
-            </select>
-          </div>
-
-          <div class="flex flex-col md:flex-row gap-4">
-            <button type="submit" :disabled="loading"
-              class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
-              <span x-show="!loading">✅ Enregistrer mon profil</span>
-              <span x-show="loading">⏳ Enregistrement...</span>
-            </button>
-
-            <button type="button" x-show="profile" @click="toggleProfile()"
-              class="brutal-btn bg-gray-200 text-black w-full md:w-auto py-4 text-xl shadow-brutal-sm">
-              Annuler
+        <!-- VUE LISTE -->
+        <div x-show="!isEditingProfile">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-black">👤 Mes Bénévoles</h2>
+            <button @click="createProfile()" class="brutal-btn bg-brutal-ice px-4 py-2 shadow-brutal-sm text-sm">
+              + Ajouter
             </button>
           </div>
-        </form>
+
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <template x-for="p in profiles" :key="p.id">
+              <div class="border-2 border-brutal-black p-4 bg-gray-50 relative">
+                <h3 class="font-bold text-xl" x-text="p.prenom + ' ' + p.nom"></h3>
+                <p class="text-gray-600" x-text="p.email"></p>
+                <p class="text-sm mt-2">👕 Taille: <span x-text="p.taille_tshirt"></span></p>
+
+                <button @click="editProfile(p.id)"
+                  class="mt-4 w-full brutal-btn bg-white border-2 border-black py-2 text-sm hover:bg-gray-100">
+                  ✏️ Modifier
+                </button>
+              </div>
+            </template>
+
+            <!-- Empty state -->
+            <div x-show="profiles.length === 0" class="col-span-full text-center py-8 text-gray-500 italic">
+              Aucun profil bénévole. Créez-en un pour commencer !
+            </div>
+          </div>
+
+          <div class="mt-6 text-right" x-show="profiles.length > 0">
+            <button @click="toggleProfileSection()" class="underline font-bold text-gray-600">
+              Fermer et voir les postes
+            </button>
+          </div>
+        </div>
+
+        <!-- VUE FORMULAIRE (Création / Edition) -->
+        <div x-show="isEditingProfile">
+          <h2 class="text-3xl font-black mb-6" x-text="profileForm.id ? 'Modifier le profil' : 'Nouveau bénévole'"></h2>
+
+          <form @submit.prevent="saveProfile()">
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block font-bold mb-2">Prénom *</label>
+                <input type="text" x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-3"
+                  placeholder="Jean" />
+              </div>
+
+              <div>
+                <label class="block font-bold mb-2">Nom *</label>
+                <input type="text" x-model="profileForm.nom" required class="brutal-input w-full px-4 py-3"
+                  placeholder="Dupont" />
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="block font-bold mb-2">Téléphone</label>
+              <input type="tel" x-model="profileForm.telephone" class="brutal-input w-full px-4 py-3"
+                placeholder="06 12 34 56 78" />
+            </div>
+
+            <div class="mb-6">
+              <label class="block font-bold mb-2">Taille T-shirt *</label>
+              <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-3 font-bold">
+                <option value="">-- Sélectionnez --</option>
+                <option value="XS">XS</option>
+                <option value="S">S</option>
+                <option value="M">M</option>
+                <option value="L">L</option>
+                <option value="XL">XL</option>
+                <option value="XXL">XXL</option>
+              </select>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4">
+              <button type="submit" :disabled="loading"
+                class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
+                <span x-show="!loading">✅ Enregistrer</span>
+                <span x-show="loading">⏳ Enregistrement...</span>
+              </button>
+
+              <button type="button" @click="cancelEdit()"
+                class="brutal-btn bg-gray-200 text-black w-full md:w-auto py-4 text-xl shadow-brutal-sm">
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <!-- Liste des Postes -->
-      <div x-show="profile && !showProfileEdit">
+      <div x-show="profiles.length > 0 && !showProfileSection">
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <h2 class="text-4xl font-black text-brutal-black">📋 Postes disponibles</h2>
 
@@ -194,122 +234,172 @@
             <div class="grid gap-6" x-show="open" x-transition>
               <template x-for="poste in group.postes" :key="poste.poste_id">
                 <div>
-                  <!-- VUE COMPACTE (CONFLIT) -->
-                  <template x-if="hasTimeConflict(poste)">
-                    <div
-                      class="brutal-card bg-gray-200 p-4 opacity-60 flex flex-col md:flex-row md:items-center justify-between gap-4 border-2 border-gray-400 border-dashed">
-                      <div class="flex items-center gap-4">
-                        <span class="text-2xl">⚠️</span>
-                        <div>
-                          <h4 class="font-bold text-lg text-gray-700 line-through decoration-red-500 decoration-2"
-                            x-text="poste.titre"></h4>
-                          <p class="text-sm font-bold text-gray-500">
-                            <span x-text="formatDate(poste.periode_debut)"></span> -
-                            <span x-text="formatTime(poste.periode_debut)"></span> à <span
-                              x-text="formatTime(poste.periode_fin)"></span>
-                          </p>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-4">
-                        <span class="font-bold text-red-600 text-sm uppercase tracking-wider">Indisponible
-                          (Conflit)</span>
-                      </div>
-                    </div>
-                  </template>
-
                   <!-- VUE NORMALE -->
-                  <template x-if="!hasTimeConflict(poste)">
-                    <div class="brutal-card p-6"
-                      :class="isUserRegistered(poste.poste_id) ? 'bg-green-100' : 'bg-brutal-white'">
+                  <div class="brutal-card p-6"
+                    :class="isUserRegistered(poste.poste_id) ? 'bg-green-50' : 'bg-brutal-white'">
 
-                      <!-- Titre, Horaires et Référent -->
-                      <div class="mb-4 flex flex-col md:flex-row md:items-center md:gap-6">
-                        <h4 class="text-2xl font-black" x-text="poste.titre"></h4>
-                        <p class="text-lg font-bold text-gray-700">
-                          📅 <span x-text="formatDate(poste.periode_debut)"></span>
-                          -
-                          <span x-text="formatTime(poste.periode_debut)"></span>
-                          à
-                          <span x-text="formatTime(poste.periode_fin)"></span>
+                    <!-- Titre, Horaires et Référent -->
+                    <div class="mb-4 flex flex-col md:flex-row md:items-center md:gap-6">
+                      <h4 class="text-2xl font-black" x-text="poste.titre"></h4>
+                      <p class="text-lg font-bold text-gray-700">
+                        📅 <span x-text="formatDate(poste.periode_debut)"></span>
+                        -
+                        <span x-text="formatTime(poste.periode_debut)"></span>
+                        à
+                        <span x-text="formatTime(poste.periode_fin)"></span>
+                      </p>
+
+                      <div x-show="poste.referent_nom" class="md:ml-auto">
+                        <p class="font-bold">
+                          👤 Référent : <span x-text="poste.referent_nom"></span>
                         </p>
-
-                        <div x-show="poste.referent_nom" class="md:ml-auto">
-                          <p class="font-bold">
-                            👤 Référent : <span x-text="poste.referent_nom"></span>
-                          </p>
-                        </div>
                       </div>
-
-                      <!-- Description -->
-                      <div x-show="poste.description" class="mb-4 p-4 bg-gray-100 border-3 border-brutal-black">
-                        <p class="font-bold" x-text="poste.description"></p>
-                      </div>
-
-                      <!-- Barre de progression -->
-                      <div class="mb-4">
-                        <div class="flex justify-between mb-2">
-                          <span class="font-bold">Inscrits</span>
-                          <span class="font-black" x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
-                        </div>
-
-                        <div class="progress-bar">
-                          <div class="progress-fill" :class="{
-                              'bg-green-500': (poste.inscrits_actuels / poste.nb_max) < 0.7,
-                              'bg-orange-500': (poste.inscrits_actuels / poste.nb_max) >= 0.7 && (poste.inscrits_actuels / poste.nb_max) < 0.9,
-                              'bg-red-500': (poste.inscrits_actuels / poste.nb_max) >= 0.9
-                            }" :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"></div>
-                        </div>
-                      </div>
-
-                      <!-- Liste des bénévoles inscrits -->
-                      <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0" class="mb-4">
-                        <p class="font-bold mb-2">Bénévoles inscrits :</p>
-                        <div class="flex flex-wrap gap-2">
-                          <template x-for="benevole in poste.liste_benevoles" :key="benevole">
-                            <span
-                              class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
-                              <span x-text="benevole"></span>
-                            </span>
-                          </template>
-                        </div>
-                      </div>
-
-                      <!-- Bouton d'inscription -->
-                      <div>
-                        <template x-if="isUserRegistered(poste.poste_id)">
-                          <button @click="unregister(poste.poste_id)"
-                            class="brutal-btn bg-red-500 text-brutal-white px-6 py-3 shadow-brutal-sm w-full md:w-auto">
-                            ❌ Se désinscrire
-                          </button>
-                        </template>
-
-                        <template x-if="!isUserRegistered(poste.poste_id)">
-                          <div>
-                            <!-- NOTE: Le cas hasTimeConflict est géré par la vue compacte au dessus, mais on garde la logique ici au cas où -->
-                            <template x-if="!hasTimeConflict(poste) && poste.inscrits_actuels >= poste.nb_max">
-                              <button disabled
-                                class="brutal-btn bg-gray-300 text-gray-600 px-6 py-3 shadow-brutal-sm cursor-not-allowed w-full md:w-auto">
-                                🚫 Complet
-                              </button>
-                            </template>
-
-                            <template x-if="!hasTimeConflict(poste) && poste.inscrits_actuels < poste.nb_max">
-                              <button @click="register(poste.poste_id)"
-                                class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal w-full md:w-auto hover:bg-brutal-ice/90">
-                                ✅ Je m'inscris
-                              </button>
-                            </template>
-                          </div>
-                        </template>
-                      </div>
-
                     </div>
-                  </template>
+
+                    <!-- Description -->
+                    <div x-show="poste.description" class="mb-4 p-4 bg-gray-100 border-3 border-brutal-black">
+                      <p class="font-bold" x-text="poste.description"></p>
+                    </div>
+
+                    <!-- Barre de progression -->
+                    <div class="mb-4">
+                      <div class="flex justify-between mb-2">
+                        <span class="font-bold">Inscrits</span>
+                        <span class="font-black" x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
+                      </div>
+
+                      <div class="progress-bar">
+                        <div class="progress-fill" :class="{
+                            'bg-green-500': (poste.inscrits_actuels / poste.nb_max) < 0.7,
+                            'bg-orange-500': (poste.inscrits_actuels / poste.nb_max) >= 0.7 && (poste.inscrits_actuels / poste.nb_max) < 0.9,
+                            'bg-red-500': (poste.inscrits_actuels / poste.nb_max) >= 0.9
+                          }" :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"></div>
+                      </div>
+                    </div>
+
+                    <!-- Liste des bénévoles inscrits (Global) -->
+                    <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0" class="mb-4">
+                      <p class="font-bold mb-2">Bénévoles inscrits :</p>
+                      <div class="flex flex-wrap gap-2">
+                        <template x-for="benevole in poste.liste_benevoles" :key="benevole">
+                          <span
+                            class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
+                            <span x-text="benevole"></span>
+                          </span>
+                        </template>
+                      </div>
+                    </div>
+
+                    <!-- Mes Inscriptions (Qui de ma famille est inscrit ?) -->
+                    <div x-show="isUserRegistered(poste.poste_id)"
+                      class="mb-4 p-3 bg-green-200 border-2 border-green-800">
+                      <p class="font-bold text-green-900 mb-1">✅ Vos inscrits :</p>
+                      <div class="flex flex-wrap gap-2">
+                        <template x-for="pid in getRegisteredProfiles(poste.poste_id)" :key="pid">
+                          <span class="px-2 py-1 bg-green-800 text-white text-xs font-bold rounded">
+                            <span x-text="profiles.find(p => p.id === pid)?.prenom"></span>
+                          </span>
+                        </template>
+                      </div>
+                    </div>
+
+                    <!-- Bouton d'action -->
+                    <div>
+                      <button @click="openRegistrationModal(poste)"
+                        class="brutal-btn px-6 py-3 shadow-brutal w-full md:w-auto flex items-center justify-center gap-2"
+                        :class="isUserRegistered(poste.poste_id) ? 'bg-white border-2 border-brutal-black' : 'bg-brutal-ice'">
+                        <span
+                          x-text="isUserRegistered(poste.poste_id) ? '⚙️ Gérer les inscriptions' : '👉 S\'inscrire'"></span>
+                      </button>
+                    </div>
+
+                  </div>
                 </div>
               </template>
             </div>
           </div>
         </template>
+      </div>
+
+      <!-- Modal Inscription -->
+      <div x-show="selectedPosteForRegistration"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        x-transition.opacity>
+        <div class="brutal-card bg-brutal-white p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+          @click.outside="closeRegistrationModal()">
+
+          <button @click="closeRegistrationModal()"
+            class="absolute top-4 right-4 text-2xl font-black hover:text-red-500">✕</button>
+
+          <template x-if="selectedPosteForRegistration">
+            <div>
+              <h2 class="text-3xl font-black mb-2">Inscription</h2>
+              <p class="text-xl font-bold text-gray-600 mb-6" x-text="selectedPosteForRegistration.titre"></p>
+
+              <div class="mb-6 p-4 bg-gray-100 border-2 border-black">
+                <p>📅 <span x-text="formatDate(selectedPosteForRegistration.periode_debut)"></span></p>
+                <p>⏰ <span x-text="formatTime(selectedPosteForRegistration.periode_debut)"></span> - <span
+                    x-text="formatTime(selectedPosteForRegistration.periode_fin)"></span></p>
+                <p class="mt-2">Places : <span
+                    x-text="selectedPosteForRegistration.inscrits_actuels + ' / ' + selectedPosteForRegistration.nb_max"></span>
+                </p>
+              </div>
+
+              <h3 class="text-xl font-bold mb-4">Qui souhaitez-vous inscrire ?</h3>
+
+              <div class="space-y-4">
+                <template x-for="profile in profiles" :key="profile.id">
+                  <div class="flex items-center justify-between p-4 border-2 border-black"
+                    :class="isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) ? 'bg-green-100' : (hasTimeConflict(selectedPosteForRegistration, profile.id) ? 'bg-gray-200 opacity-75' : 'bg-white')">
+
+                    <div>
+                      <p class="font-black text-lg" x-text="profile.prenom + ' ' + profile.nom"></p>
+
+                      <!-- Status Badges -->
+                      <div class="mt-1">
+                        <span x-show="isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id)"
+                          class="text-xs font-bold text-green-700 bg-green-200 px-2 py-1">
+                          ✅ Inscrit
+                        </span>
+                        <span
+                          x-show="!isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) && hasTimeConflict(selectedPosteForRegistration, profile.id)"
+                          class="text-xs font-bold text-red-700 bg-red-200 px-2 py-1">
+                          ⚠️ Conflit horaire
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <!-- Unregister -->
+                      <button x-show="isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id)"
+                        @click="unregister(selectedPosteForRegistration.poste_id, profile.id)"
+                        class="brutal-btn bg-red-500 text-white px-4 py-2 text-sm shadow-brutal-sm">
+                        Désinscrire
+                      </button>
+
+                      <!-- Register -->
+                      <button
+                        x-show="!isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) && !hasTimeConflict(selectedPosteForRegistration, profile.id) && selectedPosteForRegistration.inscrits_actuels < selectedPosteForRegistration.nb_max"
+                        @click="register(selectedPosteForRegistration.poste_id, profile.id)"
+                        class="brutal-btn bg-brutal-ice px-4 py-2 text-sm shadow-brutal-sm">
+                        Inscrire
+                      </button>
+
+                      <!-- Full / Conflict -->
+                      <button disabled
+                        x-show="!isProfileRegistered(selectedPosteForRegistration.poste_id, profile.id) && (hasTimeConflict(selectedPosteForRegistration, profile.id) || selectedPosteForRegistration.inscrits_actuels >= selectedPosteForRegistration.nb_max)"
+                        class="brutal-btn bg-gray-300 text-gray-500 px-4 py-2 text-sm cursor-not-allowed">
+                        <span x-show="hasTimeConflict(selectedPosteForRegistration, profile.id)">Indisponible</span>
+                        <span
+                          x-show="!hasTimeConflict(selectedPosteForRegistration, profile.id) && selectedPosteForRegistration.inscrits_actuels >= selectedPosteForRegistration.nb_max">Complet</span>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
       </div>
 
     </section>
