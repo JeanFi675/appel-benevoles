@@ -95,7 +95,20 @@ export function initStore() {
          * Logs out the user.
          */
         async logout() {
-            await AuthService.signOut();
+            try {
+                const { error } = await AuthService.signOut();
+                if (error) throw error;
+
+                // Manually reset state to ensure UI updates immediately
+                this.user = null;
+                this.resetData();
+
+                // Optional: Reload to ensure clean state
+                // window.location.reload();
+            } catch (error) {
+                console.error('Logout error:', error);
+                this.showToast('Erreur lors de la déconnexion : ' + error.message, 'error');
+            }
         },
 
         // --- UI Helpers ---
