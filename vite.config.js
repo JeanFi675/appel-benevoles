@@ -7,18 +7,44 @@ export default defineConfig({
   plugins: [
     createHtmlPlugin({
       minify: true,
-      inject: {
-        data: {
-          title: 'Bénévoles Escalade',
+      pages: [
+        {
+          entry: 'src/js/main.js',
+          filename: 'index.html',
+          template: 'index.html',
+          injectOptions: {
+            data: {
+              title: 'Bénévoles Escalade',
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            }
+          },
         },
-        ejsOptions: {
-          root: resolve(__dirname),
-        }
-      },
+        {
+          entry: 'src/js/admin.js',
+          filename: 'admin.html',
+          template: 'admin.html',
+          injectOptions: {
+            data: {
+              title: 'Administration - Bénévoles Escalade',
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            }
+          },
+        },
+      ],
     }),
   ],
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        admin: resolve(__dirname, 'admin.html'),
+      },
+    },
   }
 })
