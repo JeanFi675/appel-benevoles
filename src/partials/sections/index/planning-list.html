@@ -102,12 +102,12 @@
                             <!-- Actions -->
                             <div class="flex flex-col sm:flex-row gap-4 mt-6">
                                 <!-- Si l'utilisateur a des profils, on affiche un bouton par profil -->
-                                <div x-show="profiles.length > 0" class="flex flex-col gap-2 w-full">
+                                <div x-show="profiles.length > 0" class="flex flex-wrap gap-3">
                                     <template x-for="profile in profiles" :key="profile.id">
                                         <button @click="isProfileRegistered(poste.poste_id, profile.id) 
                                                 ? unregister(poste.poste_id, profile.id) 
                                                 : register(poste.poste_id, profile.id)"
-                                            class="brutal-btn w-full py-3 text-lg shadow-brutal-sm transition-all active:scale-95"
+                                            class="brutal-btn px-6 py-2 font-bold shadow-brutal-sm transition-all active:scale-95"
                                             :class="isProfileRegistered(poste.poste_id, profile.id) 
                                                 ? 'bg-red-500 text-white border-red-700' 
                                                 : 'bg-brutal-ice text-brutal-black'">
