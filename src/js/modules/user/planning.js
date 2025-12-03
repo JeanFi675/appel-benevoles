@@ -70,6 +70,7 @@ export const PlanningModule = {
     toggleReferentView() {
         this.showReferentView = !this.showReferentView;
         if (this.showReferentView) {
+            this.showMyInscriptions = false;
             this.loadReferentInscriptions();
         }
     },

@@ -23,17 +23,17 @@
             </button>
 
             <!-- Mobile: Toggle My Inscriptions (Acts as "Vue planning" for mobile) -->
-            <button @click="showMyInscriptions = !showMyInscriptions"
+            <button @click="showMyInscriptions = !showMyInscriptions; if(showMyInscriptions) showReferentView = false"
                 class="md:hidden brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
                 :class="showMyInscriptions ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
-                <span x-text="showMyInscriptions ? '📋 Revenir aux inscriptions' : '✅ Mes inscriptions'"></span>
+                <span x-text="showMyInscriptions ? '📋 Revenir à mes inscriptions' : '✅ Mes inscriptions'"></span>
             </button>
 
             <!-- Referent Button -->
             <button x-show="isReferent()" @click="toggleReferentView()"
                 class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
                 :class="showReferentView ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
-                <span x-text="showReferentView ? '📋 Retour au planning' : '👥 Liste de mes bénévoles'"></span>
+                <span x-text="showReferentView ? '📋 Revenir à mes inscriptions' : '👥 Liste de mes bénévoles'"></span>
             </button>
         </div>
     </div>
