@@ -4,7 +4,17 @@
         <h2 class="text-3xl font-black text-brutal-black">📋 Postes disponibles</h2>
 
         <!-- Filtres et Vues -->
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3 items-center">
+            <!-- Mobile: Volunteer Filter (Only in My Inscriptions view) -->
+            <div x-show="showMyInscriptions && profiles.length > 1" class="md:hidden">
+                <select x-model="selectedVolunteerId"
+                    class="brutal-input py-2 pl-3 pr-8 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm focus:outline-none focus:ring-0">
+                    <option value="">Tous les bénévoles</option>
+                    <template x-for="profile in profiles" :key="profile.id">
+                        <option :value="profile.id" x-text="profile.prenom"></option>
+                    </template>
+                </select>
+            </div>
             <!-- Desktop: Toggle Calendar/List View -->
             <button @click="toggleView()"
                 class="hidden md:inline-flex brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 items-center gap-2"
@@ -112,24 +122,46 @@
                                         </div>
                                     </div>
 
-                                    <!-- Liste des bénévoles inscrits (Global) -->
-                                    <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0"
-                                        class="mb-4">
-                                        <p class="font-bold mb-2">Bénévoles inscrits :</p>
-                                        <div class="flex flex-wrap gap-2">
-                                            <template x-for="benevole in poste.liste_benevoles" :key="benevole">
-                                                <span
-                                                    class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
-                                                    <span x-text="benevole"></span>
-                                                </span>
-                                            </template>
-                                        </div>
+                                    <!-- Liste des bénévoles inscrits (Global ou Perso) -->
+                                    <div class="mb-4">
+                                        <!-- Cas 1: Vue "Mes inscriptions" -> Afficher uniquement mes profils inscrits -->
+                                        <template x-if="showMyInscriptions">
+                                            <div x-show="getRegisteredProfiles(poste.poste_id).length > 0">
+                                                <p class="font-bold mb-2">Vos inscrits :</p>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <template x-for="profile in getRegisteredProfiles(poste.poste_id)"
+                                                        :key="profile.id">
+                                                        <span
+                                                            class="px-3 py-1 bg-green-600 text-white font-bold text-sm border-2 border-green-800">
+                                                            <span x-text="profile.prenom"></span>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Cas 2: Vue normale -> Afficher tous les inscrits (anonymisés ou non selon logique backend) -->
+                                        <template x-if="!showMyInscriptions">
+                                            <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0">
+                                                <p class="font-bold mb-2">Bénévoles inscrits :</p>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <template x-for="benevole in poste.liste_benevoles" :key="benevole">
+                                                        <span
+                                                            class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
+                                                            <span x-text="benevole"></span>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
 
                                     <!-- Actions -->
                                     <div class="flex flex-col sm:flex-row gap-4 mt-6">
                                         <!-- Si l'utilisateur a des profils, on affiche un bouton par profil -->
-                                        <div x-show="profiles.length > 0" class="flex flex-wrap gap-3">
+                                        <!-- Si l'utilisateur a des profils, on affiche un bouton par profil -->
+                                        <div x-show="profiles.length > 0" class="flex flex-wrap gap-3"
+                                            :class="{'hidden md:flex': showMyInscriptions}">
                                             <template x-for="profile in profiles" :key="profile.id">
                                                 <div class="inline-block">
                                                     <!-- Bouton normal (Inscrire / Désinscrire) -->

@@ -10,6 +10,7 @@ export const PlanningModule = {
     userInscriptions: [],
     showMyInscriptions: false,
     showOnlyAvailable: false,
+    selectedVolunteerId: '', // For filtering in "Mes inscriptions" view
     selectedPosteForRegistration: null,
     viewMode: 'list', // 'list' or 'week'
     calendarPage: 0,
@@ -328,6 +329,16 @@ export const PlanningModule = {
     },
 
     /**
+     * Returns a list of the user's profiles that are registered for a specific poste.
+     * @param {string} posteId - The ID of the poste.
+     * @returns {object[]} Array of profile objects.
+     */
+    getRegisteredProfiles(posteId) {
+        if (!this.profiles) return [];
+        return this.profiles.filter(profile => this.isProfileRegistered(posteId, profile.id));
+    },
+
+    /**
      * Checks for time conflicts for a profile.
      * @param {object} poste - The poste to check against.
      * @param {string} [profileId=null] - Optional profile ID to check specific conflicts.
@@ -364,7 +375,13 @@ export const PlanningModule = {
             }
 
             if (this.showMyInscriptions) {
-                if (!this.isUserRegistered(poste.poste_id)) return false;
+                // If a specific volunteer is selected, filter for their registrations
+                if (this.selectedVolunteerId) {
+                    if (!this.isProfileRegistered(poste.poste_id, this.selectedVolunteerId)) return false;
+                } else {
+                    // Otherwise show all posts where ANY of the user's profiles is registered
+                    if (!this.isUserRegistered(poste.poste_id)) return false;
+                }
             }
 
             return true;
