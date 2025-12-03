@@ -223,6 +223,41 @@ export const PlanningModule = {
     async register(posteId, benevoleId) {
         if (!this.user || !benevoleId) return;
 
+        // 1. Find the target poste
+        const targetPoste = this.postes.find(p => p.poste_id === posteId);
+        if (!targetPoste) {
+            this.showToast('❌ Poste introuvable', 'error');
+            return;
+        }
+
+        // 2. Check conditions for warning
+        // Condition A: Target poste has reached minimum
+        if (targetPoste.inscrits_actuels >= targetPoste.nb_min) {
+
+            // Condition B: Are there other postes in the same time slot that are UNDER minimum?
+            const hasUnderfilledPostes = this.postes.some(other => {
+                // Ignore self
+                if (other.poste_id === targetPoste.poste_id) return false;
+
+                // Check time slot match (exact match for now)
+                const sameStart = other.periode_debut === targetPoste.periode_debut;
+                const sameEnd = other.periode_fin === targetPoste.periode_fin;
+
+                if (!sameStart || !sameEnd) return false;
+
+                // Check if under minimum
+                return other.inscrits_actuels < other.nb_min;
+            });
+
+            if (hasUnderfilledPostes) {
+                const confirmed = await this.askConfirm(
+                    "Le nombre minimum de bénévoles pour ce poste est déjà atteint, alors que d'autres postes sur ce créneau horaire ont encore besoin de monde. Êtes-vous sûr de vouloir maintenir ce choix ?",
+                    "Attention : Besoins prioritaires"
+                );
+                if (!confirmed) return;
+            }
+        }
+
         this.loading = true;
         try {
             const { error } = await ApiService.insert('inscriptions', {
