@@ -12,6 +12,10 @@ export const PlanningModule = {
     showOnlyAvailable: false,
     selectedVolunteerId: '', // For filtering in "Mes inscriptions" view
     selectedPosteForRegistration: null,
+
+    // Referent View State
+    showReferentView: false,
+    referentInscriptions: [],
     viewMode: 'list', // 'list' or 'week'
     calendarPage: 0,
     itemsPerPage: 4,
@@ -60,6 +64,14 @@ export const PlanningModule = {
     toggleView() {
         this.viewMode = this.viewMode === 'list' ? 'week' : 'list';
         this.calendarPage = 0;
+        this.showReferentView = false; // Reset referent view when toggling calendar
+    },
+
+    toggleReferentView() {
+        this.showReferentView = !this.showReferentView;
+        if (this.showReferentView) {
+            this.loadReferentInscriptions();
+        }
     },
 
     /**
@@ -199,6 +211,123 @@ export const PlanningModule = {
         } catch (error) {
             console.error('Erreur chargement inscriptions:', error);
         }
+    },
+
+    /**
+     * Checks if the current user is a referent for any loaded poste.
+     */
+    isReferent() {
+        if (!this.user || !this.postes.length) return false;
+        return this.postes.some(p => p.referent_id === this.user.id);
+    },
+
+    /**
+     * Loads inscriptions for postes where the current user is referent.
+     */
+    async loadReferentInscriptions() {
+        if (!this.user) return;
+
+        // 1. Get all poste IDs where user is referent
+        const myPosteIds = this.postes
+            .filter(p => p.referent_id === this.user.id)
+            .map(p => p.poste_id);
+
+        if (myPosteIds.length === 0) {
+            this.referentInscriptions = [];
+            return;
+        }
+
+        this.loading = true;
+        try {
+            // 2. Fetch inscriptions for these postes
+            // We need benevoles details (now allowed by RLS) and postes details
+            // Re-implementing fetch with 'in' support using supabase directly
+            const { data: inscriptions, error: err } = await import('../../config.js').then(({ supabase }) =>
+                supabase
+                    .from('inscriptions')
+                    .select('*, benevoles(*), postes(*)')
+                    .in('poste_id', myPosteIds)
+            );
+
+            if (err) throw err;
+            this.referentInscriptions = inscriptions || [];
+        } catch (error) {
+            console.error('Erreur chargement inscriptions référent:', error);
+            this.showToast('❌ Erreur chargement bénévoles: ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Groups referent inscriptions by Period -> Poste -> Volunteers
+     */
+    getReferentViewData() {
+        const groups = {};
+
+        this.referentInscriptions.forEach(insc => {
+            if (!insc.postes || !insc.benevoles) return;
+
+            const posteId = insc.postes.id;
+
+            // Find the full poste details from the loaded public_planning (this.postes)
+            // to get the correct period name and order
+            const publicPoste = this.postes.find(p => p.poste_id === posteId);
+
+            const periode = publicPoste ? publicPoste.periode : 'Autre';
+            const periodeOrdre = publicPoste ? (publicPoste.periode_ordre || 0) : 999;
+
+            if (!groups[periode]) {
+                groups[periode] = {
+                    name: periode,
+                    order: periodeOrdre,
+                    postes: {}
+                };
+            }
+
+            if (!groups[periode].postes[posteId]) {
+                groups[periode].postes[posteId] = {
+                    ...insc.postes, // Base info from inscription join
+                    titre: publicPoste ? publicPoste.titre : insc.postes.titre, // Prefer public info
+                    periode_debut: publicPoste ? publicPoste.periode_debut : insc.postes.periode_debut,
+                    periode_fin: publicPoste ? publicPoste.periode_fin : insc.postes.periode_fin,
+                    nb_min: publicPoste ? publicPoste.nb_min : insc.postes.nb_min,
+                    nb_max: publicPoste ? publicPoste.nb_max : insc.postes.nb_max,
+                    inscrits_actuels: publicPoste ? publicPoste.inscrits_actuels : 0,
+                    volunteers: []
+                };
+            }
+
+            groups[periode].postes[posteId].volunteers.push(insc.benevoles);
+        });
+
+        // Convert to array and sort
+        return Object.values(groups)
+            .sort((a, b) => a.order - b.order)
+            .map(group => {
+                const sortedPostes = Object.values(group.postes).sort((a, b) => {
+                    return new Date(a.periode_debut) - new Date(b.periode_debut);
+                });
+
+                // Sort volunteers in each poste
+                sortedPostes.forEach(poste => {
+                    poste.volunteers.sort((a, b) => {
+                        const prenomA = (a.prenom || '').toLowerCase();
+                        const prenomB = (b.prenom || '').toLowerCase();
+                        if (prenomA < prenomB) return -1;
+                        if (prenomA > prenomB) return 1;
+
+                        const nomA = (a.nom || '').toLowerCase();
+                        const nomB = (b.nom || '').toLowerCase();
+                        return nomA.localeCompare(nomB);
+                    });
+                });
+
+                return {
+                    name: group.name,
+                    postes: sortedPostes
+                };
+            });
     },
 
     /**
