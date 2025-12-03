@@ -134,7 +134,7 @@
                                                 <div class="inline-block">
                                                     <!-- Bouton normal (Inscrire / Désinscrire) -->
                                                     <button
-                                                        x-show="isProfileRegistered(poste.poste_id, profile.id) || !hasTimeConflict(poste, profile.id)"
+                                                        x-show="isProfileRegistered(poste.poste_id, profile.id) || (!hasTimeConflict(poste, profile.id) && poste.inscrits_actuels < poste.nb_max)"
                                                         @click="isProfileRegistered(poste.poste_id, profile.id) 
                                                     ? unregister(poste.poste_id, profile.id) 
                                                     : register(poste.poste_id, profile.id)"
@@ -156,6 +156,15 @@
                                                         class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
                                                         <span class="line-through" x-text="profile.prenom"></span>
                                                         <span class="text-[10px]">Créneau pris</span>
+                                                    </button>
+
+                                                    <!-- Bouton Complet -->
+                                                    <button
+                                                        x-show="!isProfileRegistered(poste.poste_id, profile.id) && !hasTimeConflict(poste, profile.id) && poste.inscrits_actuels >= poste.nb_max"
+                                                        disabled
+                                                        class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
+                                                        <span x-text="profile.prenom"></span>
+                                                        <span class="text-[10px]">Créneau complet</span>
                                                     </button>
                                                 </div>
                                             </template>
