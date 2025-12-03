@@ -5,17 +5,18 @@
 
         <!-- Filtres et Vues -->
         <div class="flex flex-wrap gap-3">
+            <!-- Desktop: Toggle Calendar/List View -->
             <button @click="toggleView()"
                 class="hidden md:inline-flex brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 items-center gap-2"
                 :class="viewMode === 'week' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
-                <span x-text="viewMode === 'list' ? '📅 Vue planning' : '📋 Vue inscriptions'"></span>
+                <span x-text="viewMode === 'list' ? '✅ Mes inscriptions' : '📋 Revenir aux inscriptions'"></span>
             </button>
 
+            <!-- Mobile: Toggle My Inscriptions (Acts as "Vue planning" for mobile) -->
             <button @click="showMyInscriptions = !showMyInscriptions"
-                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
-                :class="showMyInscriptions ? 'bg-brutal-black text-brutal-white' : 'bg-white text-brutal-black'">
-                <span x-text="showMyInscriptions ? '✅' : '⬜'"></span>
-                <span>Mes inscriptions</span>
+                class="md:hidden brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
+                :class="showMyInscriptions ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
+                <span x-text="showMyInscriptions ? '📋 Revenir aux inscriptions' : '✅ Mes inscriptions'"></span>
             </button>
         </div>
     </div>
