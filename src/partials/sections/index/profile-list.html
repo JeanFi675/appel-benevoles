@@ -1,10 +1,10 @@
 <!-- Section Gestion Profils -->
-<div x-show="user && (profiles.length === 0 || showProfileSection)" class="brutal-card bg-brutal-white p-8 mb-8">
+<div x-show="user && (profiles.length === 0 || showProfileSection)" class="brutal-card bg-brutal-white p-4 mb-6">
 
     <!-- VUE LISTE -->
     <div x-show="!isEditingProfile">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-black">👤 Mes Bénévoles</h2>
+            <h2 class="text-2xl font-black">👤 Mes Bénévoles</h2>
             <button @click="createProfile()" class="brutal-btn bg-brutal-ice px-4 py-2 shadow-brutal-sm text-sm">
                 + Ajouter
             </button>
@@ -45,32 +45,32 @@
 
     <!-- VUE FORMULAIRE (Création / Edition) -->
     <div x-show="isEditingProfile">
-        <h2 class="text-3xl font-black mb-6" x-text="profileForm.id ? 'Modifier le profil' : 'Nouveau bénévole'"></h2>
+        <h2 class="text-2xl font-black mb-4" x-text="profileForm.id ? 'Modifier le profil' : 'Nouveau bénévole'"></h2>
 
         <form @submit.prevent="saveProfile()">
             <div class="grid md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block font-bold mb-2">Prénom *</label>
-                    <input type="text" x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-3"
+                    <input type="text" x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-2"
                         placeholder="Jean" />
                 </div>
 
                 <div>
                     <label class="block font-bold mb-2">Nom *</label>
-                    <input type="text" x-model="profileForm.nom" required class="brutal-input w-full px-4 py-3"
+                    <input type="text" x-model="profileForm.nom" required class="brutal-input w-full px-4 py-2"
                         placeholder="Dupont" />
                 </div>
             </div>
 
             <div class="mb-4">
                 <label class="block font-bold mb-2">Téléphone *</label>
-                <input type="tel" x-model="profileForm.telephone" class="brutal-input w-full px-4 py-3"
+                <input type="tel" x-model="profileForm.telephone" class="brutal-input w-full px-4 py-2"
                     placeholder="06 12 34 56 78" />
             </div>
 
             <div class="mb-6">
                 <label class="block font-bold mb-2">Taille T-shirt *</label>
-                <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-3 font-bold">
+                <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-2 font-bold">
                     <option value="">-- Sélectionnez --</option>
                     <option value="XS">XS</option>
                     <option value="S">S</option>
@@ -83,13 +83,13 @@
 
             <div class="flex flex-col md:flex-row gap-4">
                 <button type="submit" :disabled="loading"
-                    class="brutal-btn bg-brutal-ice w-full py-4 text-xl shadow-brutal">
+                    class="brutal-btn bg-brutal-ice w-full py-2 text-lg shadow-brutal">
                     <span x-show="!loading">✅ Enregistrer</span>
                     <span x-show="loading">⏳ Enregistrement...</span>
                 </button>
 
                 <button type="button" @click="cancelEdit()"
-                    class="brutal-btn bg-gray-200 text-black w-full md:w-auto py-4 text-xl shadow-brutal-sm">
+                    class="brutal-btn bg-gray-200 text-black w-full md:w-auto py-2 text-lg shadow-brutal-sm">
                     Annuler
                 </button>
             </div>

@@ -1,7 +1,7 @@
 <!-- Liste des Postes -->
 <div x-show="profiles.length > 0 && !showProfileSection">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <h2 class="text-4xl font-black text-brutal-black">📋 Postes disponibles</h2>
+        <h2 class="text-3xl font-black text-brutal-black">📋 Postes disponibles</h2>
 
         <!-- Filtres -->
         <div class="flex flex-wrap gap-3">
@@ -19,9 +19,9 @@
         <div class="mb-12" x-data="{ open: true }">
             <!-- Period Header with Neo-Brutalist Style -->
             <div @click="open = !open"
-                class="brutal-card bg-brutal-black text-brutal-white p-6 mb-6 cursor-pointer hover:bg-gray-900 transition-colors flex justify-between items-center select-none">
+                class="brutal-card bg-brutal-black text-brutal-white p-4 mb-4 cursor-pointer hover:bg-gray-900 transition-colors flex justify-between items-center select-none">
                 <div>
-                    <h3 class="text-3xl font-black uppercase tracking-wide" x-text="group.name"></h3>
+                    <h3 class="text-2xl font-black uppercase tracking-wide" x-text="group.name"></h3>
                     <div class="mt-2 flex items-center gap-4">
                         <span class="font-bold text-lg">
                             📊 <span x-text="group.postes.length"></span> poste<span
@@ -43,13 +43,13 @@
                 <template x-for="poste in group.postes" :key="poste.poste_id">
                     <div>
                         <!-- VUE NORMALE -->
-                        <div class="brutal-card p-6"
+                        <div class="brutal-card p-4"
                             :class="isUserRegistered(poste.poste_id) ? 'bg-green-50' : 'bg-brutal-white'">
 
                             <!-- Titre, Horaires et Référent -->
                             <div class="mb-4 flex flex-col md:flex-row md:items-center md:gap-6">
-                                <h4 class="text-2xl font-black" x-text="poste.titre"></h4>
-                                <p class="text-lg font-bold text-gray-700">
+                                <h4 class="text-xl font-black" x-text="poste.titre"></h4>
+                                <p class="text-base font-bold text-gray-700">
                                     📅 <span x-text="formatDate(poste.periode_debut)"></span>
                                     -
                                     <span x-text="formatTime(poste.periode_debut)"></span>
@@ -65,7 +65,7 @@
                             </div>
 
                             <!-- Description -->
-                            <div x-show="poste.description" class="mb-4 p-4 bg-gray-100 border-3 border-brutal-black">
+                            <div x-show="poste.description" class="mb-4 p-3 bg-gray-100 border-2 border-brutal-black">
                                 <p class="font-bold" x-text="poste.description"></p>
                             </div>
 

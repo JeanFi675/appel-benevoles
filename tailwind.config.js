@@ -17,9 +17,9 @@ export default {
                 'heading': ['Inter', 'sans-serif'],
             },
             boxShadow: {
-                'brutal': '6px 6px 0px #000000',
-                'brutal-sm': '4px 4px 0px #000000',
-                'brutal-hover': '3px 3px 0px #000000',
+                'brutal': '4px 4px 0px #000000',
+                'brutal-sm': '2px 2px 0px #000000',
+                'brutal-hover': '1px 1px 0px #000000',
             }
         },
     },

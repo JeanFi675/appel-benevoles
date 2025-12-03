@@ -7,7 +7,12 @@
     font-family: 'Space Grotesk', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Inter', sans-serif;
   }
 
@@ -18,15 +23,15 @@
 
 @layer components {
   .brutal-btn {
-    @apply border-4 border-brutal-black font-bold transition-all duration-100 ease-out;
+    @apply border-2 border-brutal-black font-bold transition-all duration-100 ease-out;
   }
 
   .brutal-btn:hover:not(:disabled) {
-    @apply shadow-brutal translate-x-[3px] translate-y-[3px];
+    @apply shadow-brutal translate-x-[2px] translate-y-[2px];
   }
 
   .brutal-btn:active:not(:disabled) {
-    @apply shadow-[1px_1px_0px_#000000] translate-x-[5px] translate-y-[5px];
+    @apply shadow-[1px_1px_0px_#000000] translate-x-[3px] translate-y-[3px];
   }
 
   .brutal-btn:disabled {
@@ -34,23 +39,22 @@
   }
 
   .brutal-card {
-    @apply border-4 border-brutal-black shadow-brutal;
+    @apply border-2 border-brutal-black shadow-brutal;
   }
 
   .brutal-input {
-    @apply border-4 border-brutal-black font-semibold focus:outline-none focus:ring-4 focus:ring-brutal-ice;
-    /* Note: Adjusted border width to match design system consistency if needed, kept 3px in original but 4px fits brutal theme well. Sticking to original 3px if preferred or standardizing. Let's use 3px to match original. */
-    border-width: 3px;
+    @apply border-2 border-brutal-black font-semibold focus:outline-none focus:ring-2 focus:ring-brutal-ice;
+    border-width: 2px;
   }
-  
+
   .brutal-input:focus {
-     box-shadow: 0 0 0 3px #8bbfd5;
+    box-shadow: 0 0 0 2px #8bbfd5;
   }
 
   .toast {
     animation: slideIn 0.3s ease;
   }
-  
+
   .tab-button {
     border-bottom: 4px solid transparent;
   }
@@ -66,6 +70,7 @@
     transform: translateY(-100%);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -73,8 +78,8 @@
 }
 
 .progress-bar {
-  height: 12px;
-  border: 3px solid #000000;
+  height: 10px;
+  border: 2px solid #000000;
   background: #ffffff;
 }
 
