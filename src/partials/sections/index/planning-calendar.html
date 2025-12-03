@@ -51,22 +51,29 @@
 
                                     <!-- Postes List -->
                                     <template x-for="poste in pData.postes" :key="poste.poste_id">
-                                        <div class="border-2 border-brutal-black p-2 shadow-brutal-sm hover:shadow-brutal transition-all cursor-pointer bg-green-50 overflow-hidden"
+                                        <div class="border-2 border-brutal-black p-2 shadow-brutal-sm hover:shadow-brutal transition-all cursor-pointer bg-green-50 overflow-hidden flex flex-col gap-1"
                                             :style="getPosteStyle(poste)" @click="openRegistrationModal(poste)">
 
-                                            <!-- Time -->
+                                            <!-- 1. Volunteer Name -->
                                             <div
-                                                class="text-xs font-bold bg-white inline-block px-1 py-0.5 border border-brutal-black mb-1">
+                                                class="text-xs font-bold text-brutal-black bg-brutal-ice inline-block px-1 border border-brutal-black self-start">
+                                                <span x-text="pData.profile.prenom"></span>
+                                            </div>
+
+                                            <!-- 2. Time -->
+                                            <div
+                                                class="text-xs font-bold bg-white inline-block px-1 py-0.5 border border-brutal-black self-start">
                                                 <span x-text="formatTime(poste.periode_debut)"></span> - <span
                                                     x-text="formatTime(poste.periode_fin)"></span>
                                             </div>
 
-                                            <!-- Title -->
-                                            <h4 class="font-bold text-sm leading-tight mb-1 truncate"
-                                                x-text="poste.titre"></h4>
+                                            <!-- 3. Title -->
+                                            <h4 class="font-bold text-sm leading-tight truncate" x-text="poste.titre">
+                                            </h4>
 
-                                            <!-- Referent (Small) -->
-                                            <div x-show="poste.referent_nom" class="text-xs text-gray-600 truncate">
+                                            <!-- 4. Referent (Small) -->
+                                            <div x-show="poste.referent_nom"
+                                                class="text-xs text-gray-600 truncate mt-auto">
                                                 👤 <span x-text="poste.referent_nom"></span>
                                             </div>
                                         </div>

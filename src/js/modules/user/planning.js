@@ -14,7 +14,7 @@ export const PlanningModule = {
     viewMode: 'list', // 'list' or 'week'
     calendarPage: 0,
     itemsPerPage: 4,
-    PIXELS_PER_HOUR: 60,
+    PIXELS_PER_HOUR: 35,
     START_HOUR: 6, // 06:00
     END_HOUR: 28, // 04:00 next day (24 + 4)
 
