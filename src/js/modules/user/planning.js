@@ -11,10 +11,121 @@ export const PlanningModule = {
     showMyInscriptions: false,
     showOnlyAvailable: false,
     selectedPosteForRegistration: null,
+    viewMode: 'list', // 'list' or 'week'
+    calendarPage: 0,
+    itemsPerPage: 4,
 
     // Expose utils to template
     formatDate,
     formatTime,
+
+    toggleView() {
+        this.viewMode = this.viewMode === 'list' ? 'week' : 'list';
+        this.calendarPage = 0;
+    },
+
+    /**
+     * Returns unique referents from the currently filtered postes.
+     */
+    getReferentsList() {
+        const referents = new Map();
+        this.filteredPostes().forEach(poste => {
+            if (poste.referent_id && poste.referent_nom) {
+                if (!referents.has(poste.referent_id)) {
+                    referents.set(poste.referent_id, {
+                        id: poste.referent_id,
+                        nom: poste.referent_nom,
+                        email: poste.referent_email,
+                        telephone: poste.referent_telephone
+                    });
+                }
+            }
+        });
+        return Array.from(referents.values());
+    },
+
+    /**
+     * Helper to get all unique active dates based on current filters.
+     */
+    _getSortedActiveDates() {
+        const sourcePostes = this.filteredPostes();
+        if (sourcePostes.length === 0) return [];
+
+        const uniqueDates = new Set();
+        sourcePostes.forEach(p => {
+            const date = new Date(p.periode_debut);
+            date.setHours(0, 0, 0, 0);
+            uniqueDates.add(date.getTime());
+        });
+
+        return Array.from(uniqueDates).sort((a, b) => a - b).map(time => new Date(time));
+    },
+
+    /**
+     * Prepares data for the weekly calendar view.
+     * Groups: Day -> Profile -> Postes
+     * PAGINATED: Returns only itemsPerPage days.
+     */
+    getCalendarData() {
+        const sortedDates = this._getSortedActiveDates();
+
+        // Pagination logic
+        const start = this.calendarPage * this.itemsPerPage;
+        const visibleDates = sortedDates.slice(start, start + this.itemsPerPage);
+
+        // Use the same source as dates to ensure consistency
+        const sourcePostes = this.filteredPostes();
+
+        // Build Data Structure
+        return visibleDates.map(day => {
+            const dayStr = day.toDateString();
+
+            // For each profile, find their shifts on this day
+            const profilesData = (this.profiles || []).map(profile => {
+                const profilePostes = sourcePostes.filter(poste => {
+                    const pDate = new Date(poste.periode_debut);
+                    const isSameDay = pDate.toDateString() === dayStr;
+                    const isRegistered = this.isProfileRegistered(poste.poste_id, profile.id);
+                    return isSameDay && isRegistered;
+                });
+
+                // Sort by time
+                profilePostes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut));
+
+                return {
+                    profile: profile,
+                    postes: profilePostes
+                };
+            });
+
+            return {
+                date: day,
+                formattedDate: day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }),
+                profiles: profilesData
+            };
+        });
+    },
+
+    nextPage() {
+        if (this.hasNextPage()) {
+            this.calendarPage++;
+        }
+    },
+
+    prevPage() {
+        if (this.hasPrevPage()) {
+            this.calendarPage--;
+        }
+    },
+
+    hasNextPage() {
+        const totalDays = this._getSortedActiveDates().length;
+        return (this.calendarPage + 1) * this.itemsPerPage < totalDays;
+    },
+
+    hasPrevPage() {
+        return this.calendarPage > 0;
+    },
 
     /**
      * Loads all public planning postes.
@@ -39,26 +150,7 @@ export const PlanningModule = {
         if (!this.user) return;
 
         try {
-            const { data, error } = await ApiService.fetch('inscriptions', {
-                select: '*, postes(*)',
-                eq: { benevole_id: this.user.id } // Note: RLS handles the "managed by user" check, but here we might need a different query if we want ALL managed inscriptions. 
-                // The original code used .eq('benevole_id', this.user.id) which seems wrong if user.id is auth.uid but benevole_id is the profile id.
-                // Let's check the original code... 
-                // Original: .eq('benevole_id', this.user.id); 
-                // Wait, in the original code, `this.user` is the auth user. `benevole_id` in inscriptions refers to the `benevoles` table ID.
-                // If the user has multiple profiles, we need to fetch inscriptions for ALL of them.
-                // The original code might have been buggy or I misunderstood.
-                // Let's look at the migration: "Users can view managed inscriptions".
-                // So we should probably just select * from inscriptions and let RLS filter it?
-                // Or we need to get the list of profile IDs first.
-                // For now, let's replicate the original logic but be aware it might need fixing.
-                // Actually, let's improve it: we want all inscriptions where the benevole is managed by me.
-                // Since we don't have a complex query builder here, let's rely on RLS returning only what we are allowed to see.
-            });
-
-            // Correction: The original code did .eq('benevole_id', this.user.id). This implies the user IS the benevole.
-            // But the new system has profiles.
-            // Let's trust RLS and just fetch all inscriptions we have access to.
+            // We fetch all inscriptions. RLS ensures we only see what we are allowed to see.
             const { data: inscriptions, error: err } = await ApiService.fetch('inscriptions');
 
             if (err) throw err;

@@ -1,0 +1,123 @@
+<div x-show="viewMode === 'week'" class="animate-fade-in">
+
+    <!-- Pagination Controls -->
+    <div class="flex justify-between items-center mb-4" x-show="getCalendarData().length > 0">
+        <button @click="prevPage()" :disabled="!hasPrevPage()"
+            class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            :class="hasPrevPage() ? 'bg-brutal-ice text-brutal-black' : 'bg-gray-200 text-gray-500'">
+            ◀ Précédent
+        </button>
+
+        <span class="font-bold text-lg">
+            Page <span x-text="calendarPage + 1"></span>
+        </span>
+
+        <button @click="nextPage()" :disabled="!hasNextPage()"
+            class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            :class="hasNextPage() ? 'bg-brutal-ice text-brutal-black' : 'bg-gray-200 text-gray-500'">
+            Suivant ▶
+        </button>
+    </div>
+
+    <!-- Calendar Container -->
+    <div class="brutal-card bg-brutal-white p-4 mb-8 w-fit min-w-full">
+        <div class="flex flex-col md:flex-row min-w-full md:min-w-0 gap-4 md:gap-0">
+
+            <template x-for="day in getCalendarData()" :key="day.date.getTime()">
+                <div
+                    class="flex-1 min-w-[300px] md:min-w-0 md:border-r-2 border-brutal-black last:border-r-0 pr-2 md:px-2 first:pl-0">
+
+                    <!-- Day Header -->
+                    <div class="bg-brutal-black text-brutal-white p-2 mb-4 text-center sticky top-0 z-10">
+                        <h3 class="font-black uppercase text-lg" x-text="day.formattedDate"></h3>
+                    </div>
+
+                    <!-- Profiles Columns (Sub-columns) -->
+                    <div class="flex gap-2 h-full">
+                        <template x-for="pData in day.profiles" :key="pData.profile.id">
+                            <div class="flex-1 flex flex-col gap-3 min-w-[140px]">
+
+                                <!-- Profile Header (Only if multiple profiles) -->
+                                <div x-show="profiles.length > 1"
+                                    class="text-center mb-2 border-b-2 border-brutal-black pb-1">
+                                    <span class="font-bold text-sm bg-brutal-ice px-2 py-1 border border-brutal-black"
+                                        x-text="pData.profile.prenom"></span>
+                                </div>
+
+                                <!-- Postes List -->
+                                <template x-for="poste in pData.postes" :key="poste.poste_id">
+                                    <div class="border-2 border-brutal-black p-2 shadow-brutal-sm hover:shadow-brutal transition-all cursor-pointer bg-green-50"
+                                        @click="openRegistrationModal(poste)">
+
+                                        <!-- Time -->
+                                        <div
+                                            class="text-xs font-bold bg-white inline-block px-1 py-0.5 border border-brutal-black mb-1">
+                                            <span x-text="formatTime(poste.periode_debut)"></span> - <span
+                                                x-text="formatTime(poste.periode_fin)"></span>
+                                        </div>
+
+                                        <!-- Title -->
+                                        <h4 class="font-bold text-sm leading-tight mb-1" x-text="poste.titre"></h4>
+
+                                        <!-- Referent (Small) -->
+                                        <div x-show="poste.referent_nom" class="text-xs text-gray-600">
+                                            👤 <span x-text="poste.referent_nom"></span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Empty State for Profile on this Day -->
+                                <div x-show="pData.postes.length === 0"
+                                    class="text-center py-4 text-gray-400 italic text-xs border-2 border-dashed border-gray-300 h-full flex items-center justify-center">
+                                    Aucun poste
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Global Empty State -->
+            <div x-show="getCalendarData().length === 0" class="w-full text-center py-12">
+                <p class="text-xl font-bold text-gray-500">Aucune inscription à afficher pour cette période.</p>
+                <button @click="viewMode = 'list'"
+                    class="mt-4 brutal-btn bg-brutal-ice px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm">
+                    Voir tous les postes disponibles
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Referents List (Optional, maybe less relevant if only showing my schedule, but kept for consistency) -->
+    <!-- Only show if we have data -->
+    <div x-show="getCalendarData().length > 0" class="mb-12">
+        <h3 class="text-2xl font-black text-brutal-black mb-6">📞 Référents de vos postes</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="ref in getReferentsList()" :key="ref.id">
+                <div class="brutal-card bg-white p-4 flex flex-col gap-2">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div
+                            class="w-10 h-10 bg-brutal-black text-brutal-white rounded-full flex items-center justify-center font-bold text-lg">
+                            <span x-text="ref.nom.charAt(0)"></span>
+                        </div>
+                        <h4 class="font-black text-lg" x-text="ref.nom"></h4>
+                    </div>
+
+                    <div class="space-y-1 text-sm">
+                        <p x-show="ref.email" class="flex items-center gap-2">
+                            📧 <a :href="'mailto:' + ref.email" class="hover:underline font-bold"
+                                x-text="ref.email"></a>
+                        </p>
+                        <p x-show="ref.telephone" class="flex items-center gap-2">
+                            📱 <a :href="'tel:' + ref.telephone" class="hover:underline font-bold"
+                                x-text="ref.telephone"></a>
+                        </p>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+</div>
