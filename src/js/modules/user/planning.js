@@ -14,10 +14,47 @@ export const PlanningModule = {
     viewMode: 'list', // 'list' or 'week'
     calendarPage: 0,
     itemsPerPage: 4,
+    PIXELS_PER_HOUR: 60,
+    START_HOUR: 6, // 06:00
+    END_HOUR: 28, // 04:00 next day (24 + 4)
 
     // Expose utils to template
     formatDate,
     formatTime,
+
+    /**
+     * Calculates the style for a poste in the calendar view.
+     * @param {object} poste - The poste to position.
+     * @returns {string} The style string (top, height).
+     */
+    getPosteStyle(poste) {
+        const start = new Date(poste.periode_debut);
+        const end = new Date(poste.periode_fin);
+
+        // Calculate hours from start of day (START_HOUR)
+        let startHour = start.getHours() + (start.getMinutes() / 60);
+        let endHour = end.getHours() + (end.getMinutes() / 60);
+
+        // Handle crossing midnight
+        if (startHour < this.START_HOUR) startHour += 24;
+        if (endHour < this.START_HOUR) endHour += 24;
+        if (endHour < startHour) endHour += 24; // Should be covered by above, but safety
+
+        const top = (startHour - this.START_HOUR) * this.PIXELS_PER_HOUR;
+        const duration = endHour - startHour;
+        const height = duration * this.PIXELS_PER_HOUR;
+
+        return `top: ${top}px; height: ${height}px; position: absolute; width: 100%;`;
+    },
+
+    /**
+     * Calculates the total height of the calendar container.
+     * @returns {string} The height in pixels.
+     */
+    getCalendarHeight() {
+        const totalHours = this.END_HOUR - this.START_HOUR;
+        return (totalHours * this.PIXELS_PER_HOUR) + 'px';
+    },
 
     toggleView() {
         this.viewMode = this.viewMode === 'list' ? 'week' : 'list';

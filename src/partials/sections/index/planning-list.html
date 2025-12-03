@@ -6,7 +6,7 @@
         <!-- Filtres et Vues -->
         <div class="flex flex-wrap gap-3">
             <button @click="toggleView()"
-                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
+                class="hidden md:inline-flex brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 items-center gap-2"
                 :class="viewMode === 'week' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
                 <span x-text="viewMode === 'list' ? '📅 Vue Semaine' : '📋 Vue Liste'"></span>
             </button>

@@ -20,12 +20,13 @@
     </div>
 
     <!-- Calendar Container -->
-    <div class="brutal-card bg-brutal-white p-4 mb-8 w-fit min-w-full">
-        <div class="flex flex-col md:flex-row min-w-full md:min-w-0 gap-4 md:gap-0">
+    <div class="brutal-card bg-brutal-white p-4 mb-8 w-full overflow-x-auto">
+        <!-- Added flex-wrap and gap-6 for wrapping -->
+        <div class="flex flex-wrap gap-6">
 
             <template x-for="day in getCalendarData()" :key="day.date.getTime()">
-                <div
-                    class="flex-1 min-w-[300px] md:min-w-0 md:border-r-2 border-brutal-black last:border-r-0 pr-2 md:px-2 first:pl-0">
+                <!-- Changed min-w-fit to min-w-max to force full width expansion -->
+                <div class="flex-1 min-w-max border-2 border-brutal-black p-2">
 
                     <!-- Day Header -->
                     <div class="bg-brutal-black text-brutal-white p-2 mb-4 text-center sticky top-0 z-10">
@@ -33,9 +34,10 @@
                     </div>
 
                     <!-- Profiles Columns (Sub-columns) -->
-                    <div class="flex gap-2 h-full">
+                    <!-- Removed overflow-x-auto to prevent inner scroll -->
+                    <div class="flex gap-2 h-full pb-2">
                         <template x-for="pData in day.profiles" :key="pData.profile.id">
-                            <div class="flex-1 flex flex-col gap-3 min-w-[140px]">
+                            <div class="flex-1 flex flex-col gap-3 min-w-[180px]">
 
                                 <!-- Profile Header (Only if multiple profiles) -->
                                 <div x-show="profiles.length > 1"
@@ -44,33 +46,33 @@
                                         x-text="pData.profile.prenom"></span>
                                 </div>
 
-                                <!-- Postes List -->
-                                <template x-for="poste in pData.postes" :key="poste.poste_id">
-                                    <div class="border-2 border-brutal-black p-2 shadow-brutal-sm hover:shadow-brutal transition-all cursor-pointer bg-green-50"
-                                        @click="openRegistrationModal(poste)">
+                                <!-- Postes Container (Relative for absolute positioning) -->
+                                <div class="relative w-full" :style="'height: ' + getCalendarHeight()">
 
-                                        <!-- Time -->
-                                        <div
-                                            class="text-xs font-bold bg-white inline-block px-1 py-0.5 border border-brutal-black mb-1">
-                                            <span x-text="formatTime(poste.periode_debut)"></span> - <span
-                                                x-text="formatTime(poste.periode_fin)"></span>
+                                    <!-- Postes List -->
+                                    <template x-for="poste in pData.postes" :key="poste.poste_id">
+                                        <div class="border-2 border-brutal-black p-2 shadow-brutal-sm hover:shadow-brutal transition-all cursor-pointer bg-green-50 overflow-hidden"
+                                            :style="getPosteStyle(poste)" @click="openRegistrationModal(poste)">
+
+                                            <!-- Time -->
+                                            <div
+                                                class="text-xs font-bold bg-white inline-block px-1 py-0.5 border border-brutal-black mb-1">
+                                                <span x-text="formatTime(poste.periode_debut)"></span> - <span
+                                                    x-text="formatTime(poste.periode_fin)"></span>
+                                            </div>
+
+                                            <!-- Title -->
+                                            <h4 class="font-bold text-sm leading-tight mb-1 truncate"
+                                                x-text="poste.titre"></h4>
+
+                                            <!-- Referent (Small) -->
+                                            <div x-show="poste.referent_nom" class="text-xs text-gray-600 truncate">
+                                                👤 <span x-text="poste.referent_nom"></span>
+                                            </div>
                                         </div>
-
-                                        <!-- Title -->
-                                        <h4 class="font-bold text-sm leading-tight mb-1" x-text="poste.titre"></h4>
-
-                                        <!-- Referent (Small) -->
-                                        <div x-show="poste.referent_nom" class="text-xs text-gray-600">
-                                            👤 <span x-text="poste.referent_nom"></span>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <!-- Empty State for Profile on this Day -->
-                                <div x-show="pData.postes.length === 0"
-                                    class="text-center py-4 text-gray-400 italic text-xs border-2 border-dashed border-gray-300 h-full flex items-center justify-center">
-                                    Aucun poste
+                                    </template>
                                 </div>
+
                             </div>
                         </template>
                     </div>
