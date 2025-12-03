@@ -35,7 +35,7 @@ export const AuthService = {
         return await supabase.auth.signInWithOtp({
             email,
             options: {
-                emailRedirectTo: window.location.href
+                emailRedirectTo: window.location.origin + window.location.pathname
             }
         });
     },

@@ -118,7 +118,7 @@ export const PlanningModule = {
     async unregister(posteId, benevoleId) {
         if (!this.user || !benevoleId) return;
 
-        if (!confirm("Êtes-vous sûr de vouloir désinscrire ce bénévole ?")) return;
+        if (!await this.askConfirm("Êtes-vous sûr de vouloir désinscrire ce bénévole ?", "Désinscription")) return;
 
         this.loading = true;
         try {

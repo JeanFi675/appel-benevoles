@@ -8,6 +8,7 @@ export const ProfilesModule = {
     profiles: [],
     showProfileSection: false,
     isEditingProfile: false,
+    loading: false, // Initialize loading state
     profileForm: {
         id: null,
         prenom: '',
@@ -50,6 +51,7 @@ export const ProfilesModule = {
      * Prepares the form for creating a new profile.
      */
     createProfile() {
+        this.showProfileSection = true;
         this.profileForm = {
             id: null,
             prenom: '',
@@ -82,6 +84,11 @@ export const ProfilesModule = {
 
             if (error) throw error;
             this.profiles = data || [];
+
+            // Auto-open form if no profiles exist
+            if (this.profiles.length === 0) {
+                this.createProfile();
+            }
         } catch (error) {
             console.error('Erreur chargement profils:', error);
         }
@@ -92,6 +99,12 @@ export const ProfilesModule = {
      */
     async saveProfile() {
         if (!this.user) return;
+
+        // Manual validation to ensure loading doesn't get stuck if HTML validation fails/bypassed
+        if (!this.profileForm.prenom || !this.profileForm.nom || !this.profileForm.telephone || !this.profileForm.taille_tshirt) {
+            this.showToast('❌ Veuillez remplir tous les champs obligatoires (*)', 'error');
+            return;
+        }
 
         this.loading = true;
         try {
@@ -113,11 +126,19 @@ export const ProfilesModule = {
             if (error) throw error;
 
             this.showToast('✅ Profil enregistré !', 'success');
-            this.isEditingProfile = false;
+            this.loading = false;
 
             await this.loadProfiles();
-            // Refresh postes to update names/counts if needed
-            if (this.loadPostes) await this.loadPostes();
+
+            // Ask to add another volunteer
+            if (await this.askConfirm("Voulez-vous ajouter un autre bénévole ?", "Succès !")) {
+                this.createProfile();
+            } else {
+                // Refresh postes to update names/counts if needed
+                if (this.loadPostes) await this.loadPostes();
+                this.isEditingProfile = false;
+                this.showProfileSection = false; // Close the section to show posts
+            }
         } catch (error) {
             this.showToast('❌ Erreur : ' + error.message, 'error');
         } finally {
@@ -130,7 +151,7 @@ export const ProfilesModule = {
      * @param {string} profileId - The ID of the profile to delete.
      */
     async deleteProfile(profileId) {
-        if (!confirm("Êtes-vous sûr de vouloir supprimer ce profil ? Cette action est irréversible.")) return;
+        if (!await this.askConfirm("Êtes-vous sûr de vouloir supprimer ce profil ? Cette action est irréversible.", "Suppression")) return;
 
         this.loading = true;
         try {

@@ -14,6 +14,42 @@ export function initStore() {
         loading: false,
         toasts: [],
 
+        // Modal State
+        confirmModal: {
+            open: false,
+            title: '',
+            message: '',
+            resolve: null
+        },
+
+        /**
+         * Opens the confirmation modal and returns a promise.
+         * @param {string} message - The message to display.
+         * @param {string} [title='Confirmation'] - The title of the modal.
+         * @returns {Promise<boolean>} True if confirmed, false otherwise.
+         */
+        askConfirm(message, title = 'Confirmation') {
+            this.confirmModal.title = title;
+            this.confirmModal.message = message;
+            this.confirmModal.open = true;
+
+            return new Promise((resolve) => {
+                this.confirmModal.resolve = resolve;
+            });
+        },
+
+        /**
+         * Handles the user's choice in the confirmation modal.
+         * @param {boolean} result - The user's choice.
+         */
+        handleConfirm(result) {
+            this.confirmModal.open = false;
+            if (this.confirmModal.resolve) {
+                this.confirmModal.resolve(result);
+                this.confirmModal.resolve = null;
+            }
+        },
+
         // Modules
         ...ProfilesModule,
         ...PlanningModule,
@@ -95,6 +131,8 @@ export function initStore() {
          * Logs out the user.
          */
         async logout() {
+            if (!await this.askConfirm("Voulez-vous vraiment vous déconnecter ?", "Déconnexion")) return;
+
             try {
                 const { error } = await AuthService.signOut();
                 if (error) throw error;
@@ -104,7 +142,7 @@ export function initStore() {
                 this.resetData();
 
                 // Optional: Reload to ensure clean state
-                // window.location.reload();
+                window.location.reload();
             } catch (error) {
                 console.error('Logout error:', error);
                 this.showToast('Erreur lors de la déconnexion : ' + error.message, 'error');
@@ -119,7 +157,7 @@ export function initStore() {
          * @param {'success'|'error'} [type='success'] - The type of toast.
          */
         showToast(message, type = 'success') {
-            const id = Date.now();
+            const id = Date.now() + Math.random().toString(36).substr(2, 9);
             this.toasts.push({ id, message, type });
 
             setTimeout(() => {
