@@ -188,7 +188,10 @@ export const PlanningModule = {
 
         try {
             // We fetch all inscriptions. RLS ensures we only see what we are allowed to see.
-            const { data: inscriptions, error: err } = await ApiService.fetch('inscriptions');
+            // We need nested 'postes' data for time conflict checks.
+            const { data: inscriptions, error: err } = await ApiService.fetch('inscriptions', {
+                select: '*, postes(*)'
+            });
 
             if (err) throw err;
             this.userInscriptions = inscriptions || [];
