@@ -133,19 +133,18 @@ export function initStore() {
         async logout() {
             if (!await this.askConfirm("Voulez-vous vraiment vous déconnecter ?", "Déconnexion")) return;
 
+            // Optimistic update: Clear user state immediately
+            this.user = null;
+            this.resetData();
+
             try {
-                const { error } = await AuthService.signOut();
-                if (error) throw error;
-
-                // Manually reset state to ensure UI updates immediately
-                this.user = null;
-                this.resetData();
-
-                // Optional: Reload to ensure clean state
-                window.location.reload();
+                // Attempt to sign out from Supabase
+                await AuthService.signOut();
             } catch (error) {
-                console.error('Logout error:', error);
-                this.showToast('Erreur lors de la déconnexion : ' + error.message, 'error');
+                console.error('Logout error (ignored for UX):', error);
+            } finally {
+                // Always reload the page to ensure a clean state
+                window.location.reload();
             }
         },
 
