@@ -251,7 +251,7 @@ export const AdminModule = {
 
             // If demoted to simple volunteer, remove them from being referent on any post
             if (newRole === 'benevole') {
-                const { error: updatePostesError } = await ApiService.update('postes', { referent_id: null }, { referent_id: benevoleId });
+                const { error: updatePostesError } = await ApiService.updateMany('postes', { referent_id: null }, { referent_id: benevoleId });
                 if (updatePostesError) {
                     console.error('Error removing referent from posts:', updatePostesError);
                     this.showToast('⚠️ Rôle changé, mais erreur lors du retrait des postes.', 'warning');

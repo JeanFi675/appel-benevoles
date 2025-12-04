@@ -15,7 +15,11 @@ export const PlanningModule = {
 
     // Referent View State
     showReferentView: false,
+    showReferentView: false,
     referentInscriptions: [],
+    referentProfiles: [],
+    selectedReferentProfileId: null,
+    showReferentSelectionModal: false,
     viewMode: 'list', // 'list' or 'week'
     calendarPage: 0,
     itemsPerPage: 4,
@@ -71,8 +75,29 @@ export const PlanningModule = {
         this.showReferentView = !this.showReferentView;
         if (this.showReferentView) {
             this.showMyInscriptions = false;
-            this.loadReferentInscriptions();
+
+            // Identify which profiles are referents
+            this.referentProfiles = this.profiles.filter(profile =>
+                this.postes.some(p => p.referent_id === profile.id)
+            );
+
+            if (this.referentProfiles.length > 1) {
+                // If multiple, show modal to choose
+                this.showReferentSelectionModal = true;
+            } else if (this.referentProfiles.length === 1) {
+                // If only one, select it automatically
+                this.selectedReferentProfileId = this.referentProfiles[0].id;
+                this.loadReferentInscriptions();
+            } else {
+                this.referentInscriptions = [];
+            }
         }
+    },
+
+    selectReferent(profileId) {
+        this.selectedReferentProfileId = profileId;
+        this.showReferentSelectionModal = false;
+        this.loadReferentInscriptions();
     },
 
     /**
@@ -239,19 +264,19 @@ export const PlanningModule = {
      * Checks if the current user is a referent for any loaded poste.
      */
     isReferent() {
-        if (!this.user || !this.postes.length) return false;
-        return this.postes.some(p => p.referent_id === this.user.id);
+        if (!this.user || !this.postes.length || !this.profiles) return false;
+        return this.postes.some(p => this.profiles.some(profile => profile.id === p.referent_id));
     },
 
     /**
      * Loads inscriptions for postes where the current user is referent.
      */
     async loadReferentInscriptions() {
-        if (!this.user) return;
+        if (!this.user || !this.selectedReferentProfileId) return;
 
         // 1. Get all poste IDs where user is referent
         const myPosteIds = this.postes
-            .filter(p => p.referent_id === this.user.id)
+            .filter(p => p.referent_id === this.selectedReferentProfileId)
             .map(p => p.poste_id);
 
         if (myPosteIds.length === 0) {
@@ -259,6 +284,7 @@ export const PlanningModule = {
             return;
         }
 
+        this.referentInscriptions = [];
         this.loading = true;
         try {
             // 2. Fetch inscriptions for these postes

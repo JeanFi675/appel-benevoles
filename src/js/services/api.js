@@ -58,6 +58,23 @@ export const ApiService = {
     },
 
     /**
+     * Updates multiple records.
+     * @param {string} table - The table name.
+     * @param {object} data - The data to update.
+     * @param {object} match - The condition to match { column: value }.
+     * @returns {Promise<{ data: any[], error: object|null }>} The updated data.
+     */
+    async updateMany(table, data, match) {
+        let query = supabase.from(table).update(data);
+
+        for (const [key, value] of Object.entries(match)) {
+            query = query.eq(key, value);
+        }
+
+        return await query.select();
+    },
+
+    /**
      * Upserts a record (insert or update).
      * @param {string} table - The table name.
      * @param {object} data - The data to upsert.
