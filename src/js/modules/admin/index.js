@@ -36,17 +36,17 @@ export const AdminModule = {
     // Expose utils
     formatDateTime,
 
-    get referents() {
-        return this.benevoles.filter(b => b.role === 'referent');
+    getReferents() {
+        return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
     },
 
     /**
      * Loads all admin data.
      */
     async loadData() {
+        await this.loadBenevoles();
         await Promise.all([
             this.loadPostes(),
-            this.loadBenevoles(),
             this.loadPeriodes()
         ]);
     },
@@ -66,34 +66,23 @@ export const AdminModule = {
             // But we can do it in a loop or use a view. The original code used a loop.
             const postesWithCounts = await Promise.all(
                 (data || []).map(async (poste) => {
-                    const { data: _unused } = await ApiService.fetch('inscriptions', {
-                        eq: { poste_id: poste.id },
-                        select: '*', // We just want count, but fetch helper defaults to select *
-                        // Actually our helper doesn't support count only.
-                        // Let's just use the raw supabase client for this specific count query if needed, 
-                        // or accept fetching data. 
-                        // Optimization: create a view in SQL later. For now, keep original logic.
-                    });
-
-                    // Wait, our helper returns { data, error }. It doesn't return count.
-                    // We need to fix this or use raw supabase.
-                    // Let's import supabase directly for this specific complex query or update ApiService.
-                    // For simplicity in this refactor, let's assume we can add a count option to ApiService or just import supabase here.
-                    // I'll use the ApiService but I need to update it to support count? 
-                    // No, let's just use the raw client for this specific "count" feature to avoid over-engineering the generic service.
-                    // But I can't import supabase here easily without breaking the pattern.
-                    // Let's add a `count` method to ApiService?
-                    // Or just fetch all inscriptions and count length (inefficient but works for small data).
-                    // Given the constraint, let's fetch all inscriptions for the poste.
-
                     const { data: inscriptions } = await ApiService.fetch('inscriptions', { eq: { poste_id: poste.id } });
                     const count = inscriptions ? inscriptions.length : 0;
+
+                    let referentIdentite = '-';
+                    if (poste.referent_id) {
+                        const referent = this.benevoles.find(b => b.id === poste.referent_id);
+                        if (referent) {
+                            referentIdentite = `${referent.prenom} ${referent.nom}`;
+                        }
+                    }
 
                     return {
                         ...poste,
                         periode_nom: poste.periodes?.nom || '-',
                         periode_ordre: poste.periodes?.ordre || 999,
-                        inscrits_actuels: count
+                        inscrits_actuels: count,
+                        referent_identite: referentIdentite
                     };
                 })
             );
@@ -259,6 +248,18 @@ export const AdminModule = {
         try {
             const { error } = await ApiService.update('benevoles', { role: newRole }, { id: benevoleId });
             if (error) throw error;
+
+            // If demoted to simple volunteer, remove them from being referent on any post
+            if (newRole === 'benevole') {
+                const { error: updatePostesError } = await ApiService.update('postes', { referent_id: null }, { referent_id: benevoleId });
+                if (updatePostesError) {
+                    console.error('Error removing referent from posts:', updatePostesError);
+                    this.showToast('⚠️ Rôle changé, mais erreur lors du retrait des postes.', 'warning');
+                } else {
+                    // Refresh postes to reflect the change
+                    await this.loadPostes();
+                }
+            }
 
             const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin' };
             this.showToast(`✅ Rôle changé en ${roleNames[newRole]}`, 'success');

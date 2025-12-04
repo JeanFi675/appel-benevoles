@@ -54,7 +54,7 @@
                 <label class="block font-bold mb-2">Référent</label>
                 <select x-model="posteForm.referent_id" class="brutal-input w-full px-4 py-3 font-bold">
                     <option value="">-- Aucun référent --</option>
-                    <template x-for="benevole in referents" :key="benevole.id">
+                    <template x-for="benevole in getReferents()" :key="benevole.id">
                         <option :value="benevole.id" x-text="benevole.prenom + ' ' + benevole.nom"></option>
                     </template>
                 </select>
@@ -92,6 +92,7 @@
                         <th class="text-left py-3 px-2 font-black">Titre</th>
                         <th class="text-left py-3 px-2 font-black">Période</th>
                         <th class="text-left py-3 px-2 font-black">Horaires</th>
+                        <th class="text-left py-3 px-2 font-black">Référent</th>
                         <th class="text-left py-3 px-2 font-black">Min / Max</th>
                         <th class="text-left py-3 px-2 font-black">Inscrits</th>
                         <th class="text-left py-3 px-2 font-black">Actions</th>
@@ -106,6 +107,7 @@
                                 <span x-text="formatDateTime(poste.periode_debut)"></span><br>
                                 <span x-text="formatDateTime(poste.periode_fin)"></span>
                             </td>
+                            <td class="py-3 px-2 font-bold" x-text="poste.referent_identite"></td>
                             <td class="py-3 px-2 font-bold text-center">
                                 <span x-text="poste.nb_min"></span> / <span x-text="poste.nb_max"></span>
                             </td>
