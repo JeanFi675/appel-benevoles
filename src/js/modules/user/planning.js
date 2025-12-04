@@ -78,17 +78,38 @@ export const PlanningModule = {
     /**
      * Returns unique referents from the currently filtered postes.
      */
-    getReferentsList() {
+    getMyReferentsList() {
+        // 1. Get visible dates (same logic as getCalendarData)
+        const sortedDates = this._getSortedActiveDates();
+        const start = this.calendarPage * this.itemsPerPage;
+        const visibleDates = sortedDates.slice(start, start + this.itemsPerPage);
+        const visibleDateStrings = new Set(visibleDates.map(d => d.toDateString()));
+
         const referents = new Map();
-        this.filteredPostes().forEach(poste => {
+
+        // 2. Filter source posts: Registered AND Visible on current page
+        const myPostes = this.postes.filter(poste => {
+            const isReg = this.isUserRegistered(poste.poste_id);
+            const pDate = new Date(poste.periode_debut).toDateString();
+            const isVisible = visibleDateStrings.has(pDate);
+            return isReg && isVisible;
+        });
+
+        myPostes.forEach(poste => {
             if (poste.referent_id && poste.referent_nom) {
                 if (!referents.has(poste.referent_id)) {
                     referents.set(poste.referent_id, {
                         id: poste.referent_id,
                         nom: poste.referent_nom,
                         email: poste.referent_email,
-                        telephone: poste.referent_telephone
+                        telephone: poste.referent_telephone,
+                        posts: []
                     });
+                }
+                const ref = referents.get(poste.referent_id);
+                // Avoid duplicates if multiple slots have same title
+                if (!ref.posts.includes(poste.titre)) {
+                    ref.posts.push(poste.titre);
                 }
             }
         });
@@ -445,7 +466,9 @@ export const PlanningModule = {
      * @returns {boolean} True if registered.
      */
     isUserRegistered(posteId) {
-        return this.userInscriptions.some(i => i.poste_id == posteId);
+        if (!this.profiles || this.profiles.length === 0) return false;
+        const myProfileIds = this.profiles.map(p => p.id);
+        return this.userInscriptions.some(i => i.poste_id == posteId && myProfileIds.includes(i.benevole_id));
     },
 
     /**

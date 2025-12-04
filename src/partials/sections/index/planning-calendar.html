@@ -104,7 +104,7 @@
         <h3 class="text-2xl font-black text-brutal-black mb-6">📞 Référents de vos postes</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <template x-for="ref in getReferentsList()" :key="ref.id">
+            <template x-for="ref in getMyReferentsList()" :key="ref.id">
                 <div class="brutal-card bg-white p-4 flex flex-col gap-2">
                     <div class="flex items-center gap-3 mb-2">
                         <div
@@ -123,6 +123,16 @@
                             📱 <a :href="'tel:' + ref.telephone" class="hover:underline font-bold"
                                 x-text="ref.telephone"></a>
                         </p>
+                    </div>
+
+                    <!-- List of posts -->
+                    <div class="mt-2 pt-2 border-t-2 border-brutal-black border-dashed" x-show="ref.posts.length > 0">
+                        <p class="text-xs font-bold text-gray-500 mb-1">Concernant :</p>
+                        <ul class="list-disc list-inside text-xs font-bold text-brutal-black">
+                            <template x-for="postTitle in ref.posts">
+                                <li x-text="postTitle"></li>
+                            </template>
+                        </ul>
                     </div>
                 </div>
             </template>
