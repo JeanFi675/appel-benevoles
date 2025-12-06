@@ -16,6 +16,12 @@ export const AdminModule = {
     benevoles: [],
     periodes: [],
 
+    // Search & Modal
+    searchQuery: '',
+    selectedBenevoleInscriptions: [],
+    showInscriptionsModal: false,
+    selectedBenevoleName: '',
+
     // Forms
     editingPoste: null,
     posteForm: {
@@ -35,9 +41,51 @@ export const AdminModule = {
 
     // Expose utils
     formatDateTime,
+    formatDateTimeForInput,
 
     getReferents() {
         return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
+    },
+
+    getFilteredBenevoles() {
+        if (!this.searchQuery) return this.benevoles;
+        const lowerQuery = this.searchQuery.toLowerCase();
+        return this.benevoles.filter(b =>
+            (b.nom && b.nom.toLowerCase().includes(lowerQuery)) ||
+            (b.prenom && b.prenom.toLowerCase().includes(lowerQuery)) ||
+            (b.email && b.email.toLowerCase().includes(lowerQuery))
+        );
+    },
+
+    async viewBenevoleInscriptions(benevole) {
+        this.selectedBenevoleName = `${benevole.prenom} ${benevole.nom}`;
+        this.selectedBenevoleInscriptions = [];
+        this.showInscriptionsModal = true;
+
+        try {
+            const { data, error } = await ApiService.fetch('inscriptions', {
+                select: '*, postes(titre, periodes(nom, ordre))',
+                eq: { benevole_id: benevole.id }
+            });
+
+            if (error) throw error;
+
+            this.selectedBenevoleInscriptions = (data || []).map(i => ({
+                ...i,
+                poste_titre: i.postes?.titre || 'Poste inconnu',
+                periode_nom: i.postes?.periodes?.nom || 'Période inconnue',
+                periode_ordre: i.postes?.periodes?.ordre || 999
+            })).sort((a, b) => a.periode_ordre - b.periode_ordre);
+
+        } catch (error) {
+            this.showToast('❌ Erreur chargement inscriptions : ' + error.message, 'error');
+        }
+    },
+
+    closeInscriptionsModal() {
+        this.showInscriptionsModal = false;
+        this.selectedBenevoleInscriptions = [];
+        this.selectedBenevoleName = '';
     },
 
     /**
