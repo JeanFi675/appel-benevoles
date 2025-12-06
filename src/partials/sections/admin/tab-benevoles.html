@@ -23,85 +23,166 @@
         </div>
 
         <!-- Table -->
-        <div x-show="getFilteredBenevoles().length > 0" class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="border-b-4 border-brutal-black">
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Identité</th>
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Contact</th>
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">T-shirt</th>
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Inscriptions</th>
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Référent</th>
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Rôle</th>
-                        <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="text-brutal-black">
-                    <template x-for="benevole in getFilteredBenevoles()" :key="benevole.id">
-                        <tr class="border-b-2 border-gray-200 hover:bg-yellow-50 transition-colors group">
-                            <td class="py-4 px-4 align-middle">
+        <div x-show="getFilteredBenevoles().length > 0">
+            <!-- Mobile List -->
+            <div class="md:hidden space-y-4">
+                <template x-for="benevole in getFilteredBenevoles()" :key="benevole.id">
+                    <div class="bg-white border-2 border-brutal-black p-4 shadow-brutal-sm relative">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
                                 <div class="font-black text-lg leading-tight"
                                     x-text="benevole.prenom + ' ' + benevole.nom"></div>
-                            </td>
-                            <td class="py-4 px-4 align-middle">
-                                <div class="font-bold text-sm" x-text="benevole.email"></div>
-                                <div class="text-xs font-mono mt-1 text-gray-600"
-                                    x-text="benevole.telephone || 'Pas de tel'"></div>
-                            </td>
-                            <td class="py-4 px-4 align-middle font-bold" x-text="benevole.taille_tshirt"></td>
-                            <td class="py-4 px-4 align-middle text-center">
+                                <div class="font-bold text-sm text-gray-500" x-text="benevole.email"></div>
+                            </div>
+                            <template x-if="benevole.role === 'admin'">
                                 <span
-                                    class="inline-block w-8 h-8 leading-8 rounded-full bg-brutal-ice border-2 border-brutal-black font-black text-sm"
-                                    :class="{'bg-gray-200 text-gray-400 border-gray-400': benevole.nb_inscriptions === 0}"
+                                    class="px-2 py-1 text-xs font-black uppercase text-white bg-brutal-black border border-brutal-black">Admin</span>
+                            </template>
+                            <template x-if="benevole.role === 'referent'">
+                                <span
+                                    class="px-2 py-1 text-xs font-black uppercase text-brutal-black bg-brutal-yellow border border-brutal-black">Référent</span>
+                            </template>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
+                            <div>
+                                <span class="block text-xs font-bold text-gray-400 uppercase">Tél</span>
+                                <span class="font-bold" x-text="benevole.telephone || '-'"></span>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-bold text-gray-400 uppercase">T-shirt</span>
+                                <span class="font-bold" x-text="benevole.taille_tshirt"></span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 mb-4 border-t-2 border-dashed border-gray-200 pt-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase">Inscr.</span>
+                                <span
+                                    class="inline-block w-6 h-6 leading-6 text-center rounded-full bg-brutal-ice border border-brutal-black font-black text-xs"
                                     x-text="benevole.nb_inscriptions"></span>
-                            </td>
-                            <td class="py-4 px-4 align-middle text-center">
-                                <span x-show="benevole.nb_postes_referent > 0"
-                                    class="inline-block w-8 h-8 leading-8 rounded-full bg-brutal-yellow border-2 border-brutal-black font-black text-sm"
+                            </div>
+                            <div class="flex items-center gap-2" x-show="benevole.nb_postes_referent > 0">
+                                <span class="text-xs font-bold uppercase">Réf.</span>
+                                <span
+                                    class="inline-block w-6 h-6 leading-6 text-center rounded-full bg-brutal-yellow border border-brutal-black font-black text-xs"
                                     x-text="benevole.nb_postes_referent"></span>
-                                <span x-show="!benevole.nb_postes_referent || benevole.nb_postes_referent === 0"
-                                    class="text-gray-300 font-bold">-</span>
-                            </td>
-                            <td class="py-4 px-4 align-middle">
-                                <template x-if="benevole.role === 'admin'">
-                                    <span
-                                        class="inline-flex items-center px-3 py-1 bg-brutal-black text-brutal-white text-xs font-black uppercase tracking-wider border-2 border-brutal-black">
-                                        🔐 Admin
-                                    </span>
-                                </template>
-                                <template x-if="benevole.role !== 'admin'">
-                                    <div class="relative inline-block w-full max-w-[140px]">
-                                        <select :value="benevole.role"
-                                            @change="updateBenevoleRole(benevole.id, $event.target.value)"
-                                            class="appearance-none w-full bg-white border-2 border-brutal-black px-3 py-1 pr-8 text-sm font-bold focus:shadow-brutal-sm focus:outline-none cursor-pointer transition-shadow"
-                                            :class="{
-                                                'bg-brutal-ice': benevole.role === 'referent'
-                                            }">
-                                            <option value="benevole">👤 Bénévole</option>
-                                            <option value="referent">👔 Référent</option>
-                                        </select>
-                                        <div
-                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brutal-black">
-                                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 20 20">
-                                                <path
-                                                    d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                            </svg>
-                                        </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <template x-if="benevole.role !== 'admin'">
+                                <div class="relative w-full">
+                                    <select :value="benevole.role"
+                                        @change="updateBenevoleRole(benevole.id, $event.target.value)"
+                                        class="appearance-none w-full bg-gray-50 border-2 border-brutal-black px-3 py-2 text-sm font-bold focus:shadow-brutal-sm focus:outline-none cursor-pointer"
+                                        :class="{'bg-brutal-ice': benevole.role === 'referent'}">
+                                        <option value="benevole">👤 Bénévole</option>
+                                        <option value="referent">👔 Référent</option>
+                                    </select>
+                                    <div
+                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brutal-black">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20">
+                                            <path
+                                                d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                        </svg>
                                     </div>
-                                </template>
-                            </td>
-                            <td class="py-4 px-4 align-middle text-right">
-                                <button @click="viewBenevoleInscriptions(benevole)"
-                                    class="brutal-btn-sm bg-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-                                    title="Voir les inscriptions">
-                                    📋 <span class="hidden lg:inline ml-1 font-bold text-xs uppercase">Détails</span>
-                                </button>
-                            </td>
+                                </div>
+                            </template>
+
+                            <button @click="viewBenevoleInscriptions(benevole)"
+                                class="w-full text-center brutal-btn-sm bg-brutal-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-bold uppercase text-xs">
+                                📋 Voir détails
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b-4 border-brutal-black">
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Identité</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Contact</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">T-shirt</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Inscriptions
+                            </th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Référent</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Rôle</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-right">Actions</th>
                         </tr>
-                    </template>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody class="text-brutal-black">
+                        <template x-for="benevole in getFilteredBenevoles()" :key="benevole.id">
+                            <tr class="border-b-2 border-gray-200 hover:bg-yellow-50 transition-colors group">
+                                <td class="py-4 px-4 align-middle">
+                                    <div class="font-black text-lg leading-tight"
+                                        x-text="benevole.prenom + ' ' + benevole.nom"></div>
+                                </td>
+                                <td class="py-4 px-4 align-middle">
+                                    <div class="font-bold text-sm" x-text="benevole.email"></div>
+                                    <div class="text-xs font-mono mt-1 text-gray-600"
+                                        x-text="benevole.telephone || 'Pas de tel'"></div>
+                                </td>
+                                <td class="py-4 px-4 align-middle font-bold" x-text="benevole.taille_tshirt"></td>
+                                <td class="py-4 px-4 align-middle text-center">
+                                    <span
+                                        class="inline-block w-8 h-8 leading-8 rounded-full bg-brutal-ice border-2 border-brutal-black font-black text-sm"
+                                        :class="{'bg-gray-200 text-gray-400 border-gray-400': benevole.nb_inscriptions === 0}"
+                                        x-text="benevole.nb_inscriptions"></span>
+                                </td>
+                                <td class="py-4 px-4 align-middle text-center">
+                                    <span x-show="benevole.nb_postes_referent > 0"
+                                        class="inline-block w-8 h-8 leading-8 rounded-full bg-brutal-yellow border-2 border-brutal-black font-black text-sm"
+                                        x-text="benevole.nb_postes_referent"></span>
+                                    <span x-show="!benevole.nb_postes_referent || benevole.nb_postes_referent === 0"
+                                        class="text-gray-300 font-bold">-</span>
+                                </td>
+                                <td class="py-4 px-4 align-middle">
+                                    <template x-if="benevole.role === 'admin'">
+                                        <span
+                                            class="inline-flex items-center px-3 py-1 bg-brutal-black text-brutal-white text-xs font-black uppercase tracking-wider border-2 border-brutal-black">
+                                            🔐 Admin
+                                        </span>
+                                    </template>
+                                    <template x-if="benevole.role !== 'admin'">
+                                        <div class="relative inline-block w-full max-w-[140px]">
+                                            <select :value="benevole.role"
+                                                @change="updateBenevoleRole(benevole.id, $event.target.value)"
+                                                class="appearance-none w-full bg-white border-2 border-brutal-black px-3 py-1 pr-8 text-sm font-bold focus:shadow-brutal-sm focus:outline-none cursor-pointer transition-shadow"
+                                                :class="{
+                                                    'bg-brutal-ice': benevole.role === 'referent'
+                                                }">
+                                                <option value="benevole">👤 Bénévole</option>
+                                                <option value="referent">👔 Référent</option>
+                                            </select>
+                                            <div
+                                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brutal-black">
+                                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </td>
+                                <td class="py-4 px-4 align-middle text-right">
+                                    <button @click="viewBenevoleInscriptions(benevole)"
+                                        class="brutal-btn-sm bg-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                                        title="Voir les inscriptions">
+                                        📋 <span
+                                            class="hidden lg:inline ml-1 font-bold text-xs uppercase">Détails</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     </div>
