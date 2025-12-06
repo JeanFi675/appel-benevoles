@@ -31,7 +31,8 @@
     <div class="brutal-card bg-brutal-white p-8">
         <h2 class="text-3xl font-black mb-6">Liste des périodes</h2>
 
-        <div class="overflow-x-auto">
+        <!-- Vue Desktop (Tableau) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b-4 border-brutal-black">
@@ -65,6 +66,40 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Vue Mobile (Cartes) -->
+        <div class="md:hidden space-y-4">
+            <template x-for="periode in periodes" :key="periode.id">
+                <div class="brutal-card bg-gray-50 p-4 border-2 border-brutal-black">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase block">Nom</label>
+                            <span class="text-lg font-black" x-text="periode.nom"></span>
+                        </div>
+                        <div class="ml-4 flex flex-col items-end">
+                            <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Ordre</label>
+                            <input type="number" :value="periode.ordre"
+                                @change="updatePeriodeOrder(periode.id, $event.target.value)"
+                                class="brutal-input w-16 px-2 py-1 text-center font-bold text-sm" min="1" />
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-3 border-t-2 border-dashed border-gray-300">
+                        <div>
+                            <span class="text-xs font-bold text-gray-500 uppercase mr-2">Postes :</span>
+                            <span class="font-black bg-yellow-300 px-2 py-0.5 border-2 border-black rounded text-sm"
+                                x-text="getPostesCountForPeriode(periode.id)"></span>
+                        </div>
+
+                        <button @click="deletePeriode(periode.id)" :disabled="getPostesCountForPeriode(periode.id) > 0"
+                            class="brutal-btn px-3 py-1.5 shadow-brutal-sm text-sm flex items-center gap-1"
+                            :class="getPostesCountForPeriode(periode.id) > 0 ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-red-500 text-white'">
+                            <span>🗑️</span>
+                        </button>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <div class="mt-6 p-4 bg-yellow-100 border-3 border-brutal-black">
