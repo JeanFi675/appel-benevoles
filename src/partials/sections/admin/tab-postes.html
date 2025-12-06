@@ -85,7 +85,8 @@
     <div class="brutal-card bg-brutal-white p-8">
         <h2 class="text-3xl font-black mb-6">Liste des postes</h2>
 
-        <div class="overflow-x-auto">
+        <!-- Vue Desktop (Tableau) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b-4 border-brutal-black">
@@ -130,6 +131,62 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Vue Mobile (Cartes) -->
+        <div class="md:hidden space-y-4">
+            <template x-for="poste in postes" :key="poste.id">
+                <div class="border-2 border-brutal-black bg-gray-50 p-4 shadow-brutal-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-black text-lg" x-text="poste.titre"></h3>
+                        <span class="bg-brutal-yellow px-2 py-1 text-xs font-bold border border-brutal-black"
+                            x-text="poste.periode_nom"></span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div>
+                            <span class="font-bold block text-gray-600">Début:</span>
+                            <span x-text="formatDateTime(poste.periode_debut)"></span>
+                        </div>
+                        <div>
+                            <span class="font-bold block text-gray-600">Fin:</span>
+                            <span x-text="formatDateTime(poste.periode_fin)"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <span class="font-bold block text-gray-600 text-sm">Référent:</span>
+                        <span x-text="poste.referent_identite || 'Aucun'" class="font-medium"></span>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-white border border-gray-200 p-2 mb-4">
+                        <div class="text-center">
+                            <span class="block text-xs font-bold text-gray-500">MIN</span>
+                            <span class="font-black text-lg" x-text="poste.nb_min"></span>
+                        </div>
+                        <div class="text-center border-l border-r border-gray-200 px-4">
+                            <span class="block text-xs font-bold text-gray-500">MAX</span>
+                            <span class="font-black text-lg" x-text="poste.nb_max"></span>
+                        </div>
+                        <div class="text-center">
+                            <span class="block text-xs font-bold text-gray-500">INSCRITS</span>
+                            <span class="font-black text-lg text-brutal-blue"
+                                x-text="poste.inscrits_actuels || 0"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <button @click="editPoste(poste)"
+                            class="brutal-btn bg-brutal-ice w-full py-2 text-sm shadow-brutal-sm flex justify-center items-center gap-1">
+                            ✏️ Modifier
+                        </button>
+                        <button @click="deletePoste(poste.id)"
+                            class="brutal-btn bg-red-500 text-white w-full py-2 text-sm shadow-brutal-sm flex justify-center items-center gap-1">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 </div>
