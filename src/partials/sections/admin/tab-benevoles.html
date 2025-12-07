@@ -91,10 +91,16 @@
                                 </div>
                             </template>
 
-                            <button @click="viewBenevoleInscriptions(benevole)"
-                                class="w-full text-center brutal-btn-sm bg-brutal-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-bold uppercase text-xs">
-                                📋 Voir détails
-                            </button>
+                            <div class="flex gap-2">
+                                <button @click="viewBenevoleInscriptions(benevole)"
+                                    class="flex-1 text-center brutal-btn-sm bg-brutal-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-bold uppercase text-xs">
+                                    📋 Détails
+                                </button>
+                                <button @click="openEditBenevoleInscriptions(benevole)"
+                                    class="flex-1 text-center brutal-btn-sm bg-brutal-yellow text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-bold uppercase text-xs">
+                                    ✏️ Modifier
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -171,12 +177,19 @@
                                     </template>
                                 </td>
                                 <td class="py-4 px-4 align-middle text-right">
-                                    <button @click="viewBenevoleInscriptions(benevole)"
-                                        class="brutal-btn-sm bg-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-                                        title="Voir les inscriptions">
-                                        📋 <span
-                                            class="hidden lg:inline ml-1 font-bold text-xs uppercase">Détails</span>
-                                    </button>
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button @click="viewBenevoleInscriptions(benevole)"
+                                            class="brutal-btn-sm bg-white text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                                            title="Voir les inscriptions">
+                                            📋 <span
+                                                class="hidden lg:inline ml-1 font-bold text-xs uppercase">Détails</span>
+                                        </button>
+                                        <button @click="openEditBenevoleInscriptions(benevole)"
+                                            class="brutal-btn-sm bg-brutal-yellow text-brutal-black border-2 border-brutal-black px-3 py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                                            title="Modifier les inscriptions">
+                                            ✏️
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -187,8 +200,8 @@
 
     </div>
 
-    <!-- Modal Inscriptions -->
-    <div x-show="showInscriptionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <!-- MDOAL 1: Détails (Lecture seule) -->
+    <div x-show="showDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4"
         style="display: none;">
         <div class="absolute inset-0 bg-brutal-black opacity-80 backdrop-blur-sm" @click="closeInscriptionsModal()">
         </div>
@@ -196,7 +209,7 @@
             @click.stop>
             <div class="flex justify-between items-start mb-8">
                 <div>
-                    <h3 class="text-3xl font-black uppercase italic">Inscriptions</h3>
+                    <h3 class="text-3xl font-black uppercase italic">Détails Inscriptions</h3>
                     <p class="text-xl font-bold text-gray-600" x-text="selectedBenevoleName"></p>
                 </div>
                 <button @click="closeInscriptionsModal()"
@@ -215,8 +228,7 @@
             <template x-if="selectedBenevoleInscriptions.length > 0">
                 <div class="space-y-4">
                     <template x-for="inscription in selectedBenevoleInscriptions" :key="inscription.id">
-                        <div
-                            class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group">
+                        <div class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm">
                             <div class="flex justify-between items-start gap-4">
                                 <div class="w-full">
                                     <div class="mb-1">
@@ -224,17 +236,15 @@
                                             class="inline-block px-2 py-1 bg-brutal-ice border-2 border-brutal-black text-xs font-black uppercase tracking-wider mb-2"
                                             x-text="inscription.periode_nom"></span>
                                     </div>
-
-                                    <h4 class="font-black text-xl leading-tight group-hover:text-brutal-blue transition-colors mb-2"
-                                        x-text="inscription.poste_titre"></h4>
-
+                                    <h4 class="font-black text-xl leading-tight mb-2" x-text="inscription.poste_titre">
+                                    </h4>
                                     <div
                                         class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200 inline-block">
                                         <span>⏰</span>
                                         <span x-text="inscription.horaire"></span>
                                     </div>
                                 </div>
-                                <div class="flex flex-col items-end shrink-0">
+                                <div class="flex flex-col items-end gap-2 shrink-0">
                                     <span
                                         class="px-3 py-1 bg-white text-brutal-black border-2 border-brutal-black font-black text-xs uppercase tracking-wider">
                                         INSCRIT
@@ -249,6 +259,107 @@
             <div class="mt-8 flex justify-end">
                 <button @click="closeInscriptionsModal()"
                     class="brutal-btn bg-brutal-black text-brutal-white hover:bg-gray-800">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Modification (Edition + Ajout) -->
+    <div x-show="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="absolute inset-0 bg-brutal-black opacity-80 backdrop-blur-sm" @click="closeInscriptionsModal()">
+        </div>
+        <div class="relative bg-brutal-white border-4 border-brutal-black p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-brutal-lg"
+            @click.stop>
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h3 class="text-3xl font-black uppercase italic">Modifier Inscriptions</h3>
+                    <p class="text-xl font-bold text-gray-600" x-text="selectedBenevoleName"></p>
+                </div>
+                <button @click="closeInscriptionsModal()"
+                    class="w-10 h-10 flex items-center justify-center border-2 border-brutal-black bg-white hover:bg-brutal-red hover:text-white transition-colors font-black text-xl shadow-brutal-sm">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Formulaire d'ajout -->
+            <div class="mb-8 p-4 bg-yellow-50 border-3 border-brutal-black relative">
+                <div class="absolute -top-3 left-4 px-2 bg-yellow-50 text-sm font-black uppercase tracking-wider">
+                    Ajouter une inscription</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Période</label>
+                        <select x-model="newInscriptionForm.periode_id"
+                            class="w-full bg-white border-2 border-brutal-black p-2 font-bold text-sm focus:outline-none focus:shadow-brutal-sm">
+                            <option value="">-- Choisir une période --</option>
+                            <template x-for="p in periodes" :key="p.id">
+                                <option :value="p.id" x-text="p.nom"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Poste</label>
+                        <select x-model="newInscriptionForm.poste_id"
+                            class="w-full bg-white border-2 border-brutal-black p-2 font-bold text-sm focus:outline-none focus:shadow-brutal-sm"
+                            :disabled="!newInscriptionForm.periode_id">
+                            <option value="">-- Choisir un poste --</option>
+                            <template x-for="poste in getPostesForSelectedPeriod()" :key="poste.id">
+                                <option :value="poste.id"
+                                    x-text="poste.titre + ' (' + poste.inscrits_actuels + '/' + poste.nb_min + ')'">
+                                </option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+                <button @click="addInscription()"
+                    class="mt-4 w-full brutal-btn-sm bg-brutal-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="!newInscriptionForm.periode_id || !newInscriptionForm.poste_id">
+                    ➕ Ajouter l'inscription
+                </button>
+            </div>
+
+            <hr class="border-2 border-dashed border-gray-300 my-6">
+
+            <h4 class="font-black uppercase mb-4">Inscriptions existantes</h4>
+
+            <template x-if="selectedBenevoleInscriptions.length === 0">
+                <div class="text-center py-8">
+                    <p class="font-bold text-gray-400 uppercase">Aucune inscription pour le moment</p>
+                </div>
+            </template>
+
+            <div class="space-y-4">
+                <template x-for="inscription in selectedBenevoleInscriptions" :key="inscription.id">
+                    <div class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm transition-all group">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="w-full">
+                                <div class="mb-1">
+                                    <span
+                                        class="inline-block px-2 py-1 bg-brutal-ice border-2 border-brutal-black text-xs font-black uppercase tracking-wider mb-2"
+                                        x-text="inscription.periode_nom"></span>
+                                </div>
+                                <h4 class="font-black text-xl leading-tight mb-2" x-text="inscription.poste_titre"></h4>
+                                <div
+                                    class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200 inline-block">
+                                    <span>⏰</span>
+                                    <span x-text="inscription.horaire"></span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-2 shrink-0">
+                                <button @click.stop="deleteInscription(inscription.id)"
+                                    class="p-2 bg-white text-red-500 border-2 border-brutal-black hover:bg-red-50 hover:text-red-600 transition-colors shadow-brutal-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    title="Supprimer l'inscription">
+                                    🗑️ Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="mt-8 flex justify-end">
+                <button @click="closeInscriptionsModal()"
+                    class="brutal-btn bg-brutal-white text-brutal-black border-2 border-brutal-black hover:bg-gray-100">
                     Fermer
                 </button>
             </div>

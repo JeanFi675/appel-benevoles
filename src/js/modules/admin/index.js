@@ -19,8 +19,16 @@ export const AdminModule = {
     // Search & Modal
     searchQuery: '',
     selectedBenevoleInscriptions: [],
-    showInscriptionsModal: false,
+    showDetailsModal: false, // Read-only modal
+    showEditModal: false,    // Edit/Add modal
     selectedBenevoleName: '',
+    currentBenevole: null,
+
+    // Add Inscription Form
+    newInscriptionForm: {
+        periode_id: '',
+        poste_id: ''
+    },
 
     // Forms
     editingPoste: null,
@@ -57,15 +65,39 @@ export const AdminModule = {
         );
     },
 
+    // Computed for form
+    getPostesForSelectedPeriod() {
+        if (!this.newInscriptionForm.periode_id) return [];
+        // Filter posts by period and sort them
+        return this.postes
+            .filter(p => p.periode_id === this.newInscriptionForm.periode_id)
+            .sort((a, b) => a.titre.localeCompare(b.titre));
+    },
+
     async viewBenevoleInscriptions(benevole) {
+        this.currentBenevole = benevole;
         this.selectedBenevoleName = `${benevole.prenom} ${benevole.nom}`;
         this.selectedBenevoleInscriptions = [];
-        this.showInscriptionsModal = true;
+        this.showDetailsModal = true; // Use specific flag for read-only
+        await this.refreshBenevoleInscriptions();
+    },
+
+    async openEditBenevoleInscriptions(benevole) {
+        this.currentBenevole = benevole;
+        this.selectedBenevoleName = `${benevole.prenom} ${benevole.nom}`;
+        this.selectedBenevoleInscriptions = [];
+        this.newInscriptionForm = { periode_id: '', poste_id: '' }; // Reset form
+        this.showEditModal = true; // Use specific flag for edit
+        await this.refreshBenevoleInscriptions();
+    },
+
+    async refreshBenevoleInscriptions() {
+        if (!this.currentBenevole) return;
 
         try {
             const { data, error } = await ApiService.fetch('inscriptions', {
                 select: '*, postes(titre, periodes(nom, ordre), periode_debut, periode_fin)',
-                eq: { benevole_id: benevole.id }
+                eq: { benevole_id: this.currentBenevole.id }
             });
 
             if (error) throw error;
@@ -88,10 +120,77 @@ export const AdminModule = {
         }
     },
 
+    async deleteInscription(inscriptionId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cette inscription ?')) return;
+
+        // Optimistic UI update
+        const originalList = [...this.selectedBenevoleInscriptions];
+        this.selectedBenevoleInscriptions = this.selectedBenevoleInscriptions.filter(i => i.id !== inscriptionId);
+
+        try {
+            const { error } = await ApiService.delete('inscriptions', { id: inscriptionId });
+            if (error) throw error;
+
+            this.showToast('✅ Inscription supprimée', 'success');
+
+            // Global refresh
+            this.loadBenevoles();
+            this.loadPostes();
+
+        } catch (error) {
+            this.selectedBenevoleInscriptions = originalList;
+            this.showToast('❌ Erreur suppression : ' + error.message, 'error');
+        }
+    },
+
+    async addInscription() {
+        if (!this.newInscriptionForm.periode_id || !this.newInscriptionForm.poste_id) {
+            this.showToast('⚠️ Veuillez sélectionner une période et un poste.', 'warning');
+            return;
+        }
+
+        const poste = this.postes.find(p => p.id === this.newInscriptionForm.poste_id);
+        // Basic check, though backend might also enforce constraint
+        // Check if already registered?
+        const alreadyRegistered = this.selectedBenevoleInscriptions.some(i => i.poste_id === this.newInscriptionForm.poste_id);
+        if (alreadyRegistered) {
+            this.showToast('⚠️ Ce bénévole est déjà inscrit à ce poste.', 'warning');
+            return;
+        }
+
+        this.loading = true;
+        try {
+            const payload = {
+                benevole_id: this.currentBenevole.id,
+                poste_id: this.newInscriptionForm.poste_id
+            };
+
+            const { error } = await ApiService.insert('inscriptions', payload);
+            if (error) throw error;
+
+            this.showToast('✅ Inscription ajoutée !', 'success');
+
+            // Reset form
+            this.newInscriptionForm = { periode_id: '', poste_id: '' };
+
+            // Refresh
+            await this.refreshBenevoleInscriptions();
+            this.loadBenevoles();
+            this.loadPostes();
+
+        } catch (error) {
+            this.showToast('❌ Erreur ajout : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
     closeInscriptionsModal() {
-        this.showInscriptionsModal = false;
+        this.showDetailsModal = false;
+        this.showEditModal = false;
         this.selectedBenevoleInscriptions = [];
         this.selectedBenevoleName = '';
+        this.currentBenevole = null;
     },
 
     /**
