@@ -139,14 +139,13 @@
                         <h3 class="text-2xl font-black uppercase tracking-wide" x-text="group.name"></h3>
                         <div class="mt-2 flex items-center gap-4">
                             <span class="font-bold text-lg">
-                                📊 <span x-text="group.postes.length"></span> poste<span
-                                    x-show="group.postes.length > 1">s</span>
+                                📊 <span x-text="group.totalPostes"></span> poste<span
+                                    x-show="group.totalPostes > 1">s</span>
                             </span>
                             <span class="font-bold text-lg">
-                                👥 <span x-text="group.postes.reduce((sum, p) => sum + p.inscrits_actuels, 0)"></span> /
-                                <span x-text="group.postes.reduce((sum, p) => sum + p.nb_max, 0)"></span>
-                                inscrit<span
-                                    x-show="group.postes.reduce((sum, p) => sum + p.inscrits_actuels, 0) > 1">s</span>
+                                👥 <span x-text="group.totalInscrits"></span> /
+                                <span x-text="group.totalMax"></span>
+                                inscrit<span x-show="group.totalInscrits > 1">s</span>
                             </span>
                         </div>
                     </div>
