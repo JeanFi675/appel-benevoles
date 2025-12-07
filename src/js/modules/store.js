@@ -59,27 +59,38 @@ export function initStore() {
          * Checks session and loads initial data.
          */
         async init() {
-            // Check session
-            const { user } = await AuthService.getSession();
-            if (user) {
-                this.user = user;
-                await this.loadInitialData();
-            }
+            try {
+                // Check session safely
+                console.log('🔄 Init - Checking session...');
+                const { user } = await AuthService.getSession();
+                console.log('👤 Session User:', user);
 
-            // Listen for auth changes
-            AuthService.onAuthStateChange(async (event, session) => {
-                this.user = session?.user || null;
-
-                if (event === 'SIGNED_IN') {
-                    // Clean URL hash
-                    if (window.location.hash.includes('access_token')) {
-                        window.history.replaceState(null, '', window.location.pathname);
-                    }
+                if (user) {
+                    this.user = user;
                     await this.loadInitialData();
-                } else if (event === 'SIGNED_OUT') {
-                    this.resetData();
                 }
-            });
+
+                // Listen for auth changes
+                AuthService.onAuthStateChange(async (event, session) => {
+                    console.log('🔔 Auth Event:', event);
+
+                    this.user = session?.user || null;
+
+                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                        // Clean URL hash
+                        if (window.location.hash.includes('access_token')) {
+                            console.log('🧹 Cleaning URL hash...');
+                            window.history.replaceState(null, '', window.location.pathname);
+                        }
+                        await this.loadInitialData();
+                    } else if (event === 'SIGNED_OUT') {
+                        this.resetData();
+                    }
+                });
+            } catch (error) {
+                console.error('🚨 Error during app initialization:', error);
+                this.showToast('Erreur d\'initialisation: ' + error.message, 'error');
+            }
         },
 
         /**

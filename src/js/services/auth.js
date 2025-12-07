@@ -10,11 +10,20 @@ export const AuthService = {
      * @returns {Promise<{ session: object|null, user: object|null }>} The session and user object.
      */
     async getSession() {
-        const { data: { session } } = await supabase.auth.getSession();
-        return {
-            session,
-            user: session?.user || null
-        };
+        try {
+            const { data, error } = await supabase.auth.getSession();
+            if (error) {
+                console.error('❌ AuthService.getSession error:', error);
+                return { session: null, user: null };
+            }
+            return {
+                session: data?.session || null,
+                user: data?.session?.user || null
+            };
+        } catch (err) {
+            console.error('❌ AuthService.getSession exception:', err);
+            return { session: null, user: null };
+        }
     },
 
     /**
