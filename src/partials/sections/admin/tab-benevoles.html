@@ -216,20 +216,27 @@
                 <div class="space-y-4">
                     <template x-for="inscription in selectedBenevoleInscriptions" :key="inscription.id">
                         <div
-                            class="border-3 border-brutal-black p-5 bg-white shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group">
+                            class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group">
                             <div class="flex justify-between items-start gap-4">
-                                <div>
-                                    <h4 class="font-black text-lg leading-tight group-hover:text-brutal-blue transition-colors"
-                                        x-text="inscription.poste_titre"></h4>
-                                    <div class="flex items-center gap-2 mt-2">
+                                <div class="w-full">
+                                    <div class="mb-1">
                                         <span
-                                            class="px-2 py-0.5 bg-brutal-ice border border-brutal-black text-xs font-bold uppercase"
+                                            class="inline-block px-2 py-1 bg-brutal-ice border-2 border-brutal-black text-xs font-black uppercase tracking-wider mb-2"
                                             x-text="inscription.periode_nom"></span>
                                     </div>
+
+                                    <h4 class="font-black text-xl leading-tight group-hover:text-brutal-blue transition-colors mb-2"
+                                        x-text="inscription.poste_titre"></h4>
+
+                                    <div
+                                        class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200 inline-block">
+                                        <span>⏰</span>
+                                        <span x-text="inscription.horaire"></span>
+                                    </div>
                                 </div>
-                                <div class="flex flex-col items-end">
+                                <div class="flex flex-col items-end shrink-0">
                                     <span
-                                        class="px-3 py-1 bg-brutal-green text-brutal-black border-2 border-brutal-black font-black text-xs uppercase tracking-wider">
+                                        class="px-3 py-1 bg-white text-brutal-black border-2 border-brutal-black font-black text-xs uppercase tracking-wider">
                                         INSCRIT
                                     </span>
                                 </div>

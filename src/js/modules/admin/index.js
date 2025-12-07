@@ -1,5 +1,5 @@
 import { ApiService } from '../../services/api.js';
-import { formatDateTime, formatDateTimeForInput } from '../../utils.js';
+import { formatDateTime, formatDateTimeForInput, formatTime } from '../../utils.js';
 
 /**
  * Module for managing admin operations (Postes, Periodes, Benevoles).
@@ -64,18 +64,24 @@ export const AdminModule = {
 
         try {
             const { data, error } = await ApiService.fetch('inscriptions', {
-                select: '*, postes(titre, periodes(nom, ordre))',
+                select: '*, postes(titre, periodes(nom, ordre), periode_debut, periode_fin)',
                 eq: { benevole_id: benevole.id }
             });
 
             if (error) throw error;
 
-            this.selectedBenevoleInscriptions = (data || []).map(i => ({
-                ...i,
-                poste_titre: i.postes?.titre || 'Poste inconnu',
-                periode_nom: i.postes?.periodes?.nom || 'Période inconnue',
-                periode_ordre: i.postes?.periodes?.ordre || 999
-            })).sort((a, b) => a.periode_ordre - b.periode_ordre);
+            this.selectedBenevoleInscriptions = (data || []).map(i => {
+                const debut = i.postes?.periode_debut ? formatTime(i.postes.periode_debut) : '';
+                const fin = i.postes?.periode_fin ? formatTime(i.postes.periode_fin) : '';
+
+                return {
+                    ...i,
+                    poste_titre: i.postes?.titre || 'Poste inconnu',
+                    periode_nom: i.postes?.periodes?.nom || 'Période inconnue',
+                    periode_ordre: i.postes?.periodes?.ordre || 999,
+                    horaire: (debut && fin) ? `${debut} - ${fin}` : ''
+                };
+            }).sort((a, b) => a.periode_ordre - b.periode_ordre);
 
         } catch (error) {
             this.showToast('❌ Erreur chargement inscriptions : ' + error.message, 'error');
