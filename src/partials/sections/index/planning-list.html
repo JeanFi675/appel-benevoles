@@ -159,7 +159,7 @@
                     <template x-for="subgroup in group.subgroups" :key="subgroup.id">
                         <div class="mb-4" x-data="{ openSub: subgroup.expanded }">
                             <!-- Subgroup Header -->
-                            <div @click="openSub = !openSub"
+                            <div @click="openSub = !openSub" x-show="subgroup.title"
                                 class="flex justify-between items-center bg-gray-200 p-3 cursor-pointer select-none border-l-4 border-brutal-black hover:bg-gray-300 transition-colors mb-4">
                                 <h4 class="text-lg font-black uppercase text-brutal-black" x-text="subgroup.title"></h4>
                                 <div class="text-xl transform transition-transform duration-300"
