@@ -1,7 +1,9 @@
 <!-- Liste des Postes -->
 <div x-show="profiles.length > 0 && !showProfileSection">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <h2 class="text-3xl font-black text-brutal-black">📋 Postes disponibles</h2>
+        <h2 class="text-3xl font-black text-brutal-black"
+            x-text="showReferentView ? '👥 Liste de mes bénévoles' : ((showMyInscriptions || viewMode === 'week') ? '✅ Mes inscriptions' : '📋 Formulaires d\'inscription')">
+        </h2>
 
         <!-- Filtres et Vues -->
         <div class="flex flex-wrap gap-3 items-center">
@@ -15,28 +17,35 @@
                     </template>
                 </select>
             </div>
-            <!-- Desktop: Toggle Calendar/List View -->
-            <button @click="toggleView()"
-                class="hidden md:inline-flex brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 items-center gap-2"
-                :class="viewMode === 'week' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
-                <span x-text="viewMode === 'list' ? '✅ Mes inscriptions' : '📋 Revenir aux inscriptions'"></span>
+            <!-- BUTTONS when in MAIN PAGE (Default) -->
+            <div x-show="!showReferentView && !showMyInscriptions && viewMode === 'list'" class="flex gap-3">
+                <!-- Desktop: Go to My Inscriptions (Week View) -->
+                <button @click="toggleView()"
+                    class="hidden md:inline-flex brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 items-center gap-2 bg-brutal-ice text-brutal-black">
+                    <span>✅ Mes inscriptions</span>
+                </button>
+
+                <!-- Mobile: Go to My Inscriptions (List Filter) -->
+                <button @click="showMyInscriptions = true"
+                    class="md:hidden brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-ice text-brutal-black">
+                    <span>✅ Mes inscriptions</span>
+                </button>
+
+                <!-- Referent: Go to Referent View -->
+                <button x-show="isReferent()" @click="toggleReferentView()"
+                    class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-ice text-brutal-black">
+                    <span>👥 Liste de mes bénévoles</span>
+                </button>
+            </div>
+
+            <!-- UNIFIED BACK BUTTON (Shown in any secondary view) -->
+            <button x-show="showReferentView || showMyInscriptions || viewMode === 'week'"
+                @click="viewMode = 'list'; showMyInscriptions = false; showReferentView = false; calendarPage = 0;"
+                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-black text-brutal-white">
+                <span>📋 Revenir aux inscriptions</span>
             </button>
 
-            <!-- Mobile: Toggle My Inscriptions (Acts as "Vue planning" for mobile) -->
-            <button @click="showMyInscriptions = !showMyInscriptions; if(showMyInscriptions) showReferentView = false"
-                class="md:hidden brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
-                :class="showMyInscriptions ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
-                <span x-text="showMyInscriptions ? '📋 Revenir à mes inscriptions' : '✅ Mes inscriptions'"></span>
-            </button>
-
-            <!-- Referent Button -->
-            <button x-show="isReferent()" @click="toggleReferentView()"
-                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2"
-                :class="showReferentView ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-ice text-brutal-black'">
-                <span x-text="showReferentView ? '📋 Revenir à mes inscriptions' : '👥 Liste de mes bénévoles'"></span>
-            </button>
-
-            <!-- Switch Referent Button (Only if multiple referents) -->
+            <!-- Switch Referent Button (Only if multiple referents AND in Referent View) -->
             <button x-show="showReferentView && referentProfiles.length > 1" @click="showReferentSelectionModal = true"
                 class="brutal-btn bg-yellow-400 text-brutal-black px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2">
                 <span>🔄 Changer de référent</span>
