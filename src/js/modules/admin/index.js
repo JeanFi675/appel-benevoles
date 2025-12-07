@@ -277,6 +277,27 @@ export const AdminModule = {
         }
     },
 
+    async renamePeriode(periode) {
+        const newName = prompt("Nouveau nom de la période :", periode.nom);
+        if (newName && newName.trim() !== "" && newName !== periode.nom) {
+            await this.updatePeriodeName(periode.id, newName.trim());
+        }
+    },
+
+    async updatePeriodeName(periodeId, newName) {
+        this.loading = true;
+        try {
+            const { error } = await ApiService.update('periodes', { nom: newName }, { id: periodeId });
+            if (error) throw error;
+            this.showToast('✅ Nom de la période mis à jour', 'success');
+            await this.loadPeriodes();
+        } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
     async deletePeriode(periodeId) {
         if (!confirm('Êtes-vous sûr de vouloir supprimer cette période ?')) return;
         this.loading = true;

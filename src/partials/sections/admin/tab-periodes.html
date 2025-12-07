@@ -54,7 +54,11 @@
                             <td class="py-3 px-2 font-bold text-center">
                                 <span x-text="getPostesCountForPeriode(periode.id)"></span>
                             </td>
-                            <td class="py-3 px-2">
+                            <td class="py-3 px-2 flex gap-2">
+                                <button @click="renamePeriode(periode)"
+                                    class="brutal-btn px-4 py-2 shadow-brutal-sm text-sm bg-blue-400 text-black hover:bg-blue-300">
+                                    ✏️ Modifier
+                                </button>
                                 <button @click="deletePeriode(periode.id)"
                                     :disabled="getPostesCountForPeriode(periode.id) > 0"
                                     class="brutal-btn px-4 py-2 shadow-brutal-sm text-sm"
@@ -92,11 +96,18 @@
                                 x-text="getPostesCountForPeriode(periode.id)"></span>
                         </div>
 
-                        <button @click="deletePeriode(periode.id)" :disabled="getPostesCountForPeriode(periode.id) > 0"
-                            class="brutal-btn px-3 py-1.5 shadow-brutal-sm text-sm flex items-center gap-1"
-                            :class="getPostesCountForPeriode(periode.id) > 0 ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-red-500 text-white'">
-                            <span>🗑️</span>
-                        </button>
+                        <div class="flex gap-2">
+                            <button @click="renamePeriode(periode)"
+                                class="brutal-btn px-3 py-1.5 shadow-brutal-sm text-sm flex items-center gap-1 bg-blue-400 text-black">
+                                <span>✏️</span>
+                            </button>
+                            <button @click="deletePeriode(periode.id)"
+                                :disabled="getPostesCountForPeriode(periode.id) > 0"
+                                class="brutal-btn px-3 py-1.5 shadow-brutal-sm text-sm flex items-center gap-1"
+                                :class="getPostesCountForPeriode(periode.id) > 0 ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-red-500 text-white'">
+                                <span>🗑️</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </template>
