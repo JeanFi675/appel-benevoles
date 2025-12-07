@@ -583,10 +583,61 @@ export const PlanningModule = {
         return Object.keys(groups).map(periode => {
             const postes = groups[periode];
             const ordre = postes.length > 0 ? (postes[0].periode_ordre || 0) : 0;
+
+            // Define subgroups
+            const subgroups = [
+                {
+                    id: 'critical',
+                    title: '⚠️ Postes Prioritaires (Manque de bénévoles)',
+                    expanded: true,
+                    postes: []
+                },
+                {
+                    id: 'open',
+                    title: '✅ Inscriptions Ouvertes',
+                    expanded: true,
+                    postes: []
+                },
+                {
+                    id: 'full',
+                    title: '🔒 Postes Complets',
+                    expanded: false, // Default closed for full posts to save space
+                    postes: []
+                }
+            ];
+
+            // Distribute posts into subgroups
+            postes.forEach(poste => {
+                const min = poste.nb_min || 0;
+                const max = poste.nb_max || 0;
+                const current = poste.inscrits_actuels || 0;
+
+                if (current < min) {
+                    subgroups[0].postes.push(poste);
+                } else if (current >= max) {
+                    subgroups[2].postes.push(poste);
+                } else {
+                    subgroups[1].postes.push(poste);
+                }
+            });
+
+            // Sort posts within each subgroup by date/time
+            subgroups.forEach(subgroup => {
+                subgroup.postes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut));
+            });
+
+            // Filter out empty subgroups if necessary, or keep them to show status. 
+            // Design decision: Keep them if they have content, or meaningful to show emptiness? 
+            // Let's filter out empty ones to reduce clutter.
+            const visibleSubgroups = subgroups.filter(sg => sg.postes.length > 0);
+
             return {
                 name: periode,
-                postes: postes,
-                order: ordre
+                subgroups: visibleSubgroups,
+                order: ordre,
+                totalPostes: postes.length,
+                totalInscrits: postes.reduce((sum, p) => sum + p.inscrits_actuels, 0),
+                totalMax: postes.reduce((sum, p) => sum + p.nb_max, 0)
             };
         }).sort((a, b) => a.order - b.order);
     }
