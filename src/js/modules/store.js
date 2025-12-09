@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import { AuthService } from '../services/auth.js';
 import { ProfilesModule } from './user/profiles.js';
 import { PlanningModule } from './user/planning.js';
+import { WizardModule } from './user/wizard.js';
 
 /**
  * Initializes the central application store.
@@ -53,6 +54,7 @@ export function initStore() {
         // Modules
         ...ProfilesModule,
         ...PlanningModule,
+        ...WizardModule,
 
         /**
          * Initializes the application.
@@ -103,6 +105,8 @@ export function initStore() {
                 this.loadPostes(),
                 this.loadUserInscriptions()
             ]);
+
+            this.checkWizardAutoOpen();
         },
 
         /**
@@ -154,6 +158,14 @@ export function initStore() {
             } catch (error) {
                 console.error('Logout error (ignored for UX):', error);
             } finally {
+                // FORCE CLEANUP: Clear Supabase data from localStorage
+                // Supabase uses keys like 'sb-<project-ref>-auth-token'
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sb-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+
                 // Always reload the page to ensure a clean state
                 window.location.reload();
             }

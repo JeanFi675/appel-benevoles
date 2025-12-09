@@ -401,6 +401,11 @@ export const PlanningModule = {
     async register(posteId, benevoleId) {
         if (!this.user || !benevoleId) return;
 
+        // Redirect to Wizard logic if open
+        if (this.wizardOpen) {
+            return this.wizardRegister(posteId, benevoleId);
+        }
+
         // 1. Find the target poste
         const targetPoste = this.postes.find(p => p.poste_id === posteId);
         if (!targetPoste) {
@@ -463,6 +468,11 @@ export const PlanningModule = {
     async unregister(posteId, benevoleId) {
         if (!this.user || !benevoleId) return;
 
+        // Redirect to Wizard logic if open
+        if (this.wizardOpen) {
+            return this.wizardUnregister(posteId, benevoleId);
+        }
+
         if (!await this.askConfirm("Êtes-vous sûr de vouloir désinscrire ce bénévole ?", "Désinscription")) return;
 
         this.loading = true;
@@ -484,6 +494,35 @@ export const PlanningModule = {
         }
     },
 
+    /**
+     * Checks if a specific profile is registered for a poste.
+     * @param {string} posteId - The ID of the poste.
+     * @param {string} profileId - The ID of the profile.
+     * @returns {boolean} True if registered.
+     */
+    isProfileRegistered(posteId, profileId) {
+        if (!this.userInscriptions) return false;
+
+        // Check DB inscriptions
+        const inDb = this.userInscriptions.some(i => i.poste_id == posteId && i.benevole_id == profileId);
+
+        if (this.wizardOpen) {
+            // Check Wizard Removals (if in DB but removed)
+            if (this.wizardRemovals && this.wizardRemovals.has(`${posteId}-${profileId}`)) {
+                return false;
+            }
+
+            // Check Wizard Selections (if added in wizard)
+            if (this.wizardSelections) {
+                const inWizard = Array.from(this.wizardSelections.values())
+                    .some(sel => sel.posteId == posteId && sel.profileId == profileId);
+                if (inWizard) return true;
+            }
+        }
+
+        return inDb;
+    },
+
     // --- Helpers ---
 
     /**
@@ -494,27 +533,15 @@ export const PlanningModule = {
     isUserRegistered(posteId) {
         if (!this.profiles || this.profiles.length === 0) return false;
         const myProfileIds = this.profiles.map(p => p.id);
-        return this.userInscriptions.some(i => i.poste_id == posteId && myProfileIds.includes(i.benevole_id));
-    },
+        const inDb = this.userInscriptions.some(i => i.poste_id == posteId && myProfileIds.includes(i.benevole_id));
 
-    /**
-     * Checks if a specific profile is registered for a poste.
-     * @param {string} posteId - The ID of the poste.
-     * @param {string} profileId - The ID of the profile.
-     * @returns {boolean} True if registered.
-     */
-    isProfileRegistered(posteId, profileId) {
-        return this.userInscriptions.some(i => i.poste_id == posteId && i.benevole_id == profileId);
-    },
-
-    /**
-     * Returns a list of the user's profiles that are registered for a specific poste.
-     * @param {string} posteId - The ID of the poste.
-     * @returns {object[]} Array of profile objects.
-     */
-    getRegisteredProfiles(posteId) {
-        if (!this.profiles) return [];
-        return this.profiles.filter(profile => this.isProfileRegistered(posteId, profile.id));
+        if (this.wizardOpen && this.wizardSelections) {
+            const keyPrefix = posteId + '-';
+            // Check if ANY of my profiles is in wizard selections for this poste
+            const inWizard = Array.from(this.wizardSelections.values()).some(sel => sel.posteId == posteId);
+            return inDb || inWizard;
+        }
+        return inDb;
     },
 
     /**
@@ -524,20 +551,46 @@ export const PlanningModule = {
      * @returns {boolean} True if there is a conflict.
      */
     hasTimeConflict(poste, profileId = null) {
-        const posteDebut = new Date(poste.periode_debut);
-        const posteFin = new Date(poste.periode_fin);
+        // Check against CONFIRMED inscriptions (DB) AND Wizard Selections
+        // BUT ignore Wizard Removals
 
-        return this.userInscriptions.some(inscription => {
-            if (profileId && inscription.benevole_id !== profileId) return false;
-            if (inscription.poste_id == poste.poste_id) return false;
+        const profileInscriptions = [
+            // DB Inscriptions (excluding those marked for removal)
+            ...this.userInscriptions.filter(i =>
+                (profileId ? i.benevole_id === profileId : true) &&
+                (!this.wizardOpen || !this.wizardRemovals || !this.wizardRemovals.has(`${i.poste_id}-${i.benevole_id}`))
+            ),
+            // Wizard Selections (only if wizard is open)
+            ...(this.wizardOpen ? Array.from(this.wizardSelections.values()).filter(s => (profileId ? s.profileId === profileId : true)).map(s => ({
+                poste_id: s.posteId,
+                benevole_id: s.profileId,
+                // Mocking structure for overlap check
+                postes: {
+                    periode_debut: s.debut,
+                    periode_fin: s.fin,
+                    id: s.posteId // important for self-check exclusion
+                }
+            })) : [])
+        ];
 
-            // Ensure we have nested poste data (depends on fetch select)
-            if (!inscription.postes) return false;
+        // Current poste times
+        const start = new Date(poste.periode_debut).getTime();
+        const end = new Date(poste.periode_fin).getTime();
 
-            const inscriptionDebut = new Date(inscription.postes.periode_debut);
-            const inscriptionFin = new Date(inscription.postes.periode_fin);
+        return profileInscriptions.some(i => {
+            // If i.postes is populated
+            const p = i.postes;
+            if (!p) return false;
 
-            return (posteDebut < inscriptionFin) && (posteFin > inscriptionDebut);
+            // Ignore self
+            if (i.poste_id === poste.poste_id) return false;
+            // Also check profile match if not filtered above? (Already filtered by profileId if provided)
+            if (profileId && i.benevole_id !== profileId) return false;
+
+            const pStart = new Date(p.periode_debut).getTime();
+            const pEnd = new Date(p.periode_fin).getTime();
+
+            return (start < pEnd && end > pStart);
         });
     },
 

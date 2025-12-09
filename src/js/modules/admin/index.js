@@ -280,12 +280,17 @@ export const AdminModule = {
     async savePoste() {
         this.loading = true;
         try {
+            const payload = {
+                ...this.posteForm,
+                referent_id: this.posteForm.referent_id || null
+            };
+
             if (this.editingPoste) {
-                const { error } = await ApiService.update('postes', this.posteForm, { id: this.editingPoste.id });
+                const { error } = await ApiService.update('postes', payload, { id: this.editingPoste.id });
                 if (error) throw error;
                 this.showToast('✅ Poste modifié avec succès !', 'success');
             } else {
-                const { error } = await ApiService.insert('postes', this.posteForm);
+                const { error } = await ApiService.insert('postes', payload);
                 if (error) throw error;
                 this.showToast('✅ Poste créé avec succès !', 'success');
             }
