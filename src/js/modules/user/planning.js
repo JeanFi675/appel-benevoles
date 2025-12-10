@@ -235,9 +235,34 @@ export const PlanningModule = {
 
             if (error) throw error;
             this.postes = data || [];
+
+            // Immediately reconcile if we already have user inscriptions loaded
+            if (this.userInscriptions && this.userInscriptions.length > 0) {
+                this.reconcileLocalCounts();
+            }
         } catch (error) {
             this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
         }
+    },
+
+    /**
+     * Forces consistency between local user inscriptions and public counts.
+     * Fixes stale view issues where `inscrits_actuels` < my inscriptions.
+     */
+    reconcileLocalCounts() {
+        if (!this.postes || !this.userInscriptions) return;
+
+        this.postes.forEach(poste => {
+            // Count my VALID registrations for this poste (in DB)
+            // Use loose equality for safety
+            const myCount = this.userInscriptions.filter(i => i.poste_id == poste.poste_id).length;
+
+            // Ensure numeric comparison
+            if (Number(poste.inscrits_actuels) < myCount) {
+                console.warn(`⚠️ Fixing stale count for "${poste.titre}": ${poste.inscrits_actuels} -> ${myCount}`);
+                poste.inscrits_actuels = myCount;
+            }
+        });
     },
 
     /**
@@ -507,15 +532,14 @@ export const PlanningModule = {
         const inDb = this.userInscriptions.some(i => i.poste_id == posteId && i.benevole_id == profileId);
 
         if (this.wizardOpen) {
-            // Check Wizard Removals (if in DB but removed)
-            if (this.wizardRemovals && this.wizardRemovals.has(`${posteId}-${profileId}`)) {
+            // Check Wizard Removals (Array)
+            if (this.wizardRemovals && this.wizardRemovals.includes(`${posteId}::${profileId}`)) {
                 return false;
             }
 
-            // Check Wizard Selections (if added in wizard)
+            // Check Wizard Selections (Array)
             if (this.wizardSelections) {
-                const inWizard = Array.from(this.wizardSelections.values())
-                    .some(sel => sel.posteId == posteId && sel.profileId == profileId);
+                const inWizard = this.wizardSelections.some(sel => sel.posteId == posteId && sel.profileId == profileId);
                 if (inWizard) return true;
             }
         }
@@ -536,9 +560,8 @@ export const PlanningModule = {
         const inDb = this.userInscriptions.some(i => i.poste_id == posteId && myProfileIds.includes(i.benevole_id));
 
         if (this.wizardOpen && this.wizardSelections) {
-            const keyPrefix = posteId + '-';
-            // Check if ANY of my profiles is in wizard selections for this poste
-            const inWizard = Array.from(this.wizardSelections.values()).some(sel => sel.posteId == posteId);
+            // Check if ANY of my profiles is in wizard selections for this poste (Array check)
+            const inWizard = this.wizardSelections.some(sel => sel.posteId == posteId);
             return inDb || inWizard;
         }
         return inDb;
@@ -558,10 +581,10 @@ export const PlanningModule = {
             // DB Inscriptions (excluding those marked for removal)
             ...this.userInscriptions.filter(i =>
                 (profileId ? i.benevole_id === profileId : true) &&
-                (!this.wizardOpen || !this.wizardRemovals || !this.wizardRemovals.has(`${i.poste_id}-${i.benevole_id}`))
+                (!this.wizardOpen || !this.wizardRemovals || !this.wizardRemovals.includes(`${i.poste_id}::${i.benevole_id}`))
             ),
             // Wizard Selections (only if wizard is open)
-            ...(this.wizardOpen ? Array.from(this.wizardSelections.values()).filter(s => (profileId ? s.profileId === profileId : true)).map(s => ({
+            ...(this.wizardOpen ? this.wizardSelections.filter(s => (profileId ? s.profileId === profileId : true)).map(s => ({
                 poste_id: s.posteId,
                 benevole_id: s.profileId,
                 // Mocking structure for overlap check

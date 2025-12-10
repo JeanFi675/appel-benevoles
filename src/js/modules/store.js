@@ -106,6 +106,7 @@ export function initStore() {
                 this.loadUserInscriptions()
             ]);
 
+            this.reconcileLocalCounts(); // Ensure counts are consistent
             this.checkWizardAutoOpen();
         },
 

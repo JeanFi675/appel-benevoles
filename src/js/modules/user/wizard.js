@@ -9,10 +9,10 @@ export const WizardModule = {
     wizardStep: 1,
     wizardSelectedProfileId: '',
     wizardPeriodIndex: 0,
-    wizardSelections: new Map(), // Key: "posteId-profileId", Value: { posteId, profileId, ... }
-    wizardRemovals: new Set(), // Set of "posteId-profileId" to be removed from DB
-    showWizardProfileForm: false, // UI Toggle for inline form
-    showPostCreationModal: false, // UI Toggle for "Nodal" after creation
+    wizardSelections: [], // Array of objects: { key, posteId, profileId, ... }
+    wizardRemovals: [], // Array of keys: strings "posteId-profileId"
+    showWizardProfileForm: false,
+    showPostCreationModal: false,
     wizardProfileForm: {
         prenom: '',
         nom: '',
@@ -22,11 +22,8 @@ export const WizardModule = {
 
     // Computeds converted to Methods for Alpine Mixin compatibility
     getWizardPeriods() {
-        console.log('🔮 WizardPeriods check - Postes:', this.postes?.length);
         if (!this.postes || this.postes.length === 0) return [];
-
         const periods = [...new Set(this.postes.map(p => p.periode))];
-
         return periods.sort((a, b) => {
             const pA = this.postes.find(p => p.periode === a);
             const pB = this.postes.find(p => p.periode === b);
@@ -40,93 +37,77 @@ export const WizardModule = {
         return periods[this.wizardPeriodIndex] || '';
     },
 
-    // Converted to method that returns GROUPS for the current period
     getWizardGroups() {
-        // 1. Get raw posts for current period
         const period = this.getCurrentWizardPeriodName();
         if (!period) return [];
 
         const methodPosts = this.postes.filter(p => p.periode === period);
 
-        // 2. Define Groups
         const subgroups = [
-            {
-                id: 'critical',
-                title: '⚠️ Postes Prioritaires (Manque de bénévoles)',
-                expanded: true,
-                postes: []
-            },
-            {
-                id: 'open',
-                title: '✅ Inscriptions Ouvertes',
-                expanded: true,
-                postes: []
-            },
-            {
-                id: 'full',
-                title: '🔒 Postes Complets',
-                expanded: false, // Default closed
-                postes: []
-            }
+            { id: 'critical', title: '⚠️ Postes Prioritaires (Manque de bénévoles)', expanded: true, postes: [] },
+            { id: 'open', title: '✅ Inscriptions Ouvertes', expanded: true, postes: [] },
+            { id: 'full', title: '🔒 Postes Complets', expanded: false, postes: [] }
         ];
 
-        // 3. Distribute posts
         methodPosts.forEach(poste => {
             const min = poste.nb_min || 0;
             const max = poste.nb_max || 0;
             const current = poste.inscrits_actuels || 0;
 
-            if (current < min) {
-                subgroups[0].postes.push(poste);
-            } else if (current >= max) {
-                subgroups[2].postes.push(poste);
-            } else {
-                subgroups[1].postes.push(poste);
-            }
+            if (current < min) subgroups[0].postes.push(poste);
+            else if (current >= max) subgroups[2].postes.push(poste);
+            else subgroups[1].postes.push(poste);
         });
 
-        // 4. Sort posts within groups (by time)
-        subgroups.forEach(group => {
-            group.postes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut));
-        });
-
-        // 5. Filter empty groups
+        subgroups.forEach(group => group.postes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut)));
         return subgroups.filter(g => g.postes.length > 0);
     },
 
-    /**
-     * Opens the wizard. 
-     * Resets state if necessary.
-     */
     openWizard() {
         this.wizardOpen = true;
         this.wizardStep = 1;
         this.wizardPeriodIndex = 0;
-        // Pre-select profile if only one
+        this.showPostCreationModal = false;
         if (this.profiles.length === 1) {
             this.wizardSelectedProfileId = this.profiles[0].id;
         }
     },
 
     closeWizard() {
-        // If selections exist, maybe warn? For now just close but keep state? 
-        // Better reset to avoid confusion next time opens.
-        if (this.wizardSelections.size > 0) {
+        if (this.wizardSelections.length > 0 || this.wizardRemovals.length > 0) {
             if (!confirm("Attention, vos choix dans l'assistant seront perdus. Continuer ?")) {
                 return;
             }
+
+            // Revert Optimistic Updates manually to ensure immediate UI consistency
+            // 1. Revert Removals (Add back)
+            this.wizardRemovals.forEach(key => {
+                const [posteId] = key.split('::');
+                const poste = this.postes.find(p => p.poste_id == posteId);
+                if (poste) poste.inscrits_actuels++;
+            });
+
+            // 2. Revert Selections (Remove added)
+            // Note: We only decrement if it was a NEW selection (key in wizardSelections)
+            this.wizardSelections.forEach(sel => {
+                const poste = this.postes.find(p => p.poste_id == sel.posteId);
+                if (poste) poste.inscrits_actuels--;
+            });
         }
+
         this.resetWizard();
         this.wizardOpen = false;
-        // Reload data to ensure clean state (in case we mutated things visually)
+        // Still reload to be safe, but UI is fixed instantly
         this.loadPostes();
     },
 
     resetWizard() {
-        this.wizardSelections.clear();
+        this.wizardSelections = [];
+        this.wizardRemovals = [];
         this.wizardStep = 1;
         this.wizardSelectedProfileId = '';
         this.wizardPeriodIndex = 0;
+        this.showPostCreationModal = false;
     },
 
     toggleWizardProfile(profileId) {
@@ -142,23 +123,17 @@ export const WizardModule = {
     },
 
     prevPeriod() {
-        if (this.wizardPeriodIndex > 0) {
-            this.wizardPeriodIndex--;
-        }
+        if (this.wizardPeriodIndex > 0) this.wizardPeriodIndex--;
     },
 
     nextPeriod() {
-        if (this.wizardPeriodIndex < this.getWizardPeriods().length - 1) {
-            this.wizardPeriodIndex++;
-        }
+        if (this.wizardPeriodIndex < this.getWizardPeriods().length - 1) this.wizardPeriodIndex++;
     },
 
     // --- Profile Creation (Wizard) ---
 
     async createProfileAndContinue() {
         if (!this.user) return;
-
-        // Validation
         const f = this.wizardProfileForm;
         if (!f.prenom || !f.nom || !f.telephone || !f.taille_tshirt) {
             this.showToast('❌ Veuillez remplir tous les champs', 'error');
@@ -166,18 +141,14 @@ export const WizardModule = {
         }
 
         this.loading = true;
-
-        // Safety timeout in case of hang
         const safetyTimeout = setTimeout(() => {
             if (this.loading) {
-                console.warn('⚠️ Safety timeout triggered in createProfileAndContinue');
                 this.loading = false;
                 this.showToast('❌ Le serveur met du temps à répondre. Veuillez réessayer.', 'error');
             }
         }, 8000);
 
         try {
-            console.log('📝 Creating profile...', f);
             const { data, error } = await ApiService.upsert('benevoles', {
                 user_id: this.user.id,
                 email: this.user.email,
@@ -188,169 +159,178 @@ export const WizardModule = {
             }, { select: '*' });
 
             if (error) throw error;
-            console.log('✅ Profile created, data:', data);
-
             this.showToast('✅ Profil créé !', 'success');
-
-            // Refresh profiles list
             await this.loadProfiles();
-            console.log('🔄 Profiles reloaded, count:', this.profiles?.length);
 
-            // Should be the newly created one
             const newId = data && data.length > 0 ? data[0].id : null;
-            if (newId) {
-                this.wizardSelectedProfileId = newId;
-            }
+            if (newId) this.wizardSelectedProfileId = newId;
 
-            // TRIGGER NODAL
-            console.log('🔘 Triggering Nodal...');
             this.showPostCreationModal = true;
             this.showWizardProfileForm = false;
-
-            clearTimeout(safetyTimeout); // Clear safety if successful
-
+            clearTimeout(safetyTimeout);
         } catch (error) {
             clearTimeout(safetyTimeout);
-            console.error('❌ Creation failed:', error);
             this.showToast('❌ Erreur : ' + error.message, 'error');
             this.loading = false;
         } finally {
-            // Only stop loading if we are NOT showing the Nodal (waiting for user choice)
-            // AND if the safety timeout hasn't already killed it
-            if (!this.showPostCreationModal) {
-                this.loading = false;
-            }
+            if (!this.showPostCreationModal) this.loading = false;
         }
     },
 
     handlePostProfileCreation(choice) {
-        this.loading = false; // Ensure loading is off
+        this.loading = false;
         this.showPostCreationModal = false;
-
         if (choice === 'add') {
-            // Reset form and show it again
             this.wizardProfileForm = { prenom: '', nom: '', telephone: '', taille_tshirt: '' };
             this.showWizardProfileForm = true;
-            // Deselect previous to avoid confusion? or keep selected?
-            // User wants to add another, so focus on form.
         } else {
-            // Continue -> Go to Step 2
             this.wizardStep = 2;
         }
     },
 
-    // --- Basket Logic ---
+    // --- Basket Logic (REFACTORED TO ARRAYS) ---
 
-    /**
-     * Adds a registration to the wizard basket.
-     */
     async wizardRegister(posteId, profileId) {
         try {
-            console.log('🪄 WizardRegister START:', posteId, profileId);
+            const key = `${posteId}::${profileId}`;
 
-            // Check conflicts locally
+            // Check if already selected locally
+            if (this.wizardSelections.some(s => s.key === key)) return;
+
             const targetPoste = this.postes.find(p => p.poste_id === posteId);
-            if (!targetPoste) {
-                console.error('❌ Target poste not found for ID:', posteId);
-                return;
-            }
+            if (!targetPoste) return;
 
-            // Check basic constraints
             if (targetPoste.inscrits_actuels >= targetPoste.nb_max) {
                 this.showToast('Ce poste est complet.', 'error');
                 return;
             }
 
-            // CONFIRMATION LOGIC FOR MINIMUM
+            // --- Priority Check Logic (Condensed) ---
             if (targetPoste.inscrits_actuels >= targetPoste.nb_min) {
-                console.log('⚠️ Check Priority for:', targetPoste.titre);
-
                 const targetStart = new Date(targetPoste.periode_debut).getTime();
                 const targetEnd = new Date(targetPoste.periode_fin).getTime();
-
                 const hasUnderfilledPostes = this.postes.some(other => {
                     if (other.poste_id === targetPoste.poste_id) return false;
-
                     const otherStart = new Date(other.periode_debut).getTime();
                     const otherEnd = new Date(other.periode_fin).getTime();
-
-                    // Check for exact overlap (same slot)
                     const sameSlot = (Math.abs(otherStart - targetStart) < 60000) && (Math.abs(otherEnd - targetEnd) < 60000);
-
-                    if (!sameSlot) return false;
-
-                    const isUnderfilled = other.inscrits_actuels < other.nb_min;
-                    if (isUnderfilled) {
-                        console.log('   -> Found priority need:', other.titre, `(${other.inscrits_actuels}/${other.nb_min})`);
-                    }
-                    return isUnderfilled;
+                    return sameSlot && other.inscrits_actuels < other.nb_min;
                 });
 
-                console.log('   -> Result:', hasUnderfilledPostes);
-
-                if (hasUnderfilledPostes) {
-                    console.log('   -> Triggering confirm...');
-
-                    if (typeof this.askConfirm !== 'function') {
-                        throw new Error('askConfirm is not a function');
-                    }
-
+                if (hasUnderfilledPostes && typeof this.askConfirm === 'function') {
                     const confirmed = await this.askConfirm(
                         "Le nombre minimum de bénévoles pour ce poste est déjà atteint, alors que d'autres postes sur ce créneau horaire ont encore besoin de monde. Êtes-vous sûr de vouloir maintenir ce choix ?",
                         "Attention : Besoins prioritaires"
                     );
-
-                    if (!confirmed) {
-                        console.log('   -> Cancelled by user.');
-                        return;
-                    }
+                    if (!confirmed) return;
                 }
             }
 
-            const key = `${posteId}-${profileId}`;
-            this.wizardSelections.set(key, {
-                posteId,
-                profileId,
-                posteTitle: targetPoste.titre,
-                debut: targetPoste.periode_debut,
-                fin: targetPoste.periode_fin,
-                profileName: this.profiles.find(p => p.id === profileId)?.prenom
-            });
+            // Remove from removals if present (undo delete)
+            if (this.wizardRemovals.includes(key)) {
+                this.wizardRemovals = this.wizardRemovals.filter(k => k !== key);
+            } else {
+                // Add to selections
+                this.wizardSelections.push({
+                    key,
+                    posteId,
+                    profileId,
+                    posteTitle: targetPoste.titre,
+                    debut: targetPoste.periode_debut,
+                    fin: targetPoste.periode_fin,
+                    profileName: this.profiles.find(p => p.id === profileId)?.prenom
+                });
+            }
 
-            // OPTIMISTIC UI: Increment count locally (Visual only)
             targetPoste.inscrits_actuels++;
-            console.log('✅ Registered successfully in wizard');
+            console.log('✅ Registered (Wizard Array)', key);
 
         } catch (error) {
-            console.error('🚨 Error in wizardRegister:', error);
-            alert('Erreur interne: ' + error.message); // FORCE ALERT for visibility
+            console.error(error);
+            alert('Erreur: ' + error.message);
         }
     },
 
-    /**
-     * Removes a registration from the wizard basket or marks for removal from DB.
-     */
     wizardUnregister(posteId, profileId) {
-        const key = `${posteId}-${profileId}`;
+        const key = `${posteId}::${profileId}`;
 
-        // 1. Check if it's a new local selection
-        if (this.wizardSelections.has(key)) {
-            this.wizardSelections.delete(key);
-
-            // Revert optimistic count
+        // 1. Check if it's a new local selection -> Remove it
+        const selectionIndex = this.wizardSelections.findIndex(s => s.key === key);
+        if (selectionIndex !== -1) {
+            this.wizardSelections.splice(selectionIndex, 1); // Mutate array triggers reactivity
             const targetPoste = this.postes.find(p => p.poste_id === posteId);
             if (targetPoste) targetPoste.inscrits_actuels--;
-
             return;
         }
 
-        // 2. If it's in DB, mark for removal
-        // (We assume isProfileRegistered checks were done, so it MUST be in DB if not in selections)
-        this.wizardRemovals.add(key);
+        // 2. If it's in DB -> Add to removals
+        if (!this.wizardRemovals.includes(key)) {
+            this.wizardRemovals.push(key);
+            const targetPoste = this.postes.find(p => p.poste_id === posteId);
+            if (targetPoste) targetPoste.inscrits_actuels--;
+        }
+    },
 
-        // Optimistic update
-        const targetPoste = this.postes.find(p => p.poste_id === posteId);
-        if (targetPoste) targetPoste.inscrits_actuels--;
+    getRemovalDetailsList() {
+        return this.wizardRemovals.map(key => {
+            const [posteId, profileId] = key.split('::');
+            // Use loose equality (==) because split returns strings, but IDs might be integers
+            const poste = this.postes.find(p => p.poste_id == posteId);
+            const profile = this.profiles.find(p => p.id == profileId);
+            return {
+                key,
+                posteId,
+                profileId,
+                posteTitle: poste ? poste.titre : 'inconnu',
+                profileName: profile ? profile.prenom : 'inconnu',
+                debut: poste ? poste.periode_debut : null,
+                fin: poste ? poste.periode_fin : null
+            };
+        });
+    },
+
+    async submitWizard() {
+        if (this.wizardSelections.length === 0 && this.wizardRemovals.length === 0) {
+            this.showToast('Aucune modification à enregistrer.', 'info');
+            return;
+        }
+
+        this.loading = true;
+        const safetyTimeout = setTimeout(() => {
+            if (this.loading) {
+                this.loading = false;
+                this.showToast('❌ Le serveur ne répond pas.', 'error');
+            }
+        }, 10000);
+
+        try {
+            console.log('💾 Submitting Wizard (Arrays)...', this.wizardSelections.length, this.wizardRemovals.length);
+            const promises = [];
+
+            // 1. REMOVALS
+            this.wizardRemovals.forEach(key => {
+                const [posteId, profileId] = key.split('::');
+                promises.push(ApiService.delete('inscriptions', { poste_id: posteId, benevole_id: profileId }));
+            });
+
+            // 2. ADDITIONS
+            this.wizardSelections.forEach(sel => {
+                promises.push(ApiService.upsert('inscriptions', { poste_id: sel.posteId, benevole_id: sel.profileId }));
+            });
+
+            await Promise.all(promises);
+            this.showToast('🎉 Inscriptions mises à jour !', 'success');
+
+            await this.loadInitialData();
+            this.resetWizard(); // Clears arrays
+            this.closeWizard();
+            clearTimeout(safetyTimeout);
+        } catch (error) {
+            console.error('Submit Error:', error);
+            this.showToast('Erreur: ' + (error.message || error), 'error');
+        } finally {
+            if (this.loading) this.loading = false;
+        }
     },
 
     /**
@@ -363,9 +343,6 @@ export const WizardModule = {
             // If Profiles but no inscriptions -> Wizard Step 1 shows selection.
             this.openWizard();
             console.log('🪄 Wizard auto-opened (No inscriptions)');
-
-            // Special case: If user has 0 profiles, maybe we want to focus on creation?
-            // The Wizard Step 1 handles "0 profiles" case.
         }
     }
 };

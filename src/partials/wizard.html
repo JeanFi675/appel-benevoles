@@ -84,7 +84,7 @@
 
                     <div
                         class="brutal-card bg-brutal-ice p-8 border-4 border-brutal-black shadow-brutal max-w-lg w-full">
-                        <h4 class="text-3xl font-black mb-6 uppercase">Profil Créé ! ✅</h4>
+                        <h4 class="text-3xl font-black mb-6 uppercase" x-text="modalTitle || 'Profil Créé ! ✅'"></h4>
                         <p class="font-bold text-xl mb-8">Que souhaitez-vous faire maintenant ?</p>
 
                         <div class="flex flex-col gap-4">
@@ -104,21 +104,22 @@
 
                 <!-- Existing Profiles List -->
                 <div x-show="profiles.length > 0 && !showWizardProfileForm" class="grid gap-4">
-                    <p class="font-bold text-xl mb-4">Sélectionnez le bénévole à inscrire :</p>
+                    <p class="font-bold text-xl mb-4">Vos bénévoles enregistrés :</p>
                     <template x-for="profile in profiles" :key="profile.id">
-                        <div @click="toggleWizardProfile(profile.id)"
-                            class="brutal-card p-4 cursor-pointer transition-all active:scale-95 flex items-center justify-between group"
-                            :class="wizardSelectedProfileId === profile.id ? 'bg-brutal-black text-brutal-white' : 'bg-white hover:bg-gray-100'">
-                            <span class="font-black text-xl" x-text="profile.prenom + ' ' + profile.nom"></span>
-                            <span x-show="wizardSelectedProfileId === profile.id" class="text-2xl">✅</span>
+                        <div class="brutal-card p-4 flex items-center justify-between group bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+                            :class="{'border-l-8 border-l-brutal-black': wizardSelectedProfileId === profile.id}"
+                            @click="toggleWizardProfile(profile.id)">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-6 h-6 rounded-full border-2 border-black flex items-center justify-center">
+                                    <div x-show="wizardSelectedProfileId === profile.id"
+                                        class="w-3 h-3 bg-black rounded-full"></div>
+                                </div>
+                                <span class="font-black text-xl" x-text="profile.prenom + ' ' + profile.nom"></span>
+                            </div>
                         </div>
                     </template>
-                </div>
-
-                <!-- Add Another Profile Button -->
-                <div class="mt-8 flex justify-center gap-4">
-                    <button x-show="profiles.length > 0 && !showWizardProfileForm" @click="showWizardProfileForm = true"
-                        class="brutal-btn bg-white text-brutal-black px-6 py-2 border-2 border-brutal-black text-sm hover:bg-gray-100">
+                    <button @click="showWizardProfileForm = true" class="mt-4 text-gray-500 underline font-bold">
                         + Ajouter un autre bénévole
                     </button>
                 </div>
@@ -179,32 +180,72 @@
             <div x-show="wizardStep === 3" class="max-w-3xl mx-auto">
                 <h3 class="text-3xl font-black mb-8 text-center">Récapitulatif de vos choix</h3>
 
+                <!-- Step 3 Content: Summary -->
                 <div class="bg-white border-2 border-brutal-black p-6 shadow-brutal mb-8">
-                    <template x-if="wizardSelections.size > 0">
-                        <div class="grid gap-4">
-                            <template x-for="[key, selection] in Array.from(wizardSelections.entries())" :key="key">
-                                <div class="flex justify-between items-center border-b-2 border-gray-100 pb-2">
-                                    <div>
-                                        <p class="font-black" x-text="selection.posteTitle"></p>
-                                        <p class="text-sm text-gray-600">
-                                            <span x-text="formatDate(selection.debut)"></span> •
-                                            <span x-text="formatTime(selection.debut)"></span> - <span
-                                                x-text="formatTime(selection.fin)"></span>
-                                        </p>
-                                        <p class="text-xs font-bold text-blue-600 mt-1">
-                                            👤 pour <span x-text="selection.profileName"></span>
-                                        </p>
+
+                    <!-- ADDITIONS -->
+                    <template x-if="wizardSelections.length > 0">
+                        <div class="mb-4">
+                            <h4 class="font-bold uppercase text-green-600 border-b-2 border-green-600 mb-2">
+                                À Ajouter</h4>
+                            <div class="grid gap-4">
+                                <template x-for="selection in wizardSelections" :key="selection.key">
+                                    <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                                        <div>
+                                            <p class="font-black" x-text="selection.posteTitle"></p>
+                                            <p class="text-sm text-gray-600">
+                                                <span x-text="formatDate(selection.debut)"></span> •
+                                                <span x-text="formatTime(selection.debut)"></span> -
+                                                <span x-text="formatTime(selection.fin)"></span>
+                                            </p>
+                                            <p class="text-xs font-bold text-blue-600 mt-1">
+                                                👤 pour <span x-text="selection.profileName"></span>
+                                            </p>
+                                        </div>
+                                        <button @click="wizardUnregister(selection.posteId, selection.profileId)"
+                                            class="text-red-500 font-bold hover:underline text-sm">
+                                            Annuler
+                                        </button>
                                     </div>
-                                    <button @click="wizardUnregister(selection.posteId, selection.profileId)"
-                                        class="text-red-500 font-bold hover:underline text-sm">
-                                        Retirer
-                                    </button>
-                                </div>
-                            </template>
+                                </template>
+                            </div>
                         </div>
                     </template>
-                    <template x-if="wizardSelections.size === 0">
-                        <p class="text-center italic text-gray-500">Aucune inscription sélectionnée.</p>
+
+                    <!-- REMOVALS -->
+                    <template x-if="wizardRemovals.length > 0">
+                        <div>
+                            <h4 class="font-bold uppercase text-red-600 border-b-2 border-red-600 mb-2">
+                                À Supprimer</h4>
+                            <div class="grid gap-4">
+                                <template x-for="rem in getRemovalDetailsList()" :key="rem.key">
+                                    <div
+                                        class="flex justify-between items-center border-b border-gray-100 pb-2 bg-red-50 p-2">
+                                        <div>
+                                            <p class="font-black line-through text-gray-500" x-text="rem.posteTitle">
+                                            </p>
+                                            <p class="text-sm text-gray-400">
+                                                <span x-text="formatDate(rem.debut)"></span>
+                                            </p>
+                                            <p class="text-xs font-bold text-gray-500 mt-1">
+                                                👤 <span x-text="rem.profileName"></span>
+                                            </p>
+                                        </div>
+                                        <!-- Update logic: Filter array instead of .delete() -->
+                                        <button
+                                            @click="wizardRemovals = wizardRemovals.filter(k => k !== rem.key); loadPostes()"
+                                            class="text-green-600 font-bold hover:underline text-sm">
+                                            Restaurer
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="wizardSelections.length === 0 && wizardRemovals.length === 0">
+                        <p class="text-center italic text-gray-500">Aucun changement pour le moment.
+                        </p>
                     </template>
                 </div>
 
@@ -227,22 +268,22 @@
 
             <div>
                 <!-- Step 1 Next -->
-                <button x-show="wizardStep === 1" @click="if(validateStep1()) wizardStep = 2"
-                    class="brutal-btn bg-brutal-black text-brutal-white px-8 py-3 font-bold shadow-brutal disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="!wizardSelectedProfileId">
-                    Continuer vers les Postes →
+                <button x-show="wizardStep === 1 && profiles.length > 0 && !showWizardProfileForm"
+                    @click="modalTitle = 'C\'est parti !'; showPostCreationModal = true"
+                    class="brutal-btn bg-brutal-black text-brutal-white px-8 py-3 font-bold shadow-brutal disabled:opacity-50 disabled:cursor-not-allowed">
+                    Continuer →
                 </button>
 
-                <!-- Step 2 Next (if not last period) -->
+                <!-- Step 2 Next -->
                 <button x-show="wizardStep === 2" @click="wizardStep = 3"
                     class="brutal-btn bg-yellow-400 text-black px-8 py-3 font-bold shadow-brutal border-2 border-black">
-                    Vérifier et Valider (<span x-text="wizardSelections.size"></span>)
+                    Vérifier et Valider (<span x-text="wizardSelections.length + wizardRemovals.length"></span>)
                 </button>
 
                 <!-- Step 3 Submit -->
                 <button x-show="wizardStep === 3" @click="submitWizard()"
                     class="brutal-btn bg-green-500 text-white px-8 py-3 font-bold shadow-brutal border-2 border-black disabled:opacity-50"
-                    :disabled="wizardSelections.size === 0 || loading">
+                    :disabled="(wizardSelections.length === 0 && wizardRemovals.length === 0) || loading">
                     <span x-show="!loading">Valider mes inscriptions 🎉</span>
                     <span x-show="loading">Validation...</span>
                 </button>
