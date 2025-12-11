@@ -27,7 +27,7 @@
 
             <!-- STEP 1: PROFIL -->
             <div x-show="wizardStep === 1" class="text-center max-w-2xl mx-auto">
-                <h3 class="text-3xl font-black mb-6">Qui êtes-vous ?</h3>
+                <!-- h3 removed per user request -->
 
                 <!-- NEW: EMBEDDED PROFILE FORM -->
                 <div x-show="profiles.length === 0 || showWizardProfileForm"
@@ -64,11 +64,13 @@
                             </select>
                         </div>
 
-                        <div class="flex justify-between items-center mt-6 pt-4 border-t-2 border-gray-100">
+                        <div class="flex justify-between items-center mt-6 pt-4 border-t-2 border-gray-100 gap-4">
                             <button x-show="profiles.length > 0" @click="showWizardProfileForm = false"
-                                class="text-gray-500 underline font-bold text-sm">Annuler</button>
+                                class="brutal-btn bg-white text-brutal-black border-2 border-brutal-black px-6 py-2 font-bold shadow-brutal hover:bg-gray-100 uppercase text-sm">
+                                Annuler
+                            </button>
                             <button @click="createProfileAndContinue()"
-                                class="brutal-btn bg-brutal-black text-brutal-white px-6 py-2 w-full ml-auto shadow-brutal hover:bg-gray-800 disabled:opacity-50"
+                                class="brutal-btn bg-brutal-black text-brutal-white px-6 py-2 w-full shadow-brutal hover:bg-gray-800 disabled:opacity-50"
                                 :class="{'w-auto': profiles.length > 0}" :disabled="loading">
                                 <span x-show="!loading">Enregistrer & Continuer</span>
                                 <span x-show="loading">...</span>
@@ -109,19 +111,13 @@
                         <div class="brutal-card p-4 flex items-center justify-between group bg-white cursor-pointer hover:bg-gray-50 transition-colors"
                             :class="{'border-l-8 border-l-brutal-black': wizardSelectedProfileId === profile.id}"
                             @click="toggleWizardProfile(profile.id)">
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-6 h-6 rounded-full border-2 border-black flex items-center justify-center">
-                                    <div x-show="wizardSelectedProfileId === profile.id"
-                                        class="w-3 h-3 bg-black rounded-full"></div>
-                                </div>
-                                <span class="font-black text-xl" x-text="profile.prenom + ' ' + profile.nom"></span>
+                            <div class="flex items-center gap-4 w-full">
+                                <span class="font-black text-xl w-full text-center"
+                                    x-text="profile.prenom + ' ' + profile.nom"></span>
                             </div>
                         </div>
                     </template>
-                    <button @click="showWizardProfileForm = true" class="mt-4 text-gray-500 underline font-bold">
-                        + Ajouter un autre bénévole
-                    </button>
+                    <!-- 'Ajouter un autre bénévole' link removed per user request -->
                 </div>
             </div>
 
