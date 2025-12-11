@@ -123,22 +123,9 @@
 
             <!-- STEP 2: PERIODES -->
             <div x-show="wizardStep === 2">
-                <!-- Navigation Périodes -->
-                <div
-                    class="flex justify-between items-center mb-6 bg-brutal-black text-brutal-white p-3 rounded-none shadow-brutal-sm">
-                    <button @click="prevPeriod()"
-                        class="brutal-btn bg-white text-black px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="wizardPeriodIndex === 0">
-                        ← Précédent
-                    </button>
-
-                    <h3 class="text-xl font-black uppercase text-center" x-text="getCurrentWizardPeriodName()"></h3>
-
-                    <button @click="nextPeriod()"
-                        class="brutal-btn bg-white text-black px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="wizardPeriodIndex >= getWizardPeriods().length - 1">
-                        Suivant →
-                    </button>
+                <!-- Titre Période Active -->
+                <div class="mb-6 bg-brutal-black text-brutal-white p-3 rounded-none shadow-brutal-sm text-center">
+                    <h3 class="text-xl font-black uppercase" x-text="getCurrentWizardPeriodName()"></h3>
                 </div>
 
                 <!-- Liste des Postes pour la période active (GROUPÉE) -->
@@ -256,7 +243,8 @@
         <div
             class="border-t-4 border-brutal-black p-4 bg-gray-100 flex justify-between items-center sticky bottom-0 z-10">
             <div class="flex gap-2">
-                <button x-show="wizardStep > 1" @click="wizardStep--"
+                <button x-show="wizardStep > 1"
+                    @click="wizardStep === 2 && wizardPeriodIndex > 0 ? prevPeriod() : wizardStep--"
                     class="brutal-btn bg-white px-6 py-3 border-2 border-brutal-black font-bold">
                     Retour
                 </button>
@@ -270,8 +258,18 @@
                     Continuer →
                 </button>
 
-                <!-- Step 2 Next -->
-                <button x-show="wizardStep === 2" @click="wizardStep = 3"
+                <!-- Step 2 Next Period -->
+                <button
+                    x-show="wizardStep === 2 && (getWizardPeriods() && wizardPeriodIndex < getWizardPeriods().length - 1)"
+                    @click="nextPeriod()"
+                    class="brutal-btn bg-brutal-black text-brutal-white px-8 py-3 font-bold shadow-brutal">
+                    Suivant →
+                </button>
+
+                <!-- Step 2 Next -> Validate (Last Period) -->
+                <button
+                    x-show="wizardStep === 2 && (getWizardPeriods() && wizardPeriodIndex >= getWizardPeriods().length - 1)"
+                    @click="wizardStep = 3"
                     class="brutal-btn bg-yellow-400 text-black px-8 py-3 font-bold shadow-brutal border-2 border-black">
                     Vérifier et Valider (<span x-text="wizardSelections.length + wizardRemovals.length"></span>)
                 </button>
