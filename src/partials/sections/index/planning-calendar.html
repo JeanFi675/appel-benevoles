@@ -51,8 +51,8 @@
 
                                     <!-- Postes List -->
                                     <template x-for="poste in pData.postes" :key="poste.poste_id">
-                                        <div class="border-2 border-brutal-black p-2 shadow-brutal-sm hover:shadow-brutal transition-all cursor-pointer bg-green-50 overflow-hidden flex flex-col gap-1"
-                                            :style="getPosteStyle(poste)" @click="openRegistrationModal(poste)">
+                                        <div class="border-2 border-brutal-black p-2 shadow-brutal-sm bg-green-50 overflow-hidden flex flex-col gap-1"
+                                            :style="getPosteStyle(poste)">
 
                                             <!-- 1. Volunteer Name -->
                                             <div

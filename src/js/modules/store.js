@@ -133,6 +133,8 @@ export function initStore() {
             } catch (error) {
                 console.error('🚨 Error during app initialization:', error);
                 this.showToast('Erreur d\'initialisation: ' + error.message, 'error');
+            } finally {
+                this.initPlanningResponsive();
             }
         },
 

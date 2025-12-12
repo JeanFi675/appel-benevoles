@@ -69,10 +69,58 @@ export const WizardModule = {
         this.wizardStep = 1;
         this.wizardPeriodIndex = 0;
         this.showPostCreationModal = false;
-        if (this.profiles.length === 1) {
+        if (this.profiles && this.profiles.length === 1) {
             this.wizardSelectedProfileId = this.profiles[0].id;
         }
     },
+
+    /**
+     * Opens the wizard and pre-selects a poste (Action from Dashboard).
+     * @param {string} posteId 
+     * @param {string} [profileId] 
+     * @param {'register'|'unregister'} [action='register'] 
+     */
+    async openWizardWithContext(posteId, profileId, action = 'register') {
+        this.openWizard();
+
+        // Move to Step 2 (Choice) directly if profiles exist
+        if (this.profiles && this.profiles.length > 0) {
+            this.wizardStep = 2;
+        }
+
+        // Find the period index for this poste to show the right slide
+        const targetPoste = this.postes.find(p => p.poste_id === posteId);
+        if (targetPoste) {
+            const periods = this.getWizardPeriods();
+            const pIndex = periods.indexOf(targetPoste.periode);
+            if (pIndex !== -1) this.wizardPeriodIndex = pIndex;
+
+            // Perform the action (Optimistic Add/Remove to Basket)
+            // We need a profile ID. If not provided, and user has 1 profile, use it.
+            // If user has multiple profiles, we can't auto-add without clarification, 
+            // BUT for UX we might want to just open the wizard at the right place.
+
+            let effectiveProfileId = profileId;
+            if (!effectiveProfileId && this.profiles.length === 1) {
+                effectiveProfileId = this.profiles[0].id;
+            }
+
+            if (effectiveProfileId) {
+                if (action === 'register') {
+                    await this.wizardRegister(posteId, effectiveProfileId);
+                } else if (action === 'unregister') {
+                    this.wizardUnregister(posteId, effectiveProfileId);
+                }
+            } else {
+                // If multiple profiles and no forced profile, we can't auto-register blindly.
+                // But we navigated to the correct period, so the user can just click.
+                if (action === 'register') {
+                    this.showToast('Veuillez sélectionner le bénévole pour ce poste.', 'info');
+                }
+            }
+        }
+    },
+
 
     closeWizard() {
         if (this.wizardSelections.length > 0 || this.wizardRemovals.length > 0) {

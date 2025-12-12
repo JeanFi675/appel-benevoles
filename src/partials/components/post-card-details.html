@@ -1,6 +1,5 @@
 <!-- VUE NORMALE -->
-<div class="brutal-card p-4"
-    :class="isUserRegistered(poste.poste_id) ? 'bg-green-50' : 'bg-brutal-white'">
+<div class="brutal-card p-4" :class="isUserRegistered(poste.poste_id) ? 'bg-green-50' : 'bg-brutal-white'">
 
     <!-- Titre, Horaires et Référent -->
     <div class="mb-4 flex flex-col md:flex-row md:items-center md:gap-6">
@@ -21,8 +20,7 @@
     </div>
 
     <!-- Description -->
-    <div x-show="poste.description"
-        class="mb-4 p-3 bg-gray-100 border-2 border-brutal-black">
+    <div x-show="poste.description" class="mb-4 p-3 bg-gray-100 border-2 border-brutal-black">
         <p class="font-bold" x-text="poste.description"></p>
     </div>
 
@@ -30,8 +28,7 @@
     <div class="mb-4">
         <div class="flex justify-between mb-2">
             <span class="font-bold">Inscrits</span>
-            <span class="font-black"
-                x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
+            <span class="font-black" x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
         </div>
 
         <div class="progress-bar relative overflow-visible">
@@ -42,11 +39,9 @@
             }" :style="'width: ' + ((poste.inscrits_actuels / poste.nb_max) * 100) + '%'"></div>
 
             <!-- Mini Marker -->
-            <div x-show="poste.nb_min > 0"
-                class="absolute top-0 bottom-0 w-0.5 bg-black z-10"
+            <div x-show="poste.nb_min > 0" class="absolute top-0 bottom-0 w-0.5 bg-black z-10"
                 :style="'left: ' + ((poste.nb_min / poste.nb_max) * 100) + '%'">
-                <div
-                    class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold whitespace-nowrap">
+                <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold whitespace-nowrap">
                     Mini : <span x-text="poste.nb_min"></span>
                 </div>
             </div>
@@ -60,11 +55,8 @@
             <div x-show="getRegisteredProfiles(poste.poste_id).length > 0">
                 <p class="font-bold mb-2">Vos inscrits :</p>
                 <div class="flex flex-wrap gap-2">
-                    <template
-                        x-for="profile in getRegisteredProfiles(poste.poste_id)"
-                        :key="profile.id">
-                        <span
-                            class="px-3 py-1 bg-green-600 text-white font-bold text-sm border-2 border-green-800">
+                    <template x-for="profile in getRegisteredProfiles(poste.poste_id)" :key="profile.id">
+                        <span class="px-3 py-1 bg-green-600 text-white font-bold text-sm border-2 border-green-800">
                             <span x-text="profile.prenom"></span>
                         </span>
                     </template>
@@ -74,12 +66,10 @@
 
         <!-- Cas 2: Vue normale -> Afficher tous les inscrits (anonymisés ou non selon logique backend) -->
         <template x-if="!showMyInscriptions">
-            <div
-                x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0">
+            <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0">
                 <p class="font-bold mb-2">Bénévoles inscrits :</p>
                 <div class="flex flex-wrap gap-2">
-                    <template x-for="benevole in poste.liste_benevoles"
-                        :key="benevole">
+                    <template x-for="benevole in poste.liste_benevoles" :key="benevole">
                         <span
                             class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
                             <span x-text="benevole"></span>
@@ -93,36 +83,34 @@
     <!-- Actions -->
     <div class="flex flex-col sm:flex-row gap-4 mt-6">
         <!-- Si l'utilisateur a des profils, on affiche un bouton par profil -->
-        <div x-show="profiles.length > 0" class="flex flex-wrap gap-3"
-            :class="{'hidden md:flex': showMyInscriptions}">
+        <div x-show="profiles.length > 0" class="flex flex-wrap gap-3" :class="{'hidden md:flex': showMyInscriptions}">
             <template x-for="profile in profiles" :key="profile.id">
                 <div class="inline-block">
-                    <!-- Bouton normal (Inscrire / Désinscrire) -->
-                    <!-- NOTE: check 'isWizard' variable if available for specific wizard behaviors, 
-                         otherwise relying on standard register/unregister which will be updated in store.js -->
-                    <button
-                        x-show="isProfileRegistered(poste.poste_id, profile.id) || (!hasTimeConflict(poste, profile.id) && poste.inscrits_actuels < poste.nb_max)"
-                        @click="isProfileRegistered(poste.poste_id, profile.id) 
-                            ? unregister(poste.poste_id, profile.id) 
-                            : register(poste.poste_id, profile.id)"
-                        class="brutal-btn px-6 py-2 font-bold shadow-brutal-sm transition-all active:scale-95"
-                        :class="isProfileRegistered(poste.poste_id, profile.id) 
-                            ? 'bg-red-500 text-white border-red-700' 
-                            : 'bg-brutal-ice text-brutal-black'">
-                        <span x-text="
-                            isProfileRegistered(poste.poste_id, profile.id)
-                                ? (profiles.length > 1 ? 'Désinscrire ' + profile.prenom : 'Se désinscrire')
-                                : (profiles.length > 1 ? 'Inscrire ' + profile.prenom : 'S\'inscrire')
-                        "></span>
-                    </button>
+                    <!-- Bouton normal (Inscrire / Désinscrire) - ONLY VISIBLE IN WIZARD -->
+                    <template x-if="wizardOpen">
+                        <button
+                            x-show="isProfileRegistered(poste.poste_id, profile.id) || (!hasTimeConflict(poste, profile.id) && poste.inscrits_actuels < poste.nb_max)"
+                            @click="isProfileRegistered(poste.poste_id, profile.id) 
+                                ? unregister(poste.poste_id, profile.id) 
+                                : register(poste.poste_id, profile.id)"
+                            class="brutal-btn px-6 py-2 font-bold shadow-brutal-sm transition-all active:scale-95"
+                            :class="isProfileRegistered(poste.poste_id, profile.id) 
+                                ? 'bg-red-500 text-white border-red-700' 
+                                : 'bg-brutal-ice text-brutal-black'">
+                            <span x-text="
+                                isProfileRegistered(poste.poste_id, profile.id)
+                                    ? (profiles.length > 1 ? 'Désinscrire ' + profile.prenom : 'Se désinscrire')
+                                    : (profiles.length > 1 ? 'Inscrire ' + profile.prenom : 'S\'inscrire')
+                            "></span>
+                        </button>
+                    </template>
 
                     <!-- Bouton Conflit -->
                     <button
                         x-show="!isProfileRegistered(poste.poste_id, profile.id) && hasTimeConflict(poste, profile.id)"
                         disabled
                         class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
-                        <span class="line-through"
-                            x-text="profile.prenom"></span>
+                        <span class="line-through" x-text="profile.prenom"></span>
                         <span class="text-[10px]">Créneau pris</span>
                     </button>
 

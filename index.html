@@ -44,15 +44,23 @@
                   </div>
                 </div>
 
-                <%- include('/src/partials/sections/index/profile-list.html') %>
+                <!-- <%- include('/src/partials/sections/index/profile-list.html') %> -->
 
-                  <%- include('/src/partials/sections/index/planning-list.html') %>
+                <%- include('/src/partials/sections/index/planning-list.html') %>
 
 
 
               </section>
 
           </main>
+
+          <!-- Global Action Button (Floating) -->
+          <div class="fixed bottom-6 right-6 z-40" x-show="!wizardOpen">
+            <button @click="openWizardWithContext(null, null, 'register')"
+              class="brutal-btn bg-yellow-400 text-brutal-black px-6 py-4 rounded-full shadow-brutal border-2 border-brutal-black font-black text-lg flex items-center gap-3 hover:scale-105 transition-transform">
+              <span>✏️ Modifier mes inscriptions</span>
+            </button>
+          </div>
 
           <%- include('/src/partials/wizard.html') %>
 

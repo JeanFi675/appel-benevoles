@@ -20,7 +20,7 @@ export const PlanningModule = {
     referentProfiles: [],
     selectedReferentProfileId: null,
     showReferentSelectionModal: false,
-    viewMode: 'list', // 'list' or 'week'
+    viewMode: window.innerWidth >= 768 ? 'week' : 'list', // Responsive Default
     calendarPage: 0,
     itemsPerPage: 4,
     PIXELS_PER_HOUR: 35,
@@ -424,64 +424,14 @@ export const PlanningModule = {
      * @param {string} benevoleId - The ID of the profile.
      */
     async register(posteId, benevoleId) {
-        if (!this.user || !benevoleId) return;
+        if (!this.user) return;
 
-        // Redirect to Wizard logic if open
+        // ALWAYS Redirect to Wizard logic
         if (this.wizardOpen) {
             return this.wizardRegister(posteId, benevoleId);
-        }
-
-        // 1. Find the target poste
-        const targetPoste = this.postes.find(p => p.poste_id === posteId);
-        if (!targetPoste) {
-            this.showToast('❌ Poste introuvable', 'error');
-            return;
-        }
-
-        // 2. Check conditions for warning
-        // Condition A: Target poste has reached minimum
-        if (targetPoste.inscrits_actuels >= targetPoste.nb_min) {
-
-            // Condition B: Are there other postes in the same time slot that are UNDER minimum?
-            const hasUnderfilledPostes = this.postes.some(other => {
-                // Ignore self
-                if (other.poste_id === targetPoste.poste_id) return false;
-
-                // Check time slot match (exact match for now)
-                const sameStart = other.periode_debut === targetPoste.periode_debut;
-                const sameEnd = other.periode_fin === targetPoste.periode_fin;
-
-                if (!sameStart || !sameEnd) return false;
-
-                // Check if under minimum
-                return other.inscrits_actuels < other.nb_min;
-            });
-
-            if (hasUnderfilledPostes) {
-                const confirmed = await this.askConfirm(
-                    "Le nombre minimum de bénévoles pour ce poste est déjà atteint, alors que d'autres postes sur ce créneau horaire ont encore besoin de monde. Êtes-vous sûr de vouloir maintenir ce choix ?",
-                    "Attention : Besoins prioritaires"
-                );
-                if (!confirmed) return;
-            }
-        }
-
-        this.loading = true;
-        try {
-            const { error } = await ApiService.insert('inscriptions', {
-                poste_id: posteId,
-                benevole_id: benevoleId
-            });
-
-            if (error) throw error;
-
-            this.showToast('✅ Inscription réussie !', 'success');
-            await this.loadPostes();
-            await this.loadUserInscriptions();
-        } catch (error) {
-            this.showToast('❌ ' + error.message, 'error');
-        } finally {
-            this.loading = false;
+        } else {
+            // Dashboard Action -> Open Wizard with Context
+            return this.openWizardWithContext(posteId, benevoleId, 'register');
         }
     },
 
@@ -491,31 +441,14 @@ export const PlanningModule = {
      * @param {string} benevoleId - The ID of the profile.
      */
     async unregister(posteId, benevoleId) {
-        if (!this.user || !benevoleId) return;
+        if (!this.user) return;
 
-        // Redirect to Wizard logic if open
+        // ALWAYS Redirect to Wizard logic
         if (this.wizardOpen) {
             return this.wizardUnregister(posteId, benevoleId);
-        }
-
-        if (!await this.askConfirm("Êtes-vous sûr de vouloir désinscrire ce bénévole ?", "Désinscription")) return;
-
-        this.loading = true;
-        try {
-            const { error } = await ApiService.delete('inscriptions', {
-                poste_id: posteId,
-                benevole_id: benevoleId
-            });
-
-            if (error) throw error;
-
-            this.showToast('✅ Désinscription réussie', 'success');
-            await this.loadPostes();
-            await this.loadUserInscriptions();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
+        } else {
+            // Dashboard Action -> Open Wizard with Context
+            return this.openWizardWithContext(posteId, benevoleId, 'unregister');
         }
     },
 
@@ -728,5 +661,19 @@ export const PlanningModule = {
                 totalMax: postes.reduce((sum, p) => sum + p.nb_max, 0)
             };
         }).sort((a, b) => a.order - b.order);
+    },
+
+    /**
+     * Initializes the module with responsive listeners.
+     */
+    initPlanningResponsive() {
+        window.addEventListener('resize', () => {
+            // Force view constraints
+            if (window.innerWidth >= 768) {
+                if (this.viewMode !== 'week') this.viewMode = 'week';
+            } else {
+                if (this.viewMode !== 'list') this.viewMode = 'list';
+            }
+        });
     }
 };

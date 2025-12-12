@@ -85,10 +85,8 @@ export const ProfilesModule = {
             if (error) throw error;
             this.profiles = data || [];
 
-            // Auto-open form if no profiles exist
-            if (this.profiles.length === 0) {
-                this.createProfile();
-            }
+            // Auto-open logic is now handled by WizardModule.checkWizardAutoOpen()
+
         } catch (error) {
             console.error('Erreur chargement profils:', error);
         }
