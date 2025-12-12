@@ -62,13 +62,54 @@ export function initStore() {
          */
         async init() {
             try {
+                // 0. Handle URL Errors (e.g., expired Magic Link)
+                const hash = window.location.hash;
+                if (hash && hash.includes('error=')) {
+                    const params = new URLSearchParams(hash.substring(1)); // Remove #
+                    const errorDescription = params.get('error_description');
+                    const errorCode = params.get('error_code');
+
+                    if (errorDescription) {
+                        // Translate common codes
+                        let msg = errorDescription.replace(/\+/g, ' ');
+                        if (errorCode === 'otp_expired') msg = 'Ce lien de connexion a expiré. Veuillez en demander un nouveau.';
+
+                        // Wait a tick for Alpine to be ready
+                        setTimeout(() => this.showToast('❌ ' + msg, 'error'), 500);
+
+                        // Clean URL
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
+                }
+
                 // Check session safely
                 console.log('🔄 Init - Checking session...');
-                const { user } = await AuthService.getSession();
-                console.log('👤 Session User:', user);
 
-                if (user) {
-                    this.user = user;
+                // Detect Magic Link flow BEFORE getSession (which might consume the hash via auto-refresh)
+                const isMagicLink = window.location.hash.includes('access_token') || window.location.hash.includes('type=');
+
+                const { user: initialUser } = await AuthService.getSession();
+
+                if (initialUser) {
+                    if (isMagicLink) {
+                        console.log('✨ Magic Link detected. Skipping strict check (Session is fresh).');
+                        // No refresh needed, we assume the token from the link is valid
+                    } else {
+                        console.log('🕵️‍♂️ Existing session found, verifying validity (Strict Mode)...');
+                        // STRICT CHECK: Attempt to refresh immediately
+                        const { data, error } = await ApiService.refreshSession();
+
+                        if (error || !data.session) {
+                            console.warn('⛔ Session is invalid or expired:', error);
+                            await this.logout(false); // Logout without confirmation
+                            return;
+                        }
+
+                        console.log('✅ Session verified & Refreshed.');
+                        initialUser = data.session.user; // Update user from refresh
+                    }
+
+                    this.user = initialUser;
                     await this.loadInitialData();
                 }
 
@@ -145,9 +186,10 @@ export function initStore() {
 
         /**
          * Logs out the user.
+         * @param {boolean} [confirm=true] - Whether to ask for confirmation.
          */
-        async logout() {
-            if (!await this.askConfirm("Voulez-vous vraiment vous déconnecter ?", "Déconnexion")) return;
+        async logout(confirm = true) {
+            if (confirm && !await this.askConfirm("Voulez-vous vraiment vous déconnecter ?", "Déconnexion")) return;
 
             // Optimistic update: Clear user state immediately
             this.user = null;

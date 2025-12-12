@@ -13,6 +13,7 @@ export const WizardModule = {
     wizardRemovals: [], // Array of keys: strings "posteId-profileId"
     showWizardProfileForm: false,
     showPostCreationModal: false,
+    modalTitle: '',
     wizardProfileForm: {
         prenom: '',
         nom: '',
@@ -290,46 +291,98 @@ export const WizardModule = {
     },
 
     async submitWizard() {
+        console.log('🚀 submitWizard START');
         if (this.wizardSelections.length === 0 && this.wizardRemovals.length === 0) {
             this.showToast('Aucune modification à enregistrer.', 'info');
             return;
         }
 
         this.loading = true;
+
+        // Safety timeout to force release
         const safetyTimeout = setTimeout(() => {
             if (this.loading) {
+                console.error('⏰ Safety Timeout Triggered');
                 this.loading = false;
-                this.showToast('❌ Le serveur ne répond pas.', 'error');
+                this.showToast('❌ Le serveur ne répond pas (Timeout).', 'error');
             }
         }, 10000);
 
         try {
-            console.log('💾 Submitting Wizard (Arrays)...', this.wizardSelections.length, this.wizardRemovals.length);
+            console.log('💾 Submitting Wizard (Arrays)...', {
+                add: this.wizardSelections.length,
+                remove: this.wizardRemovals.length
+            });
+
+            // Refresh session handled globally in store.js
+
+
             const promises = [];
+
+            // Helper to reject promise on API error / Timeout
+            const handleApiCall = async (promise, context) => {
+                let timer;
+                const timeoutPromise = new Promise((_, reject) => {
+                    timer = setTimeout(() => reject(new Error('Request timed out (20s)')), 20000);
+                });
+
+                try {
+                    console.log(`📡 Sending ${context}...`);
+                    const res = await Promise.race([promise, timeoutPromise]);
+                    clearTimeout(timer);
+
+                    if (res && res.error) {
+                        console.error('❌ API Error in ' + context, res.error);
+                        throw new Error(res.error.message || JSON.stringify(res.error));
+                    }
+                    console.log(`✅ Success ${context}`);
+                    return res;
+                } catch (e) {
+                    clearTimeout(timer);
+                    console.error('❌ Exception in ' + context, e);
+                    throw e;
+                }
+            };
 
             // 1. REMOVALS
             this.wizardRemovals.forEach(key => {
                 const [posteId, profileId] = key.split('::');
-                promises.push(ApiService.delete('inscriptions', { poste_id: posteId, benevole_id: profileId }));
+                console.log('🗑️ Queueing DELETE:', { posteId, profileId });
+                promises.push(handleApiCall(
+                    ApiService.delete('inscriptions', { poste_id: posteId, benevole_id: profileId }),
+                    `DELETE ${posteId}::${profileId}`
+                ));
             });
 
             // 2. ADDITIONS
             this.wizardSelections.forEach(sel => {
-                promises.push(ApiService.upsert('inscriptions', { poste_id: sel.posteId, benevole_id: sel.profileId }));
+                console.log('💾 Queueing UPSERT:', { id: sel.posteId, profile: sel.profileId });
+                promises.push(handleApiCall(
+                    ApiService.upsert('inscriptions', { poste_id: sel.posteId, benevole_id: sel.profileId }),
+                    `UPSERT ${sel.posteId}::${sel.profileId}`
+                ));
             });
 
+            console.log('⏳ Awaiting promises...', promises.length);
             await Promise.all(promises);
+            console.log('✅ All promises resolved');
+
             this.showToast('🎉 Inscriptions mises à jour !', 'success');
 
-            await this.loadInitialData();
+            console.log('🔄 Reloading data...');
+            await this.loadInitialData(); // Ensure this exists and works
+            console.log('✅ Data reloaded');
+
             this.resetWizard(); // Clears arrays
             this.closeWizard();
             clearTimeout(safetyTimeout);
         } catch (error) {
-            console.error('Submit Error:', error);
+            console.error('💥 Submit Error Caught:', error);
+            clearTimeout(safetyTimeout);
             this.showToast('Erreur: ' + (error.message || error), 'error');
         } finally {
-            if (this.loading) this.loading = false;
+            console.log('🏁 submitWizard FINALLY');
+            this.loading = false;
         }
     },
 

@@ -31,6 +31,13 @@ export const ApiService = {
     },
 
     /**
+     * Refreshes the current session.
+     */
+    async refreshSession() {
+        return await supabase.auth.refreshSession();
+    },
+
+    /**
      * Inserts a new record into a table.
      * @param {string} table - The table name.
      * @param {object} data - The data to insert.
