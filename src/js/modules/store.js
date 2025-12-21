@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import { AuthService } from '../services/auth.js';
+import { ApiService } from '../services/api.js';
 import { ProfilesModule } from './user/profiles.js';
 import { PlanningModule } from './user/planning.js';
 import { WizardModule } from './user/wizard.js';
@@ -206,7 +207,8 @@ export function initStore() {
                 // FORCE CLEANUP: Clear Supabase data from localStorage
                 // Supabase uses keys like 'sb-<project-ref>-auth-token'
                 Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('sb-')) {
+                    if (key.startsWith('sb-') || key.includes('supabase')) {
+                        console.log('🧹 Removing localStorage key:', key);
                         localStorage.removeItem(key);
                     }
                 });

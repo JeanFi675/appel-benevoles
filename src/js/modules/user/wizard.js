@@ -65,6 +65,7 @@ export const WizardModule = {
     },
 
     openWizard() {
+        if (!this.user) return;
         this.wizardOpen = true;
         this.wizardStep = 1;
         this.wizardPeriodIndex = 0;
