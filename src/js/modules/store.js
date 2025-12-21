@@ -88,7 +88,7 @@ export function initStore() {
                 // Detect Magic Link flow BEFORE getSession (which might consume the hash via auto-refresh)
                 const isMagicLink = window.location.hash.includes('access_token') || window.location.hash.includes('type=');
 
-                const { user: initialUser } = await AuthService.getSession();
+                let { user: initialUser } = await AuthService.getSession();
 
                 if (initialUser) {
                     if (isMagicLink) {
