@@ -89,9 +89,9 @@
             <!-- Global Empty State -->
             <div x-show="getCalendarData().length === 0" class="w-full text-center py-12">
                 <p class="text-xl font-bold text-gray-500">Aucune inscription à afficher pour cette période.</p>
-                <button @click="viewMode = 'list'"
+                <button @click="openWizard()"
                     class="mt-4 brutal-btn bg-brutal-ice px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm">
-                    Voir tous les postes disponibles
+                    S'inscrire à des postes
                 </button>
             </div>
 

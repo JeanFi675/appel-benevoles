@@ -2,7 +2,7 @@
 <div x-show="profiles.length > 0 && !showProfileSection">
     <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <h2 class="text-3xl font-black text-brutal-black"
-            x-text="showReferentView ? '👥 Liste de mes bénévoles' : ((showMyInscriptions || viewMode === 'week') ? '✅ Mes inscriptions' : '📋 Formulaires d\'inscription')">
+            x-text="showReferentView ? '👥 Liste de mes bénévoles' : '✅ Mes inscriptions'">
         </h2>
 
         <!-- Filtres et Vues -->
@@ -17,34 +17,19 @@
                     </template>
                 </select>
             </div>
-            <!-- BUTTONS when in MAIN PAGE (Default) -->
-            <div x-show="!showReferentView && !showMyInscriptions && viewMode === 'list'" class="flex gap-3">
-                <!-- Desktop: Go to My Inscriptions (Week View) -->
-                <button @click="toggleView()"
-                    class="hidden md:inline-flex brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 items-center gap-2 bg-brutal-ice text-brutal-black">
-                    <span>✅ Mes inscriptions</span>
-                </button>
 
-                <!-- Mobile: Go to My Inscriptions (List Filter) -->
-                <button @click="showMyInscriptions = true"
-                    class="md:hidden brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-ice text-brutal-black">
-                    <span>✅ Mes inscriptions</span>
-                </button>
-
-                <!-- Referent: Go to Referent View -->
-                <button x-show="isReferent()" @click="toggleReferentView()"
-                    class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-ice text-brutal-black">
-                    <span>👥 Liste de mes bénévoles</span>
-                </button>
-            </div>
-
-            <!-- UNIFIED BACK BUTTON (Shown in any secondary view) -->
-            <button x-show="showReferentView || showMyInscriptions || viewMode === 'week'"
-                @click="viewMode = 'list'; showMyInscriptions = false; showReferentView = false; calendarPage = 0;"
-                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-black text-brutal-white">
-                <span>📋 Revenir aux inscriptions</span>
+            <!-- Referent: Go to Referent View (Visible if Referent AND not already in View) -->
+            <button x-show="isReferent() && !showReferentView" @click="toggleReferentView()"
+                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-brutal-ice text-brutal-black">
+                <span>👥 Liste de mes bénévoles</span>
             </button>
 
+            <!-- Back Button (Visible in Referent View) -->
+            <button x-show="showReferentView" @click="toggleReferentView()"
+                class="brutal-btn px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2 bg-white text-brutal-black">
+                <span>⬅ Retour</span>
+            </button>
+            
             <!-- Switch Referent Button (Only if multiple referents AND in Referent View) -->
             <button x-show="showReferentView && referentProfiles.length > 1" @click="showReferentSelectionModal = true"
                 class="brutal-btn bg-yellow-400 text-brutal-black px-4 py-2 text-sm font-bold border-2 border-brutal-black shadow-brutal-sm transition-all active:scale-95 flex items-center gap-2">
@@ -58,8 +43,14 @@
         <%- include('/src/partials/sections/index/planning-calendar.html') %>
     </div>
 
+    <!-- Loader -->
+    <div x-show="loading && showReferentView" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-brutal-black border-t-transparent"></div>
+        <p class="mt-4 font-bold">Chargement des bénévoles...</p>
+    </div>
+
     <!-- VUE LISTE REFERENT -->
-    <div x-show="showReferentView" class="animate-fade-in">
+    <div x-show="showReferentView && !loading" class="animate-fade-in w-full max-w-full overflow-hidden">
         <template x-for="group in getReferentViewData()" :key="group.name + '-' + selectedReferentProfileId">
             <div class="mb-12" x-data="{ open: false }">
                 <!-- Period Header -->

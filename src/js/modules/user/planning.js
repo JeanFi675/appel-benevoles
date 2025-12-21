@@ -8,7 +8,7 @@ import { formatDate, formatTime } from '../../utils.js';
 export const PlanningModule = {
     postes: [],
     userInscriptions: [],
-    showMyInscriptions: false,
+    showMyInscriptions: true,
     showOnlyAvailable: false,
     selectedVolunteerId: '', // For filtering in "Mes inscriptions" view
     selectedPosteForRegistration: null,
@@ -75,6 +75,8 @@ export const PlanningModule = {
         this.showReferentView = !this.showReferentView;
         if (this.showReferentView) {
             this.showMyInscriptions = false;
+            this.referentInscriptions = []; // Reset previous data
+            this.loading = true; // Show loading state
 
             // Identify which profiles are referents
             this.referentProfiles = this.profiles.filter(profile =>
@@ -82,6 +84,7 @@ export const PlanningModule = {
             );
 
             if (this.referentProfiles.length > 1) {
+                this.loading = false; // Stop loading if waiting for selection
                 // If multiple, show modal to choose
                 this.showReferentSelectionModal = true;
             } else if (this.referentProfiles.length === 1) {
@@ -89,7 +92,7 @@ export const PlanningModule = {
                 this.selectedReferentProfileId = this.referentProfiles[0].id;
                 this.loadReferentInscriptions();
             } else {
-                this.referentInscriptions = [];
+                this.loading = false; // No profiles
             }
         }
     },

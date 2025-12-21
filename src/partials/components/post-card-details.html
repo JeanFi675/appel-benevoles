@@ -26,7 +26,7 @@
 
     <!-- Barre de progression -->
     <div class="mb-4">
-        <div class="flex justify-between mb-2">
+        <div class="flex justify-between mb-8">
             <span class="font-bold">Inscrits</span>
             <span class="font-black" x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
         </div>
@@ -51,18 +51,7 @@
     <!-- Liste des bénévoles inscrits (Global ou Perso) -->
     <div class="mb-4">
         <!-- Cas 1: Vue "Mes inscriptions" -> Afficher uniquement mes profils inscrits -->
-        <template x-if="showMyInscriptions">
-            <div x-show="getRegisteredProfiles(poste.poste_id).length > 0">
-                <p class="font-bold mb-2">Vos inscrits :</p>
-                <div class="flex flex-wrap gap-2">
-                    <template x-for="profile in getRegisteredProfiles(poste.poste_id)" :key="profile.id">
-                        <span class="px-3 py-1 bg-green-600 text-white font-bold text-sm border-2 border-green-800">
-                            <span x-text="profile.prenom"></span>
-                        </span>
-                    </template>
-                </div>
-            </div>
-        </template>
+
 
         <!-- Cas 2: Vue normale -> Afficher tous les inscrits (anonymisés ou non selon logique backend) -->
         <template x-if="!showMyInscriptions">
@@ -80,14 +69,14 @@
         </template>
     </div>
 
-    <!-- Actions -->
-    <div class="flex flex-col sm:flex-row gap-4 mt-6">
-        <!-- Si l'utilisateur a des profils, on affiche un bouton par profil -->
-        <div x-show="profiles.length > 0" class="flex flex-wrap gap-3" :class="{'hidden md:flex': showMyInscriptions}">
-            <template x-for="profile in profiles" :key="profile.id">
-                <div class="inline-block">
-                    <!-- Bouton normal (Inscrire / Désinscrire) - ONLY VISIBLE IN WIZARD -->
-                    <template x-if="wizardOpen">
+    <!-- Actions - Visible uniquement dans le Wizard -->
+    <template x-if="wizardOpen">
+        <div class="flex flex-col sm:flex-row gap-4 mt-6">
+            <!-- Si l'utilisateur a des profils, on affiche un bouton par profil -->
+            <div x-show="profiles.length > 0" class="flex flex-wrap gap-3">
+                <template x-for="profile in profiles" :key="profile.id">
+                    <div class="inline-block">
+                        <!-- Bouton normal (Inscrire / Désinscrire) -->
                         <button
                             x-show="isProfileRegistered(poste.poste_id, profile.id) || (!hasTimeConflict(poste, profile.id) && poste.inscrits_actuels < poste.nb_max)"
                             @click="isProfileRegistered(poste.poste_id, profile.id) 
@@ -103,32 +92,45 @@
                                     : (profiles.length > 1 ? 'Inscrire ' + profile.prenom : 'S\'inscrire')
                             "></span>
                         </button>
-                    </template>
 
-                    <!-- Bouton Conflit -->
-                    <button
-                        x-show="!isProfileRegistered(poste.poste_id, profile.id) && hasTimeConflict(poste, profile.id)"
-                        disabled
-                        class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
-                        <span class="line-through" x-text="profile.prenom"></span>
-                        <span class="text-[10px]">Créneau pris</span>
-                    </button>
+                        <!-- Bouton Conflit -->
+                        <button
+                            x-show="!isProfileRegistered(poste.poste_id, profile.id) && hasTimeConflict(poste, profile.id)"
+                            disabled
+                            class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
+                            <span class="line-through" x-text="profile.prenom"></span>
+                            <span class="text-[10px]">Créneau pris</span>
+                        </button>
 
-                    <!-- Bouton Complet -->
-                    <button
-                        x-show="!isProfileRegistered(poste.poste_id, profile.id) && !hasTimeConflict(poste, profile.id) && poste.inscrits_actuels >= poste.nb_max"
-                        disabled
-                        class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
-                        <span x-text="profile.prenom"></span>
-                        <span class="text-[10px]">Créneau complet</span>
-                    </button>
-                </div>
-            </template>
+                        <!-- Bouton Complet -->
+                        <button
+                            x-show="!isProfileRegistered(poste.poste_id, profile.id) && !hasTimeConflict(poste, profile.id) && poste.inscrits_actuels >= poste.nb_max"
+                            disabled
+                            class="brutal-btn px-4 py-1 font-bold border-2 border-gray-400 bg-gray-200 text-gray-500 cursor-not-allowed opacity-70 flex flex-col items-center leading-tight">
+                            <span x-text="profile.prenom"></span>
+                            <span class="text-[10px]">Créneau complet</span>
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Si aucun profil, message -->
+            <p x-show="profiles.length === 0" class="text-red-600 font-bold italic">
+                Créez un profil bénévole pour vous inscrire.
+            </p>
         </div>
+    </template>
 
-        <!-- Si aucun profil, message -->
-        <p x-show="profiles.length === 0" class="text-red-600 font-bold italic">
-            Créez un profil bénévole pour vous inscrire.
-        </p>
-    </div>
+    <!-- Affichage Lecture Seule (Hors Wizard) -->
+    <template x-if="!wizardOpen">
+        <div class="mt-4 flex flex-wrap gap-2">
+             <template x-for="profile in profiles" :key="profile.id">
+                <div x-show="isProfileRegistered(poste.poste_id, profile.id)" 
+                     class="inline-flex items-center gap-2 px-3 py-1 bg-green-100 border-2 border-green-600 text-green-800 font-bold rounded-full text-sm">
+                    <span>✅</span>
+                    <span x-text="profile.prenom"></span>
+                </div>
+             </template>
+        </div>
+    </template>
 </div>

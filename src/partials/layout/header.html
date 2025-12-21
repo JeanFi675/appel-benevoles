@@ -1,24 +1,12 @@
 <header class="bg-brutal-black text-brutal-white py-8 mb-8 border-b-8 border-brutal-black">
     <div class="container mx-auto px-4 relative">
-        <!-- Desktop Wizard Button -->
-        <div class="absolute top-0 right-4 hidden md:block" x-show="user" style="display: none;">
-            <button @click="openWizard()"
-                class="brutal-btn bg-yellow-400 text-black px-4 py-2 font-bold shadow-brutal-white border-2 border-white hover:bg-white transition-colors flex items-center gap-2">
-                <span>🪄</span> Assistant
-            </button>
-        </div>
+
 
         <h1 class="text-5xl font-black text-center tracking-tight">
             🧗 BÉNÉVOLES ESCALADE
         </h1>
         <p class="text-center mt-2 text-xl font-body">Inscrivez-vous pour aider la compétition</p>
 
-        <!-- Mobile Wizard Button -->
-        <div class="mt-6 flex justify-center md:hidden" x-show="user" style="display: none;">
-            <button @click="openWizard()"
-                class="brutal-btn bg-yellow-400 text-black px-6 py-2 font-bold shadow-brutal-white border-2 border-white hover:bg-white text-lg flex items-center gap-2">
-                <span>🪄</span> Assistant d'inscription
-            </button>
-        </div>
+
     </div>
 </header>

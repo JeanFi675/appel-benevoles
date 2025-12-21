@@ -108,13 +108,12 @@
                 <div x-show="profiles.length > 0 && !showWizardProfileForm" class="grid gap-4">
                     <p class="font-bold text-xl mb-4">Vos bénévoles enregistrés :</p>
                     <template x-for="profile in profiles" :key="profile.id">
-                        <div class="brutal-card p-4 flex items-center justify-between group bg-white cursor-pointer hover:bg-gray-50 transition-colors"
-                            :class="{'border-l-8 border-l-brutal-black': wizardSelectedProfileId === profile.id}"
-                            @click="toggleWizardProfile(profile.id)">
-                            <div class="flex items-center gap-4 w-full">
-                                <span class="font-black text-xl w-full text-center"
-                                    x-text="profile.prenom + ' ' + profile.nom"></span>
-                            </div>
+                        <div class="brutal-card p-4 flex flex-col sm:flex-row sm:items-center justify-between bg-white border-2 border-brutal-black mb-4 gap-3">
+                            <span class="font-black text-xl break-all" x-text="profile.prenom + ' ' + profile.nom"></span>
+                            <button @click.stop="deleteProfile(profile.id)" 
+                                class="brutal-btn bg-white text-red-500 border-2 border-red-500 hover:bg-red-50 px-3 py-1 font-bold text-sm w-full sm:w-auto flex items-center justify-center gap-2">
+                                🗑️ Supprimer
+                            </button>
                         </div>
                     </template>
                     <!-- 'Ajouter un autre bénévole' link removed per user request -->
