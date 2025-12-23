@@ -31,8 +31,10 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.isAdmin = true;
-            this.loading = false;
+            
+            // Wait for data before showing UI
             await this.loadData();
+            this.loading = false;
 
             // Auth listener
             AuthService.onAuthStateChange(async (event, session) => {

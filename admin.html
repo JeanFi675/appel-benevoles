@@ -36,12 +36,13 @@
         </div>
 
         <!-- Loading -->
-        <div x-show="loading && !isAdmin" class="brutal-card bg-brutal-white p-8 max-w-2xl mx-auto text-center">
-          <p class="text-2xl font-black">⏳ Vérification des droits...</p>
+        <div x-show="loading" class="brutal-card bg-brutal-white p-8 max-w-2xl mx-auto text-center">
+          <p x-show="!isAdmin" class="text-2xl font-black">⏳ Vérification des droits...</p>
+          <p x-show="isAdmin" class="text-2xl font-black">⏳ Chargement des données...</p>
         </div>
 
         <!-- Admin Interface -->
-        <div x-show="isAdmin" style="display: none;">
+        <div x-show="isAdmin && !loading" style="display: none;">
 
           <%- include('/src/partials/sections/admin/tabs.html') %>
 
