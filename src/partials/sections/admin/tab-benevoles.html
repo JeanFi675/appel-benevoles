@@ -27,7 +27,8 @@
             <!-- Mobile List -->
             <div class="md:hidden space-y-4">
                 <template x-for="benevole in getFilteredBenevoles()" :key="benevole.id">
-                    <div class="bg-white border-2 border-brutal-black p-4 shadow-brutal-sm relative">
+                    <div class="border-2 border-brutal-black p-4 shadow-brutal-sm relative transition-colors"
+                         :class="benevole.bgClass">
                         <div class="flex justify-between items-start mb-3">
                             <div>
                                 <div class="font-black text-lg leading-tight"
@@ -142,7 +143,8 @@
                     </thead>
                     <tbody class="text-brutal-black">
                         <template x-for="benevole in getFilteredBenevoles()" :key="benevole.id">
-                            <tr class="border-b-2 border-gray-200 hover:bg-yellow-50 transition-colors group">
+                            <tr class="border-b-2 border-gray-200 transition-colors group"
+                                :class="[benevole.bgClass, 'hover:bg-yellow-50']">
                                 <td class="py-4 px-4 align-middle">
                                     <div class="font-black text-lg leading-tight"
                                         x-text="benevole.prenom + ' ' + benevole.nom"></div>

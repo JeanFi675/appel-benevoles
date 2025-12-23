@@ -78,13 +78,46 @@ export const AdminModule = {
     },
 
     getFilteredBenevoles() {
-        if (!this.searchQuery) return this.benevoles;
-        const lowerQuery = this.searchQuery.toLowerCase();
-        return this.benevoles.filter(b =>
-            (b.nom && b.nom.toLowerCase().includes(lowerQuery)) ||
-            (b.prenom && b.prenom.toLowerCase().includes(lowerQuery)) ||
-            (b.email && b.email.toLowerCase().includes(lowerQuery))
-        );
+        let filtered = this.benevoles;
+        
+        // 1. Filter
+        if (this.searchQuery) {
+            const lowerQuery = this.searchQuery.toLowerCase();
+            filtered = this.benevoles.filter(b =>
+                (b.nom && b.nom.toLowerCase().includes(lowerQuery)) ||
+                (b.prenom && b.prenom.toLowerCase().includes(lowerQuery)) ||
+                (b.email && b.email.toLowerCase().includes(lowerQuery))
+            );
+        }
+
+        // 2. Assign alternating colors (Quinconce logic based on family/email)
+        let lastEmail = null;
+        let isAlt = false;
+
+        return filtered.map(b => {
+             // If email changes, toggle background
+             // Note: We use a safe check for email, grouping unknowns together or treating as separate? 
+             // Treating null email as unique would be safer, but usually they have emails. 
+             // Let's assume empty email = separate group or same group? 
+             // Let's assume grouping by string validity.
+             const currentEmail = (b.email || '').toLowerCase();
+             
+             if (currentEmail !== lastEmail) {
+                 // Switch color only if it's a NEW group
+                 // But wait, "quinconce" means alternate. 
+                 // Family A (White), Family A (White), Family B (Gray), Family C (White)...
+                 // Yes, so we toggle isAlt.
+                 if (lastEmail !== null) { // Don't toggle on first item, strictly start with false
+                     isAlt = !isAlt; 
+                 }
+                 lastEmail = currentEmail;
+             }
+             
+             return {
+                 ...b,
+                 bgClass: isAlt ? 'bg-gray-100' : 'bg-white'
+             };
+        });
     },
 
     // Computed for form
