@@ -66,7 +66,7 @@ export const CagnotteModule = {
             parentElement.innerHTML = '';
 
             const widget = document.createElement('div');
-            widget.className = 'bg-white rounded-lg shadow-sm p-4 border border-emerald-100 mt-4 cagnotte-widget-content';
+            widget.className = 'bg-white rounded-lg shadow-sm p-4 border border-emerald-100 cagnotte-widget-content';
             widget.innerHTML = `
                 <div class="flex items-center justify-between">
                     <div>
