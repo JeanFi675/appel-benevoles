@@ -32,7 +32,7 @@
                 <!-- NEW: EMBEDDED PROFILE FORM -->
                 <div x-show="profiles.length === 0 || showWizardProfileForm"
                     class="mb-8 p-6 text-left max-w-lg mx-auto bg-white border-2 border-brutal-black shadow-brutal">
-                    <h4 class="text-xl font-black mb-4 uppercase bg-yellow-400 inline-block px-2">Nouveau Bénévole</h4>
+                    <h4 class="text-xl font-black mb-4 uppercase bg-yellow-400 inline-block px-2" x-text="wizardProfileForm.id ? 'Modifier Bénévole' : 'Nouveau Bénévole'"></h4>
 
                     <div class="space-y-4">
                         <div>
@@ -65,14 +65,14 @@
                         </div>
 
                         <div class="flex justify-between items-center mt-6 pt-4 border-t-2 border-gray-100 gap-4">
-                            <button x-show="profiles.length > 0" @click="showWizardProfileForm = false"
+                            <button x-show="profiles.length > 0" @click="cancelWizardEdit()"
                                 class="brutal-btn bg-white text-brutal-black border-2 border-brutal-black px-6 py-2 font-bold shadow-brutal hover:bg-gray-100 uppercase text-sm">
                                 Annuler
                             </button>
                             <button @click="createProfileAndContinue()"
                                 class="brutal-btn bg-brutal-black text-brutal-white px-6 py-2 w-full shadow-brutal hover:bg-gray-800 disabled:opacity-50"
                                 :class="{'w-auto': profiles.length > 0}" :disabled="loading">
-                                <span x-show="!loading">Enregistrer & Continuer</span>
+                                <span x-show="!loading" x-text="wizardProfileForm.id ? 'Mettre à jour' : 'Enregistrer & Continuer'"></span>
                                 <span x-show="loading">...</span>
                             </button>
                         </div>
@@ -110,10 +110,16 @@
                     <template x-for="profile in profiles" :key="profile.id">
                         <div class="brutal-card p-4 flex flex-col sm:flex-row sm:items-center justify-between bg-white border-2 border-brutal-black mb-4 gap-3">
                             <span class="font-black text-xl break-all" x-text="profile.prenom + ' ' + profile.nom"></span>
-                            <button @click.stop="deleteProfile(profile.id)" 
-                                class="brutal-btn bg-white text-red-500 border-2 border-red-500 hover:bg-red-50 px-3 py-1 font-bold text-sm w-full sm:w-auto flex items-center justify-center gap-2">
-                                🗑️ Supprimer
-                            </button>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button @click.stop="editWizardProfile(profile.id)" 
+                                    class="brutal-btn bg-white text-brutal-black border-2 border-brutal-black hover:bg-gray-50 px-3 py-1 font-bold text-sm flex-1 sm:flex-initial flex items-center justify-center gap-2">
+                                    ✏️ Modifier
+                                </button>
+                                <button @click.stop="deleteProfile(profile.id)" 
+                                    class="brutal-btn bg-white text-red-500 border-2 border-red-500 hover:bg-red-50 px-3 py-1 font-bold text-sm flex-1 sm:flex-initial flex items-center justify-center gap-2">
+                                    🗑️ Supprimer
+                                </button>
+                            </div>
                         </div>
                     </template>
                     <!-- 'Ajouter un autre bénévole' link removed per user request -->

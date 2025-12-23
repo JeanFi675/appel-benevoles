@@ -15,6 +15,7 @@ export const WizardModule = {
     showPostCreationModal: false,
     modalTitle: '',
     wizardProfileForm: {
+        id: null,
         prenom: '',
         nom: '',
         telephone: '',
@@ -158,6 +159,7 @@ export const WizardModule = {
         this.wizardSelectedProfileId = '';
         this.wizardPeriodIndex = 0;
         this.showPostCreationModal = false;
+        this.cancelWizardEdit();
     },
 
     toggleWizardProfile(profileId) {
@@ -180,7 +182,25 @@ export const WizardModule = {
         if (this.wizardPeriodIndex < this.getWizardPeriods().length - 1) this.wizardPeriodIndex++;
     },
 
-    // --- Profile Creation (Wizard) ---
+    // --- Profile Management (Wizard) ---
+
+    editWizardProfile(profileId) {
+        const profile = this.profiles.find(p => p.id === profileId);
+        if (!profile) return;
+        this.wizardProfileForm = {
+            id: profile.id,
+            prenom: profile.prenom,
+            nom: profile.nom,
+            telephone: profile.telephone,
+            taille_tshirt: profile.taille_tshirt
+        };
+        this.showWizardProfileForm = true;
+    },
+
+    cancelWizardEdit() {
+        this.showWizardProfileForm = false;
+        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '' };
+    },
 
     async createProfileAndContinue() {
         if (!this.user) return;
@@ -199,24 +219,38 @@ export const WizardModule = {
         }, 8000);
 
         try {
-            const { data, error } = await ApiService.upsert('benevoles', {
+            const payload = {
                 user_id: this.user.id,
                 email: this.user.email,
                 prenom: f.prenom,
                 nom: f.nom,
                 telephone: f.telephone,
                 taille_tshirt: f.taille_tshirt
-            }, { select: '*' });
+            };
+
+            if (f.id) {
+                payload.id = f.id;
+            }
+
+            const { data, error } = await ApiService.upsert('benevoles', payload, { select: '*' });
 
             if (error) throw error;
-            this.showToast('✅ Profil créé !', 'success');
+            
             await this.loadProfiles();
 
             const newId = data && data.length > 0 ? data[0].id : null;
             if (newId) this.wizardSelectedProfileId = newId;
 
-            this.showPostCreationModal = true;
-            this.showWizardProfileForm = false;
+            if (f.id) {
+                this.showToast('✅ Profil mis à jour !', 'success');
+                this.showWizardProfileForm = false;
+                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '' };
+            } else {
+                this.showToast('✅ Profil créé !', 'success');
+                this.showPostCreationModal = true;
+                this.showWizardProfileForm = false;
+            }
+            
             clearTimeout(safetyTimeout);
         } catch (error) {
             clearTimeout(safetyTimeout);
@@ -341,8 +375,15 @@ export const WizardModule = {
 
     async submitWizard() {
         console.log('🚀 submitWizard START');
+        
+        // Mark wizard as completed for this user
+        if (this.user) {
+            localStorage.setItem('wizard_completed_' + this.user.id, 'true');
+        }
+
         if (this.wizardSelections.length === 0 && this.wizardRemovals.length === 0) {
             this.showToast('Aucune modification à enregistrer.', 'info');
+            this.closeWizard(); // Ensure we close even if no changes
             return;
         }
 
@@ -439,12 +480,26 @@ export const WizardModule = {
      * Hook to run after initial data load to auto-open wizard.
      */
     checkWizardAutoOpen() {
-        if (!this.userInscriptions || this.userInscriptions.length === 0) {
-            // Check if user has at least one profile?
-            // If No profile -> Wizard Step 1 shows "Create Profile".
-            // If Profiles but no inscriptions -> Wizard Step 1 shows selection.
+        if (!this.user) return;
+
+        const key = 'wizard_completed_' + this.user.id;
+        const hasCompleted = localStorage.getItem(key);
+        // Check if there are VALID inscriptions (linking to an existing profile)
+        // This handles cases where a profile was deleted but inscriptions remain (orphans)
+        const hasInscriptions = this.userInscriptions && this.userInscriptions.some(ins => {
+            return this.profiles.some(p => p.id === ins.benevole_id);
+        });
+
+        // Condition: Open if (No Inscriptions) AND (Not already marked as completed)
+        // Note: checking hasInscriptions covers "New User". 
+        // Checking !hasCompleted ensures it persists until they validate (which sets the flag).
+        // If they have inscriptions, we assume they are done.
+        
+        if (!hasInscriptions && !hasCompleted) {
+            console.log('🪄 Wizard auto-opening (First time/Incomplete)...');
             this.openWizard();
-            console.log('🪄 Wizard auto-opened (No inscriptions)');
+        } else {
+            console.log('✅ Wizard not auto-opened', { hasInscriptions, hasCompleted });
         }
     }
 };
