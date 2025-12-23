@@ -16,6 +16,10 @@
                     <h3 class="font-bold text-xl" x-text="p.prenom + ' ' + p.nom"></h3>
                     <p class="text-gray-600" x-text="p.email"></p>
                     <p class="text-sm mt-2">👕 Taille: <span x-text="p.taille_tshirt"></span></p>
+                    <div class="mt-2 text-sm">
+                        <p x-show="p.repas_vendredi">🍽️ <span class="font-bold">Repas Ven. 15</span></p>
+                        <p x-show="p.repas_samedi">🍽️ <span class="font-bold">Repas Sam. 16</span></p>
+                    </div>
 
                     <div class="flex gap-2 mt-4">
                         <button @click="editProfile(p.id)"
@@ -79,6 +83,22 @@
                     <option value="XL">XL</option>
                     <option value="XXL">XXL</option>
                 </select>
+                </select>
+            </div>
+
+            <div class="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400">
+                <h3 class="font-bold mb-2">🍽️ Repas Bénévoles</h3>
+                <p class="text-sm mb-4">Afin de prévoir les quantités, merci de nous indiquer votre présence aux repas offerts aux bénévoles.</p>
+                
+                <div class="flex items-center gap-3 mb-2">
+                    <input type="checkbox" id="repas_vendredi" x-model="profileForm.repas_vendredi" class="w-6 h-6 accent-brutal-black">
+                    <label for="repas_vendredi" class="font-bold cursor-pointer">Présent pour le repas du vendredi soir (15 mai 2026)</label>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="repas_samedi" x-model="profileForm.repas_samedi" class="w-6 h-6 accent-brutal-black">
+                    <label for="repas_samedi" class="font-bold cursor-pointer">Présent pour le repas du samedi soir (16 mai 2026)</label>
+                </div>
             </div>
 
             <div class="flex flex-col md:flex-row gap-4">

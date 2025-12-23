@@ -15,6 +15,17 @@ export const AdminModule = {
     postes: [],
     benevoles: [],
     periodes: [],
+    
+    // Stats
+    stats: {
+        tshirts: {},
+        repas: {
+            vendredi: 0,
+            samedi: 0
+        }
+    },
+
+    // Search & Modal
 
     // Search & Modal
     searchQuery: '',
@@ -258,6 +269,7 @@ export const AdminModule = {
             });
             if (error) throw error;
             this.benevoles = data || [];
+            this.calculateStats();
         } catch (error) {
             this.showToast('❌ Erreur chargement bénévoles : ' + error.message, 'error');
         }
@@ -447,6 +459,41 @@ export const AdminModule = {
             this.showToast('❌ Erreur : ' + error.message, 'error');
             await this.loadBenevoles();
         }
+    },
+
+    calculateStats() {
+        const tshirts = {};
+        let vendredi = 0;
+        let samedi = 0;
+
+        this.benevoles.forEach(b => {
+            // T-Shirts
+            const size = b.taille_tshirt || 'Non défini';
+            tshirts[size] = (tshirts[size] || 0) + 1;
+
+            // Repas
+            if (b.repas_vendredi) vendredi++;
+            if (b.repas_samedi) samedi++;
+        });
+
+        // Sort sizes specifically
+        const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Non défini'];
+        const sortedTshirts = {};
+        sizeOrder.forEach(size => {
+            if (tshirts[size]) sortedTshirts[size] = tshirts[size];
+        });
+        // Add any others not in order
+        Object.keys(tshirts).forEach(size => {
+            if (!sortedTshirts[size]) sortedTshirts[size] = tshirts[size];
+        });
+
+        this.stats = {
+            tshirts: sortedTshirts,
+            repas: {
+                vendredi,
+                samedi
+            }
+        };
     },
 
     // --- Helpers ---
