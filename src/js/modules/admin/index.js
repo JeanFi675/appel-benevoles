@@ -283,8 +283,18 @@ export const AdminModule = {
     async loadBenevolesAndStats() {
         try {
             // 1. Fetch Benevoles
-            const { data: benevolesData, error: benevolesError } = await ApiService.fetch('admin_benevoles', {
-                order: { column: 'nom', ascending: true }
+            // 1. Fetch Benevoles (Sorted by Email to group families, then Name)
+            const { data: benevoleRaw, error: benevolesError } = await ApiService.fetch('admin_benevoles', {
+                order: { column: 'email', ascending: true }
+            });
+            // Secondary sort in JS to be safe (if Supabase only supports one order param effectively here, or simply to refine)
+            const benevolesData = (benevoleRaw || []).sort((a, b) => {
+                const mailA = (a.email || '').toLowerCase();
+                const mailB = (b.email || '').toLowerCase();
+                if (mailA < mailB) return -1;
+                if (mailA > mailB) return 1;
+                // If same email, sort by First Name (or Name)
+                return (a.prenom || '').localeCompare(b.prenom || '');
             });
             if (benevolesError) throw benevolesError;
             
@@ -293,6 +303,9 @@ export const AdminModule = {
                  select: '*'
             });
             const transactions = transactionsError ? [] : (transactionsData || []);
+            if (transactions.length > 0) {
+                 // console.log('DEBUG: Transaction 0 sample:', ... );
+            }
 
             // 3. Fetch All Inscriptions (for Credits)
             // We need to link Inscription -> Poste -> Periode -> Credit
@@ -346,7 +359,7 @@ export const AdminModule = {
             transactions.forEach(t => {
                 const stats = getUserStats(t.user_id);
                 if (stats) {
-                    const amount = parseFloat(t.amount);
+                    const amount = parseFloat(t.montant); // FIX: amount -> montant
                     stats.transactions_solde += amount;
                     if (amount < 0) {
                         stats.transaction_debit_abs += Math.abs(amount);
@@ -356,32 +369,60 @@ export const AdminModule = {
                     }
                 }
             });
+            // NEW LOGIC: Identify which benevole is the "Primary" for display purposes
+            // We want to show the specific earned credits for EVERYONE
+            // But show the Consumed/Restant ONLY on the first member of the family
+            const familyHeadMap = {}; // userId -> benevoleId (first one encountered)
+            
+            // Assuming benevolesData is sorted enough or random, we just pick the first one we see per userId
+            (benevolesData || []).forEach(b => {
+                if (b.user_id && !familyHeadMap[b.user_id]) {
+                    familyHeadMap[b.user_id] = b.id;
+                }
+            });
+
             this.benevoles = (benevolesData || []).map(b => {
                 const userId = b.user_id;
-                let total_materiel = 0;
+
+                // 1. Total Matériel (Earned) is ALWAYS individual contribution
+                const earned_individuel = benevoleCredits[b.id] || 0;
+
                 let dispo = 0;
                 let total_consomme = 0;
+                let is_family_head = false;
+                let has_family = !!userId;
 
                 if (userId && userStats[userId]) {
-                    // LINKED TO FAMILY
+                    // It is a specific account
                     const stats = userStats[userId];
-                    total_materiel = stats.inscriptions_credit;
-                    total_consomme = stats.transaction_debit_abs;
-                    const balance = total_materiel - total_consomme;
-                    dispo = Math.max(0, balance);
+                    
+                    // Logic: Only the "Head" of family displays the consumption/balance
+                    if (familyHeadMap[userId] === b.id) {
+                        is_family_head = true;
+                        // Consumed = Family Total Consumed
+                        total_consomme = stats.transaction_debit_abs;
+                        // Balance = Family Total Credit - Family Total Consumed
+                        const family_total_credit = stats.inscriptions_credit;
+                        const balance = family_total_credit - total_consomme;
+                        dispo = Math.max(0, balance);
+                    } else {
+                        // Secondary member: Does not show consumption/balance repetition
+                        total_consomme = 0; // Or handle as null in UI
+                        dispo = 0; 
+                    }
                 } else {
-                    // ORPHAN VOLUNTEER (No User Account)
-                    // Can generate credits but cannot spend/have a balance
-                    total_materiel = benevoleCredits[b.id] || 0;
-                    dispo = 0; 
+                    // Orphan
                     total_consomme = 0;
+                    dispo = 0;
                 }
                 
                 return {
                     ...b,
-                    cagnotte_total: total_materiel,
-                    cagnotte_solde: dispo,
-                    cagnotte_real_consumed: total_consomme 
+                    cagnotte_total: earned_individuel, // DISPLAY: "Gagné" (Individual)
+                    cagnotte_solde: dispo,             // DISPLAY: "Restant Global" (Only on head)
+                    cagnotte_real_consumed: total_consomme, // DISPLAY: "Consommé Global" (Only on head)
+                    is_family_head: is_family_head,
+                    has_family: has_family
                 };
             });
 

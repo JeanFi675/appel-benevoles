@@ -12,14 +12,21 @@
       </p>
     </div>
     <div class="flex items-center gap-4">
-      <div class="mr-8 text-right" x-show="stats.cagnotte">
-         <div class="text-sm font-bold text-gray-500 uppercase tracking-wider">Alloué / Consommé</div>
-         <div class="text-xl font-black">
-            <span class="text-brutal-black" x-text="(stats.cagnotte.total_distribue || 0) + ' D'"></span>
-            <span class="text-gray-400 mx-1">/</span>
-            <span class="text-emerald-600" x-text="(stats.cagnotte.total_consomme || 0) + ' D'"></span>
+      <div class="mr-8 text-right flex flex-col gap-1" x-show="stats.cagnotte">
+         <div class="flex items-center justify-end gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
+            <span>Distribué</span>
+            <span class="text-xs">vs</span>
+            <span class="text-red-600">Consommé</span>
          </div>
-         <div class="text-xs font-bold text-gray-400 mt-1">Reste: <span class="text-emerald-600" x-text="(stats.cagnotte.total_restant || 0) + ' D'"></span></div>
+         <div class="text-xl font-black flex items-center justify-end gap-2">
+            <span class="text-brutal-black" x-text="(stats.cagnotte.total_distribue || 0) + ' D'"></span>
+            <span class="text-gray-300">|</span>
+            <span class="text-red-600" x-text="'-' + (stats.cagnotte.total_consomme || 0) + ' D'"></span>
+         </div>
+         <div class="text-xs font-bold text-gray-400 mt-1 flex justify-end gap-1">
+            <span>Reste:</span>
+            <span class="text-emerald-600" x-text="(stats.cagnotte.total_restant || 0) + ' D'"></span>
+         </div>
       </div>
 
       <span

@@ -72,10 +72,19 @@
                                 <span class="text-xs font-bold uppercase text-gray-500">Matos:</span>
                                 <span class="font-black text-sm" x-text="(benevole.cagnotte_total || 0) + ' D'"></span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold uppercase text-emerald-600">Dispo:</span>
-                                <span class="font-black text-sm text-emerald-600" x-text="(benevole.cagnotte_solde || 0) + ' D'"></span>
-                            </div>
+                            <!-- Family Head Stats -->
+                            <template x-if="benevole.is_family_head">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-1">
+                                         <span class="text-xs font-bold uppercase text-red-500">Conso:</span>
+                                         <span class="font-black text-xs text-red-500" x-text="'-' + (benevole.cagnotte_real_consumed || 0)"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                         <span class="text-xs font-bold uppercase text-emerald-600">Reste:</span>
+                                         <span class="font-black text-xs text-emerald-600" x-text="(benevole.cagnotte_solde || 0)"></span>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
 
                         <div class="flex flex-col gap-3">
@@ -126,7 +135,7 @@
                             </th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Référent</th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Total Matériel</th>
-                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Dispo</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Conso</th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Rôle</th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-right">Actions</th>
                         </tr>
@@ -162,7 +171,25 @@
                                     <div class="font-black text-sm" x-text="(benevole.cagnotte_total || 0) + ' D'"></div>
                                 </td>
                                 <td class="py-4 px-4 align-middle text-center">
-                                    <div class="font-black text-sm text-emerald-600" x-text="(benevole.cagnotte_solde || 0) + ' D'"></div>
+                                    <template x-if="benevole.is_family_head">
+                                        <div class="flex flex-col items-center">
+                                            <div class="font-black text-sm text-red-500 flex items-center gap-1">
+                                                <span>📉</span>
+                                                <span x-text="'-' + (benevole.cagnotte_real_consumed || 0) + ' D'"></span>
+                                            </div>
+                                            <div class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded mt-1 border border-emerald-200" title="Reste à dépenser">
+                                                <span x-text="'Reste: ' + (benevole.cagnotte_solde || 0)"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="benevole.has_family && !benevole.is_family_head">
+                                        <div class="text-gray-300 text-xs italic" title="Voir compte principal">
+                                            (voir chef)
+                                        </div>
+                                    </template>
+                                    <template x-if="!benevole.has_family">
+                                         <div class="text-gray-300 text-xs">-</div>
+                                    </template>
                                 </td>
                                 <td class="py-4 px-4 align-middle">
                                     <template x-if="benevole.role === 'admin'">
