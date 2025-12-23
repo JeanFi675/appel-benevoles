@@ -12,6 +12,16 @@
       </p>
     </div>
     <div class="flex items-center gap-4">
+      <div class="mr-8 text-right" x-show="stats.cagnotte">
+         <div class="text-sm font-bold text-gray-500 uppercase tracking-wider">Alloué / Consommé</div>
+         <div class="text-xl font-black">
+            <span class="text-brutal-black" x-text="(stats.cagnotte.total_distribue || 0) + ' D'"></span>
+            <span class="text-gray-400 mx-1">/</span>
+            <span class="text-emerald-600" x-text="(stats.cagnotte.total_consomme || 0) + ' D'"></span>
+         </div>
+         <div class="text-xs font-bold text-gray-400 mt-1">Reste: <span class="text-emerald-600" x-text="(stats.cagnotte.total_restant || 0) + ' D'"></span></div>
+      </div>
+
       <span
         class="font-bold text-lg"
         x-text="config.cagnotte_active ? 'Cagnotte ACTIVÉE' : 'Cagnotte DÉSACTIVÉE'"

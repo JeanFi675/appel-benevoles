@@ -55,7 +55,7 @@
                             </div>
                         </div>
 
-                        <div class="flex gap-4 mb-4 border-t-2 border-dashed border-gray-200 pt-3">
+                        <div class="flex gap-4 mb-4 border-t-2 border-dashed border-gray-200 pt-3 flex-wrap">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs font-bold uppercase">Inscr.</span>
                                 <span
@@ -67,6 +67,14 @@
                                 <span
                                     class="inline-block w-6 h-6 leading-6 text-center rounded-full bg-brutal-yellow border border-brutal-black font-black text-xs"
                                     x-text="benevole.nb_postes_referent"></span>
+                            </div>
+                            <div class="flex items-center gap-2 border-l-2 border-gray-300 pl-3">
+                                <span class="text-xs font-bold uppercase text-gray-500">Matos:</span>
+                                <span class="font-black text-sm" x-text="(benevole.cagnotte_total || 0) + ' D'"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase text-emerald-600">Dispo:</span>
+                                <span class="font-black text-sm text-emerald-600" x-text="(benevole.cagnotte_solde || 0) + ' D'"></span>
                             </div>
                         </div>
 
@@ -117,6 +125,8 @@
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Inscriptions
                             </th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Référent</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Total Matériel</th>
+                            <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">Dispo</th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Rôle</th>
                             <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-right">Actions</th>
                         </tr>
@@ -146,6 +156,13 @@
                                         x-text="benevole.nb_postes_referent"></span>
                                     <span x-show="!benevole.nb_postes_referent || benevole.nb_postes_referent === 0"
                                         class="text-gray-300 font-bold">-</span>
+                                </td>
+                                <!-- CAGNOTTE -->
+                                <td class="py-4 px-4 align-middle text-center">
+                                    <div class="font-black text-sm" x-text="(benevole.cagnotte_total || 0) + ' D'"></div>
+                                </td>
+                                <td class="py-4 px-4 align-middle text-center">
+                                    <div class="font-black text-sm text-emerald-600" x-text="(benevole.cagnotte_solde || 0) + ' D'"></div>
                                 </td>
                                 <td class="py-4 px-4 align-middle">
                                     <template x-if="benevole.role === 'admin'">
@@ -239,7 +256,7 @@
                                     <h4 class="font-black text-xl leading-tight mb-2" x-text="inscription.poste_titre">
                                     </h4>
                                     <div
-                                        class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200 inline-block">
+                                        class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200">
                                         <span>⏰</span>
                                         <span x-text="inscription.horaire"></span>
                                     </div>
@@ -340,7 +357,7 @@
                                 </div>
                                 <h4 class="font-black text-xl leading-tight mb-2" x-text="inscription.poste_titre"></h4>
                                 <div
-                                    class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200 inline-block">
+                                    class="flex items-center gap-2 text-gray-600 font-bold text-sm bg-gray-50 p-2 border-2 border-gray-200">
                                     <span>⏰</span>
                                     <span x-text="inscription.horaire"></span>
                                 </div>

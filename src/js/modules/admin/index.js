@@ -22,6 +22,11 @@ export const AdminModule = {
         repas: {
             vendredi: 0,
             samedi: 0
+        },
+        cagnotte: {
+            total_distribue: 0,
+            total_consomme: 0,
+            total_restant: 0
         }
     },
 
@@ -151,7 +156,7 @@ export const AdminModule = {
             this.showToast('✅ Inscription supprimée', 'success');
 
             // Global refresh
-            this.loadBenevoles();
+            this.loadBenevolesAndStats();
             this.loadPostes();
 
         } catch (error) {
@@ -191,8 +196,10 @@ export const AdminModule = {
             this.newInscriptionForm = { periode_id: '', poste_id: '' };
 
             // Refresh
+            // Refresh
+            // Refresh
             await this.refreshBenevoleInscriptions();
-            this.loadBenevoles();
+            this.loadBenevolesAndStats(); // Refresh logic to update cagnotte credits
             this.loadPostes();
 
         } catch (error) {
@@ -214,12 +221,15 @@ export const AdminModule = {
      * Loads all admin data.
      */
     async loadData() {
-        await Promise.all([
-            this.loadBenevoles(),
-            this.loadPostes(),
-            this.loadPeriodes(),
-            this.loadConfig()
-        ]);
+        // Parallel fetch of all improved
+        const p1 = this.loadBenevolesAndStats(); // Merged logic
+        const p2 = this.loadPostes(); // Postes needs inscriptions too, but we handle it separately or optimize
+        const p3 = this.loadPeriodes();
+        const p4 = this.loadConfig();
+
+        await Promise.all([p1, p2, p3, p4]);
+        
+        // Post-process logic for Cagnotte if needed, but loadBenevolesAndStats does it.
     },
 
     /**
@@ -269,17 +279,122 @@ export const AdminModule = {
         }
     },
 
-    async loadBenevoles() {
+    // Unified loader for benevoles + cagnotte stats
+    async loadBenevolesAndStats() {
         try {
-            const { data, error } = await ApiService.fetch('admin_benevoles', {
+            // 1. Fetch Benevoles
+            const { data: benevolesData, error: benevolesError } = await ApiService.fetch('admin_benevoles', {
                 order: { column: 'nom', ascending: true }
             });
-            if (error) throw error;
-            this.benevoles = data || [];
+            if (benevolesError) throw benevolesError;
+            
+            // 2. Fetch Transactions (Debits/Manual Adjustments)
+            const { data: transactionsData, error: transactionsError } = await ApiService.fetch('cagnotte_transactions', {
+                 select: '*'
+            });
+            const transactions = transactionsError ? [] : (transactionsData || []);
+
+            // 3. Fetch All Inscriptions (for Credits)
+            // We need to link Inscription -> Poste -> Periode -> Credit
+            const { data: inscriptionsData, error: inscriptionsError } = await ApiService.fetch('inscriptions', {
+                select: 'benevole_id, poste_id, postes(periode_id, periodes(montant_credit))'
+            });
+            const allInscriptions = inscriptionsError ? [] : (inscriptionsData || []);
+            
+
+
+            // Process Stats
+            const userStats = {}; // Map user_id -> stats (Family Wallet)
+            const benevoleCredits = {}; // Map benevole_id -> credit (Individual contribution)
+            
+            // Helper to get user stats object
+            const getUserStats = (userId) => {
+                if (!userId) return null;
+                if (!userStats[userId]) {
+                    userStats[userId] = { 
+                        inscriptions_credit: 0, 
+                        transactions_solde: 0, // Sum of ALL transactions (positive and negative)
+                        transaction_debit_abs: 0 // Sum of ABS(negative transactions)
+                    };
+                }
+                return userStats[userId];
+            };
+
+            // Calculate Credits from Inscriptions
+            // We need to map benevole_id to user_id (if exists).
+            const benevoleMap = {}; // benevole_id -> user_id
+            (benevolesData || []).forEach(b => { benevoleMap[b.id] = b.user_id; });
+            
+            allInscriptions.forEach(insc => {
+                // 1. Calculate Credit for this inscription
+                if (insc.postes && insc.postes.periodes) {
+                    const credit = parseFloat(insc.postes.periodes.montant_credit || 0);
+                    
+                    // A. Store individual credit
+                    benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
+
+                    // B. Store family credit if user attached
+                    const userId = benevoleMap[insc.benevole_id];
+                    if (userId) {
+                        const stats = getUserStats(userId);
+                        stats.inscriptions_credit += credit;
+                    }
+                }
+            });
+
+            // Calculate Debits/Adjustments from Transactions (Only applicable if user_id exists)
+            transactions.forEach(t => {
+                const stats = getUserStats(t.user_id);
+                if (stats) {
+                    const amount = parseFloat(t.amount);
+                    stats.transactions_solde += amount;
+                    if (amount < 0) {
+                        stats.transaction_debit_abs += Math.abs(amount);
+                    } else {
+                        // Positive transaction = Bonus credit
+                        stats.inscriptions_credit += amount;
+                    }
+                }
+            });
+            this.benevoles = (benevolesData || []).map(b => {
+                const userId = b.user_id;
+                let total_materiel = 0;
+                let dispo = 0;
+                let total_consomme = 0;
+
+                if (userId && userStats[userId]) {
+                    // LINKED TO FAMILY
+                    const stats = userStats[userId];
+                    total_materiel = stats.inscriptions_credit;
+                    total_consomme = stats.transaction_debit_abs;
+                    const balance = total_materiel - total_consomme;
+                    dispo = Math.max(0, balance);
+                } else {
+                    // ORPHAN VOLUNTEER (No User Account)
+                    // Can generate credits but cannot spend/have a balance
+                    total_materiel = benevoleCredits[b.id] || 0;
+                    dispo = 0; 
+                    total_consomme = 0;
+                }
+                
+                return {
+                    ...b,
+                    cagnotte_total: total_materiel,
+                    cagnotte_solde: dispo,
+                    cagnotte_real_consumed: total_consomme 
+                };
+            });
+
             this.calculateStats();
         } catch (error) {
-            this.showToast('❌ Erreur chargement bénévoles : ' + error.message, 'error');
+            console.error(error);
+            this.showToast('❌ Erreur chargement bénévoles/cagnotte : ' + error.message, 'error');
         }
+    },
+
+    // Alias for compatibility
+    async loadBenevoles() {
+        return this.loadBenevolesAndStats();
     },
 
     async loadPeriodes() {
@@ -513,10 +628,10 @@ export const AdminModule = {
 
             const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin' };
             this.showToast(`✅ Rôle changé en ${roleNames[newRole]}`, 'success');
-            await this.loadBenevoles();
+            await this.loadBenevolesAndStats();
         } catch (error) {
             this.showToast('❌ Erreur : ' + error.message, 'error');
-            await this.loadBenevoles();
+            await this.loadBenevolesAndStats();
         }
     },
 
@@ -535,6 +650,16 @@ export const AdminModule = {
             if (b.repas_samedi) samedi++;
         });
 
+        // CAGNOTTE STATS
+        // total_distribue = sum of all positive transactions (we have this aggregated in benevoles check if useful, or re-calc)
+        // Actually, we can just sum up from the this.benevoles mapped data
+        
+        const total_distribue = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_total || 0), 0);
+        const total_restant = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_solde || 0), 0);
+        
+        // Total consumed = Sum of REAL consumption
+        const total_consomme = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_real_consumed || 0), 0);
+
         // Sort sizes specifically
         const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Non défini'];
         const sortedTshirts = {};
@@ -551,6 +676,11 @@ export const AdminModule = {
             repas: {
                 vendredi,
                 samedi
+            },
+            cagnotte: {
+                total_distribue,
+                total_consomme,
+                total_restant
             }
         };
     },
