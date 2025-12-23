@@ -22,7 +22,7 @@
                   class="sticky top-0 z-40 brutal-card bg-brutal-white p-4 mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4 shadow-brutal border-b-2 border-brutal-black">
                   <div>
                     <p class="text-sm font-bold text-gray-600">Bienvenue,</p>
-                    <p class="text-2xl font-black" x-text="user?.email"></p>
+                    <p class="text-2xl font-black break-all" x-text="user?.email"></p>
                     <span x-show="profiles.some(p => p.role === 'admin')"
                       class="inline-block mt-2 px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black">
                       🔐 Administrateur
@@ -33,6 +33,10 @@
                       class="brutal-btn bg-brutal-ice px-6 py-3 shadow-brutal-sm text-center">
                       🔐 Admin
                     </a>
+                    <button @click="openWizard()"
+                        class="brutal-btn bg-yellow-400 text-brutal-black px-6 py-3 shadow-brutal-sm w-full sm:w-auto border-2 border-brutal-black font-bold">
+                        🧙 Assistant
+                    </button>
                     <button @click="toggleProfileSection()"
                       class="brutal-btn bg-brutal-white text-brutal-black px-6 py-3 shadow-brutal-sm w-full sm:w-auto border-2 border-brutal-black">
                       👤 Gérer les profils

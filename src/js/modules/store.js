@@ -65,6 +65,15 @@ export function initStore() {
             try {
                 // 0. Handle URL Errors (e.g., expired Magic Link)
                 const hash = window.location.hash;
+                const search = window.location.search;
+                
+                // Helper to check for auth params in Hash or Search (PKCE)
+                const isAuthRedirect = 
+                    hash.includes('access_token') || 
+                    hash.includes('type=') || 
+                    hash.includes('error=') ||
+                    search.includes('code=');
+
                 if (hash && hash.includes('error=')) {
                     const params = new URLSearchParams(hash.substring(1)); // Remove #
                     const errorDescription = params.get('error_description');
@@ -86,8 +95,11 @@ export function initStore() {
                 // Check session safely
                 console.log('🔄 Init - Checking session...');
 
-                // Detect Magic Link flow BEFORE getSession (which might consume the hash via auto-refresh)
-                const isMagicLink = window.location.hash.includes('access_token') || window.location.hash.includes('type=');
+                // Detect Magic Link flow BEFORE getSession
+                const isMagicLink = 
+                    window.location.hash.includes('access_token') || 
+                    window.location.hash.includes('type=') || 
+                    window.location.search.includes('code='); // PKCE support
 
                 let { user: initialUser } = await AuthService.getSession();
 
@@ -122,8 +134,8 @@ export function initStore() {
 
                     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                         // Clean URL hash
-                        if (window.location.hash.includes('access_token')) {
-                            console.log('🧹 Cleaning URL hash...');
+                        if (isAuthRedirect) {
+                            console.log('🧹 Cleaning URL auth params...');
                             window.history.replaceState(null, '', window.location.pathname);
                         }
                         await this.loadInitialData();
@@ -213,8 +225,9 @@ export function initStore() {
                     }
                 });
 
-                // Always reload the page to ensure a clean state
-                window.location.reload();
+                // RELOAD CLEANLY: Redirect to base path to remove any query strings or hashes
+                // This prevents "refresh logging you back in" if there was a lingering access_token/code in the URL
+                window.location.href = window.location.pathname;
             }
         },
 
