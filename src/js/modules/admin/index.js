@@ -55,7 +55,8 @@ export const AdminModule = {
     },
     periodeForm: {
         nom: '',
-        ordre: 1
+        ordre: 1,
+        montant_credit: 0.00
     },
 
     // Expose utils
@@ -373,7 +374,7 @@ export const AdminModule = {
             const { error } = await ApiService.insert('periodes', this.periodeForm);
             if (error) throw error;
             this.showToast('✅ Période créée avec succès !', 'success');
-            this.periodeForm = { nom: '', ordre: this.periodes.length + 1 };
+            this.periodeForm = { nom: '', ordre: this.periodes.length + 1, montant_credit: 0.00 };
             await this.loadPeriodes();
         } catch (error) {
             this.showToast('❌ Erreur : ' + error.message, 'error');
@@ -387,6 +388,17 @@ export const AdminModule = {
             const { error } = await ApiService.update('periodes', { ordre: parseInt(newOrder) }, { id: periodeId });
             if (error) throw error;
             this.showToast('✅ Ordre mis à jour', 'success');
+            await this.loadPeriodes();
+        } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        }
+    },
+
+    async updatePeriodeAmount(periodeId, newAmount) {
+        try {
+            const { error } = await ApiService.update('periodes', { montant_credit: parseFloat(newAmount) }, { id: periodeId });
+            if (error) throw error;
+            this.showToast('✅ Montant mis à jour', 'success');
             await this.loadPeriodes();
         } catch (error) {
             this.showToast('❌ Erreur : ' + error.message, 'error');

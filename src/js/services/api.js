@@ -31,6 +31,16 @@ export const ApiService = {
     },
 
     /**
+     * Calls a remote procedure (SQL function).
+     * @param {string} rpcName - The name of the RPC function.
+     * @param {object} [params] - Parameters for the function.
+     * @returns {Promise<{ data: any, error: object|null }>} The result.
+     */
+    async rpc(rpcName, params = {}) {
+        return await supabase.rpc(rpcName, params);
+    },
+
+    /**
      * Refreshes the current session.
      */
     async refreshSession() {

@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants.js';
 
-// Configuration Supabase (depuis import.meta.env injectées par Vite)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Re-export for compatibility if needed, but better to import from constants
+export { SUPABASE_URL, SUPABASE_ANON_KEY };
 
 // Validation
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {

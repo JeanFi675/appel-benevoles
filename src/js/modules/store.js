@@ -4,6 +4,7 @@ import { ApiService } from '../services/api.js';
 import { ProfilesModule } from './user/profiles.js';
 import { PlanningModule } from './user/planning.js';
 import { WizardModule } from './user/wizard.js';
+import { CagnotteModule } from './user/cagnotte.js';
 
 /**
  * Initializes the central application store.
@@ -56,6 +57,7 @@ export function initStore() {
         ...ProfilesModule,
         ...PlanningModule,
         ...WizardModule,
+        ...CagnotteModule,
 
         /**
          * Initializes the application.

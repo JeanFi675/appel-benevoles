@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "alpinejs": "^3.13.3"
+    "alpinejs": "^3.13.3",
+    "dotenv": "^17.2.3",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",

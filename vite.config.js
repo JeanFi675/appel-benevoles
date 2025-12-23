@@ -34,6 +34,19 @@ export default defineConfig({
             }
           },
         },
+        {
+          entry: 'src/js/debit.js',
+          filename: 'debit.html',
+          template: 'debit.html',
+          injectOptions: {
+            data: {
+              title: 'Paiement - Bénévoles',
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            }
+          },
+        },
       ],
     }),
   ],
@@ -44,6 +57,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
+        debit: resolve(__dirname, 'debit.html'),
       },
     },
   }
