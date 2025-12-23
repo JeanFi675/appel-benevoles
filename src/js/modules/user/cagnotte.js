@@ -20,6 +20,9 @@ export const CagnotteModule = {
   /**
    * Fetches the current balance for the user's family
    */
+  /**
+   * Fetches the current balance for the user's family
+   */
   async getBalance() {
     if (!this.user) return 0;
     try {
@@ -31,6 +34,22 @@ export const CagnotteModule = {
     } catch (e) {
       console.error("Error fetching balance:", e);
       return 0;
+    }
+  },
+
+  /**
+   * Fetches the feature flag status
+   */
+  async getStatus() {
+    try {
+        const { data, error } = await ApiService.fetch('config', {
+            eq: { key: 'cagnotte_active' }
+        });
+        if (error) throw error;
+        return (data && data.length > 0) ? data[0].value : false;
+    } catch (e) {
+        console.error("Error fetching status:", e);
+        return false;
     }
   },
 
@@ -58,7 +77,16 @@ export const CagnotteModule = {
         // actually, full re-render is fine.
       }
 
-      const balance = await this.getBalance();
+      const [balance, isActive] = await Promise.all([
+        this.getBalance(),
+        this.getStatus()
+      ]);
+      
+      // If not active, show 0 (but keep real balance in background logic if needed, though here purely display)
+      const displayBalance = isActive ? balance : 0;
+      const themeTitle = "Mon Matériel"; // Was "Ma Cagnotte"
+      const themeUnit = "dégaines"; // Was "€"
+
 
       // Check again if parent still exists (component might have been destroyed)
       if (!parentElement) return;
@@ -72,16 +100,18 @@ export const CagnotteModule = {
       widget.innerHTML = `
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-sm font-semibold text-emerald-800 uppercase tracking-wide">Ma Cagnotte</h3>
+                        <h3 class="text-sm font-semibold text-emerald-800 uppercase tracking-wide">${themeTitle}</h3>
                         <div class="text-2xl font-bold text-emerald-600">${parseFloat(
-                          balance
-                        ).toFixed(2)} €</div>
+                          displayBalance
+                        ).toFixed(isActive ? 2 : 0)} ${themeUnit}</div>
                     </div>
+                    ${isActive ? `
                     <button id="show-qr-${benevoleId}" class="bg-gray-800 hover:bg-black text-white p-2 rounded-lg transition-colors" title="Afficher mon QR Code">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </button>
+                    ` : ''}
                 </div>
                 
                 <!-- Modal / Expanded Area for QR Code -->
@@ -100,7 +130,8 @@ export const CagnotteModule = {
       const qrContainer = widget.querySelector(`#qr-container-${benevoleId}`);
       const canvas = widget.querySelector(`#qr-canvas-${benevoleId}`);
 
-      btn.addEventListener("click", () => {
+      if (btn) {
+        btn.addEventListener("click", () => {
         const isHidden = qrContainer.classList.contains("hidden");
         if (isHidden) {
           qrContainer.classList.remove("hidden");
@@ -120,6 +151,7 @@ export const CagnotteModule = {
           btn.classList.add("bg-gray-800");
         }
       });
+     }
     } finally {
       isRendering = false;
     }

@@ -1,56 +1,102 @@
 <div x-show="activeTab === 'recap'" class="brutal-card bg-brutal-white p-6">
-    <h2 class="text-3xl font-black mb-6">📊 Récapitulatif</h2>
+  <h2 class="text-3xl font-black mb-6">📊 Récapitulatif</h2>
 
-    <div class="grid md:grid-cols-2 gap-8">
-        
-        <!-- T-SHIRTS -->
-        <div class="border-4 border-brutal-black p-4 bg-blue-50">
-            <h3 class="text-2xl font-black mb-4 border-b-2 border-brutal-black pb-2">👕 T-Shirts</h3>
-            
-            <template x-if="stats.tshirts && Object.keys(stats.tshirts).length > 0">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b-2 border-brutal-black">
-                            <th class="py-2 font-black">Taille</th>
-                            <th class="py-2 font-black text-right">Quantité</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="(count, size) in stats.tshirts" :key="size">
-                            <tr class="border-b border-gray-300">
-                                <td class="py-2 font-bold" x-text="size || 'Non défini'"></td>
-                                <td class="py-2 text-right font-mono text-lg" x-text="count"></td>
-                            </tr>
-                        </template>
-                        <tr class="bg-brutal-black text-brutal-white">
-                            <td class="py-2 pl-2 font-black">TOTAL</td>
-                            <td class="py-2 pr-2 text-right font-mono text-lg" x-text="Object.values(stats.tshirts).reduce((a, b) => a + b, 0)"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </template>
-            <div x-show="!stats.tshirts || Object.keys(stats.tshirts).length === 0" class="italic text-gray-500">
-                Aucune donnée de T-shirt.
-            </div>
-        </div>
-
-        <!-- REPAS -->
-        <div class="border-4 border-brutal-black p-4 bg-yellow-50">
-            <h3 class="text-2xl font-black mb-4 border-b-2 border-brutal-black pb-2">🍽️ Repas Bénévoles</h3>
-            
-            <table class="w-full text-left border-collapse">
-                <tbody>
-                    <tr class="border-b-2 border-brutal-black">
-                        <td class="py-4 font-bold text-lg">Vendredi soir (15 mai)</td>
-                        <td class="py-4 text-right font-black text-2xl" x-text="stats.repas.vendredi"></td>
-                    </tr>
-                    <tr>
-                        <td class="py-4 font-bold text-lg">Samedi soir (16 mai)</td>
-                        <td class="py-4 text-right font-black text-2xl" x-text="stats.repas.samedi"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
+  <!-- CONFIGURATION -->
+  <div
+    class="mb-8 p-6 bg-brutal-white border-4 border-brutal-black shadow-brutal flex justify-between items-center"
+  >
+    <div>
+      <h3 class="text-2xl font-black">⚙️ Configuration</h3>
+      <p class="text-gray-600 font-bold">
+        Gérer les fonctionnalités globales de l'application.
+      </p>
     </div>
+    <div class="flex items-center gap-4">
+      <span
+        class="font-bold text-lg"
+        x-text="config.cagnotte_active ? 'Cagnotte ACTIVÉE' : 'Cagnotte DÉSACTIVÉE'"
+      ></span>
+      <button
+        @click="toggleCagnotte()"
+        class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none"
+        :class="config.cagnotte_active ? 'bg-green-400' : 'bg-gray-300'"
+      >
+        <span class="sr-only">Activer la cagnotte</span>
+        <span
+          class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
+          :class="config.cagnotte_active ? 'translate-x-7' : 'translate-x-0.5'"
+        ></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-8">
+    <!-- T-SHIRTS -->
+    <div class="border-4 border-brutal-black p-4 bg-blue-50">
+      <h3 class="text-2xl font-black mb-4 border-b-2 border-brutal-black pb-2">
+        👕 T-Shirts
+      </h3>
+
+      <template x-if="stats.tshirts && Object.keys(stats.tshirts).length > 0">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b-2 border-brutal-black">
+              <th class="py-2 font-black">Taille</th>
+              <th class="py-2 font-black text-right">Quantité</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(count, size) in stats.tshirts" :key="size">
+              <tr class="border-b border-gray-300">
+                <td class="py-2 font-bold" x-text="size || 'Non défini'"></td>
+                <td
+                  class="py-2 text-right font-mono text-lg"
+                  x-text="count"
+                ></td>
+              </tr>
+            </template>
+            <tr class="bg-brutal-black text-brutal-white">
+              <td class="py-2 pl-2 font-black">TOTAL</td>
+              <td
+                class="py-2 pr-2 text-right font-mono text-lg"
+                x-text="Object.values(stats.tshirts).reduce((a, b) => a + b, 0)"
+              ></td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
+      <div
+        x-show="!stats.tshirts || Object.keys(stats.tshirts).length === 0"
+        class="italic text-gray-500"
+      >
+        Aucune donnée de T-shirt.
+      </div>
+    </div>
+
+    <!-- REPAS -->
+    <div class="border-4 border-brutal-black p-4 bg-yellow-50">
+      <h3 class="text-2xl font-black mb-4 border-b-2 border-brutal-black pb-2">
+        🍽️ Repas Bénévoles
+      </h3>
+
+      <table class="w-full text-left border-collapse">
+        <tbody>
+          <tr class="border-b-2 border-brutal-black">
+            <td class="py-4 font-bold text-lg">Vendredi soir (15 mai)</td>
+            <td
+              class="py-4 text-right font-black text-2xl"
+              x-text="stats.repas.vendredi"
+            ></td>
+          </tr>
+          <tr>
+            <td class="py-4 font-bold text-lg">Samedi soir (16 mai)</td>
+            <td
+              class="py-4 text-right font-black text-2xl"
+              x-text="stats.repas.samedi"
+            ></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>

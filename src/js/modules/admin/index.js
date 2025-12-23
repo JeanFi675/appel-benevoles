@@ -25,6 +25,11 @@ export const AdminModule = {
         }
     },
 
+    // Configuration
+    config: {
+        cagnotte_active: false
+    },
+
     // Search & Modal
 
     // Search & Modal
@@ -209,10 +214,11 @@ export const AdminModule = {
      * Loads all admin data.
      */
     async loadData() {
-        await this.loadBenevoles();
         await Promise.all([
+            this.loadBenevoles(),
             this.loadPostes(),
-            this.loadPeriodes()
+            this.loadPeriodes(),
+            this.loadConfig()
         ]);
     },
 
@@ -285,6 +291,47 @@ export const AdminModule = {
             this.periodes = data || [];
         } catch (error) {
             this.showToast('❌ Erreur chargement périodes : ' + error.message, 'error');
+        }
+    },
+
+    async loadConfig() {
+        try {
+            const { data, error } = await ApiService.fetch('config', {
+                eq: { key: 'cagnotte_active' }
+            });
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                this.config.cagnotte_active = data[0].value;
+            } else {
+                // Should exist from migration, but fallback
+                this.config.cagnotte_active = false;
+            }
+        } catch (error) {
+            console.error('Error loading config:', error);
+            this.showToast('⚠️ Erreur chargement configuration', 'warning');
+        }
+    },
+    
+    async toggleCagnotte() {
+        const newValue = !this.config.cagnotte_active;
+        // Optimistic update
+        this.config.cagnotte_active = newValue;
+        
+        try {
+            // Check if exists first (or upsert if API supports it, here assuming update works if row exists)
+            // Ideally ApiService supports upsert, but let's try update or insert
+            
+            // We know row exists from migration
+            const { error } = await ApiService.update('config', { value: newValue }, { key: 'cagnotte_active' });
+            
+            if (error) throw error;
+            
+            this.showToast(`✅ Cagnotte ${newValue ? 'ACTIVÉE' : 'DÉSACTIVÉE'}`, 'success');
+        } catch (error) {
+            // Revert
+            this.config.cagnotte_active = !newValue;
+            this.showToast('❌ Erreur mise à jour : ' + error.message, 'error');
         }
     },
 
