@@ -19,11 +19,13 @@ export const WizardModule = {
         prenom: '',
         nom: '',
         telephone: '',
-        telephone: '',
         taille_tshirt: '',
         repas_vendredi: false,
         repas_samedi: false
     },
+
+    // Data for public view
+    publicInscriptions: [], // Stores { poste_id, formatted_name }
 
     // Computeds converted to Methods for Alpine Mixin compatibility
     getWizardPeriods() {
@@ -32,7 +34,7 @@ export const WizardModule = {
         return periods.sort((a, b) => {
             const pA = this.postes.find(p => p.periode === a);
             const pB = this.postes.find(p => p.periode === b);
-            return (pA?.periode_ordre || 0) - (pB?.periode_ordre || 0);
+            return (Number(pA?.periode_ordre) || 0) - (Number(pB?.periode_ordre) || 0);
         });
     },
 
@@ -55,6 +57,16 @@ export const WizardModule = {
         ];
 
         methodPosts.forEach(poste => {
+            // enrich with volunteer names
+            const names = this.publicInscriptions
+                .filter(i => i.poste_id === poste.poste_id)
+                .map(i => i.formatted_name);
+            
+            // Allow mutation of the object for display purposes, 
+            // or create a lightweight copy to avoid side effects if 'postes' is frozen (likely not).
+            // Direct mutation is easiest for Alpine reactivity if 'postes' is reactive.
+            poste.liste_benevoles = names;
+
             const min = poste.nb_min || 0;
             const max = poste.nb_max || 0;
             const current = poste.inscrits_actuels || 0;
@@ -64,7 +76,7 @@ export const WizardModule = {
             else subgroups[1].postes.push(poste);
         });
 
-        subgroups.forEach(group => group.postes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut)));
+        subgroups.forEach(group => group.postes.sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime()));
         return subgroups.filter(g => g.postes.length > 0);
     },
 
@@ -76,6 +88,20 @@ export const WizardModule = {
         this.showPostCreationModal = false;
         if (this.profiles && this.profiles.length === 1) {
             this.wizardSelectedProfileId = this.profiles[0].id;
+        }
+        
+        // Load public inscriptions when opening
+        this.loadPublicInscriptions();
+    },
+
+    async loadPublicInscriptions() {
+        try {
+            const { data, error } = await ApiService.rpc('get_public_inscriptions');
+            if (error) throw error;
+            this.publicInscriptions = data || [];
+        } catch (err) {
+            console.error('Error loading public inscriptions:', err);
+            // Non-blocking error, we just don't show names
         }
     },
 
@@ -195,7 +221,6 @@ export const WizardModule = {
             prenom: profile.prenom,
             nom: profile.nom,
             telephone: profile.telephone,
-            telephone: profile.telephone,
             taille_tshirt: profile.taille_tshirt,
             repas_vendredi: profile.repas_vendredi || false,
             repas_samedi: profile.repas_samedi || false
@@ -231,7 +256,6 @@ export const WizardModule = {
                 prenom: f.prenom,
                 nom: f.nom,
                 telephone: f.telephone,
-                telephone: f.telephone,
                 taille_tshirt: f.taille_tshirt,
                 repas_vendredi: f.repas_vendredi,
                 repas_samedi: f.repas_samedi
@@ -241,13 +265,13 @@ export const WizardModule = {
                 payload.id = f.id;
             }
 
-            const { data, error } = await ApiService.upsert('benevoles', payload, { select: '*' });
+            const { data, error } = await ApiService.upsert('benevoles', payload);
 
             if (error) throw error;
             
             await this.loadProfiles();
 
-            const newId = data && data.length > 0 ? data[0].id : null;
+            const newId = data ? data.id : null;
             if (newId) this.wizardSelectedProfileId = newId;
 
             if (f.id) {
@@ -274,7 +298,7 @@ export const WizardModule = {
         this.loading = false;
         this.showPostCreationModal = false;
         if (choice === 'add') {
-            this.wizardProfileForm = { prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
             this.showWizardProfileForm = true;
         } else {
             this.wizardStep = 2;

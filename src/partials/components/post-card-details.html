@@ -54,7 +54,7 @@
 
 
         <!-- Cas 2: Vue normale -> Afficher tous les inscrits (anonymisés ou non selon logique backend) -->
-        <template x-if="!showMyInscriptions">
+        <template x-if="!showMyInscriptions || wizardOpen">
             <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0">
                 <p class="font-bold mb-2">Bénévoles inscrits :</p>
                 <div class="flex flex-wrap gap-2">
