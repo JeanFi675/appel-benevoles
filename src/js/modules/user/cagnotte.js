@@ -96,17 +96,17 @@ export const CagnotteModule = {
 
       const widget = document.createElement("div");
       widget.className =
-        "bg-white rounded-lg shadow-sm p-4 border border-emerald-100 cagnotte-widget-content";
+        "bg-white rounded-lg shadow-sm p-2 md:p-4 border border-emerald-100 cagnotte-widget-content";
       widget.innerHTML = `
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-sm font-semibold text-emerald-800 uppercase tracking-wide">${themeTitle}</h3>
-                        <div class="text-2xl font-bold text-emerald-600">${parseFloat(
+                        <h3 class="text-xs md:text-sm font-semibold text-emerald-800 uppercase tracking-wide">${themeTitle}</h3>
+                        <div class="text-lg md:text-2xl font-bold text-emerald-600">${parseFloat(
                           displayBalance
                         ).toFixed(isActive ? 2 : 0)} ${themeUnit}</div>
                     </div>
                     ${isActive ? `
-                    <button id="show-qr-${benevoleId}" class="bg-gray-800 hover:bg-black text-white p-2 rounded-lg transition-colors" title="Afficher mon QR Code">
+                    <button id="show-qr-${benevoleId}" class="bg-gray-800 hover:bg-black text-white p-1 md:p-2 rounded-lg transition-colors" title="Afficher mon QR Code">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
