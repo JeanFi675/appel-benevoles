@@ -1,5 +1,7 @@
 # 🧗 Système de Gestion de Bénévoles pour Compétition d'Escalade
 
+![Project Status: Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)
+
 Application web moderne pour gérer les inscriptions de bénévoles avec authentification Magic Link, gestion des conflits temporels et design neo-brutaliste.
 
 ## ✨ Fonctionnalités
@@ -20,7 +22,13 @@ Application web moderne pour gérer les inscriptions de bénévoles avec authent
 - **Frontend** : HTML + Alpine.js + Tailwind CSS (via CDN, pas de build)
 - **Backend** : Supabase (PostgreSQL + Auth + Row Level Security)
 - **Hébergement** : GitHub Pages (statique)
-- **Design** : Neo-brutaliste (noir/ice/blanc, bordures épaisses, ombres dures)
+- **Code Quality** : JSDoc + `jsconfig.json` (Type Checking)
+
+### Structure du Code
+
+- `src/js/modules/` : Logique métier (Store, User, Admin)
+- `src/js/services/` : Couche d'abstraction API & Auth
+- `src/js/utils.js` : Utilitaires formatés et documentés
 
 ### Base de Données
 
@@ -32,6 +40,7 @@ Application web moderne pour gérer les inscriptions de bénévoles avec authent
 ### Sécurité
 
 - **Row Level Security (RLS)** : Chaque utilisateur ne peut modifier que ses propres données
+- **Optimisation** : Index sur les clés étrangères (`user_id`, `auteur_id`, etc.)
 - **Triggers PostgreSQL** : Validation atomique des capacités et conflits temporels
 - **Clé API publique** : Sûre car protégée par RLS
 
@@ -145,7 +154,10 @@ colors: {
 Changez les fonts Google Fonts (ligne 9) :
 
 ```html
-<link href="https://fonts.googleapis.com/css2?family=VotreFontTitre&family=VotreFontBody&display=swap" rel="stylesheet">
+<link
+  href="https://fonts.googleapis.com/css2?family=VotreFontTitre&family=VotreFontBody&display=swap"
+  rel="stylesheet"
+/>
 ```
 
 ## 📊 Administration
@@ -153,11 +165,13 @@ Changez les fonts Google Fonts (ligne 9) :
 ### Ajouter des postes
 
 **Via le Table Editor Supabase** (recommandé) :
+
 1. Ouvrez **Table Editor** → **postes**
 2. Cliquez sur **Insert row**
 3. Remplissez les champs directement comme dans Excel
 
 **Via SQL** :
+
 ```sql
 INSERT INTO postes (titre, periode_debut, periode_fin, categorie, description, nb_min, nb_max)
 VALUES ('Nouveau poste', '2025-06-14 14:00:00+02', '2025-06-14 18:00:00+02', 'Catégorie', 'Description', 2, 5);

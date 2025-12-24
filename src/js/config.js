@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+/// <reference types="vite/client" />
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants.js';
 
 // Re-export for compatibility if needed, but better to import from constants
@@ -31,5 +32,4 @@ export const getMagicLinkRedirectUrl = (page = '') => {
     return page ? `${baseUrl}/${page}` : window.location.href;
 };
 
-console.log(`🔧 Environnement : ${isDevelopment ? 'Development' : 'Production'}`);
-console.log(`🌐 App URL : ${getAppUrl()}`);
+
