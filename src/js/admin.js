@@ -16,15 +16,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             // Check admin role
-            const { data: profile, error } = await ApiService.fetch('benevoles', {
-                eq: { id: user.id },
+            const { data: profiles, error } = await ApiService.fetch('benevoles', {
+                eq: { user_id: user.id },
                 select: 'role'
             });
 
-            // Note: fetch returns array, we need single
-            const adminProfile = (profile && profile.length > 0) ? profile[0] : null;
+            const hasAdminRole = profiles && profiles.some(p => p.role === 'admin');
 
-            if (error || !adminProfile || adminProfile.role !== 'admin') {
+            if (error || !hasAdminRole) {
                 this.isAdmin = false;
                 this.loading = false;
                 return;
