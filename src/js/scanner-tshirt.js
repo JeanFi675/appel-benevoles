@@ -4,9 +4,21 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants.js';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+/**
+ * @typedef {Object} Volunteer
+ * @property {string} benevole_id
+ * @property {string} prenom
+ * @property {string} nom
+ * @property {string} taille_tshirt
+ * @property {boolean} t_shirt_recupere
+ * @property {boolean} has_registrations
+ * @property {boolean} [selected]
+ */
+
 Alpine.data('tshirtScanner', () => ({
     loading: true,
     error: null,
+    /** @type {Volunteer[]} */
     volunteers: [],
 
     async init() {
@@ -21,6 +33,15 @@ Alpine.data('tshirtScanner', () => ({
             return;
         }
 
+        // Failsafe timeout
+        const timeoutId = setTimeout(() => {
+            if (this.loading) {
+                console.error('⏰ Init timed out');
+                this.error = "Délai d'attente dépassé. Vérifiez votre connexion.";
+                this.loading = false;
+            }
+        }, 5000);
+
         try {
             console.log('📡 Calling get_family_tshirt_info_smart...');
             const { data, error } = await supabase.rpc('get_family_tshirt_info_smart', { scan_id: id });
@@ -28,6 +49,7 @@ Alpine.data('tshirtScanner', () => ({
 
             if (error) throw error;
 
+            // @ts-ignore
             this.volunteers = (data || []).map(v => ({
                 ...v,
                 selected: v.has_registrations && !v.t_shirt_recupere // Auto-select if eligible and needed
@@ -43,6 +65,7 @@ Alpine.data('tshirtScanner', () => ({
             console.error('💥 Init Error:', e);
             this.error = "Erreur chargement: " + e.message;
         } finally {
+            clearTimeout(timeoutId);
             console.log('🛑 Finally block - setting loading false');
             this.loading = false;
         }

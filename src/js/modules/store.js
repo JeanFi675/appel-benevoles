@@ -23,6 +23,7 @@ export function initStore() {
             open: false,
             title: '',
             message: '',
+            /** @type {((value: boolean) => void) | null} */
             resolve: null
         },
 
@@ -244,9 +245,11 @@ export function initStore() {
          */
         showToast(message, type = 'success') {
             const id = Date.now() + Math.random().toString(36).substr(2, 9);
+            // @ts-ignore
             this.toasts.push({ id, message, type });
 
             setTimeout(() => {
+                // @ts-ignore
                 this.toasts = this.toasts.filter(t => t.id !== id);
             }, 5000);
         }
