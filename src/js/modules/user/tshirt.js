@@ -38,17 +38,17 @@ export const TshirtModule = {
             // Render Widget
             parentElement.innerHTML = "";
             const widget = document.createElement("div");
-            widget.className = "bg-white rounded-lg shadow-sm p-4 border border-blue-100 mt-4 tshirt-widget-content";
+            widget.className = "bg-white rounded-lg shadow-sm p-2 md:p-4 border border-blue-100 tshirt-widget-content";
 
             const countToCollect = eligibles.filter(v => !v.t_shirt_recupere).length;
 
             widget.innerHTML = `
             <div class="flex items-center justify-between">
                 <div>
-                     <h3 class="text-sm font-semibold text-blue-800 uppercase tracking-wide">👕 Mes T-shirts</h3>
-                     <p class="text-blue-600 font-bold text-lg">${countToCollect} à récupérer</p>
+                     <h3 class="text-xs md:text-sm font-semibold text-blue-800 uppercase tracking-wide">👕 Mes T-shirts</h3>
+                     <p class="text-blue-600 font-bold text-sm md:text-xl">${countToCollect} à récupérer</p>
                 </div>
-                 <button id="show-tshirt-qr" class="bg-blue-600 hover:bg-blue-800 text-white p-2 rounded-lg transition-colors">
+                 <button id="show-tshirt-qr" class="bg-blue-600 hover:bg-blue-800 text-white p-1 md:p-2 rounded-lg transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -57,7 +57,7 @@ export const TshirtModule = {
             <div id="tshirt-qr-container" class="hidden mt-4 text-center border-t pt-4">
                  <p class="text-sm text-gray-500 mb-2">Présentez ce code au stand T-shirts</p>
                  <div class="flex justify-center bg-white p-2 rounded">
-                    <canvas id="tshirt-canvas"></canvas>
+                    <canvas id="tshirt-canvas" class="max-w-full h-auto"></canvas>
                  </div>
             </div>
         `;
@@ -78,8 +78,10 @@ export const TshirtModule = {
                         const scannerUrl = `${window.location.origin}${directory}scanner-tshirt.html?id=${userId}`;
 
                         QRCode.toCanvas(canvas, scannerUrl, { width: 200, margin: 2 }, (e) => { if (e) console.error(e); });
+                        parentElement.classList.add("col-span-2");
                     } else {
                         container.classList.add('hidden');
+                        parentElement.classList.remove("col-span-2");
                     }
                 });
             }
