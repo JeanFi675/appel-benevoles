@@ -5,6 +5,7 @@ import { ProfilesModule } from './user/profiles.js';
 import { PlanningModule } from './user/planning.js';
 import { WizardModule } from './user/wizard.js';
 import { CagnotteModule } from './user/cagnotte.js';
+import { TshirtModule } from './user/tshirt.js';
 
 /**
  * Initializes the central application store.
@@ -58,6 +59,7 @@ export function initStore() {
         ...PlanningModule,
         ...WizardModule,
         ...CagnotteModule,
+        ...TshirtModule,
 
         /**
          * Initializes the application.
@@ -68,11 +70,11 @@ export function initStore() {
                 // 0. Handle URL Errors (e.g., expired Magic Link)
                 const hash = window.location.hash;
                 const search = window.location.search;
-                
+
                 // Helper to check for auth params in Hash or Search (PKCE)
-                const isAuthRedirect = 
-                    hash.includes('access_token') || 
-                    hash.includes('type=') || 
+                const isAuthRedirect =
+                    hash.includes('access_token') ||
+                    hash.includes('type=') ||
                     hash.includes('error=') ||
                     search.includes('code=');
 
@@ -98,9 +100,9 @@ export function initStore() {
                 console.log('🔄 Init - Checking session...');
 
                 // Detect Magic Link flow BEFORE getSession
-                const isMagicLink = 
-                    window.location.hash.includes('access_token') || 
-                    window.location.hash.includes('type=') || 
+                const isMagicLink =
+                    window.location.hash.includes('access_token') ||
+                    window.location.hash.includes('type=') ||
                     window.location.search.includes('code='); // PKCE support
 
                 let { user: initialUser } = await AuthService.getSession();

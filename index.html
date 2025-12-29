@@ -1,123 +1,99 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <%- include('/src/partials/layout/head.html', { title: 'Bénévoles Escalade - Inscription' }) %>
+<%- include('/src/partials/layout/head.html', { title: 'Bénévoles Escalade - Inscription' }) %>
 
-  <body
-    class="bg-brutal-ice min-h-screen overflow-x-hidden"
-    x-data="app()"
-    x-init="init()"
-  >
+  <body class="bg-brutal-ice min-h-screen overflow-x-hidden" x-data="app()" x-init="init()">
     <%- include('/src/partials/components/toast.html') %>
-    <%- include('/src/partials/components/confirm-modal.html') %>
-    <%- include('/src/partials/layout/header.html') %>
+      <%- include('/src/partials/components/confirm-modal.html') %>
+        <%- include('/src/partials/layout/header.html') %>
 
-    <main class="container mx-auto px-4 pb-24">
-      <%- include('/src/partials/sections/index/login.html') %>
+          <main class="container mx-auto px-4 pb-24">
+            <%- include('/src/partials/sections/index/login.html') %>
 
-      <!-- Section Utilisateur Connecté -->
-      <section x-show="user" style="display: none">
-        <!-- Barre Utilisateur -->
-        <div
-          class="sticky top-0 z-40 brutal-card bg-brutal-white p-2 md:p-3 mb-2 md:mb-4 flex flex-col gap-2 md:gap-3 shadow-brutal border-b-2 border-brutal-black"
-        >
-          <!-- Header: Info User + Cagnotte (Side by Side on mobile if possible, or stacked compact) -->
-          <div
-            class="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-2 md:gap-3"
-          >
-            <!-- User Info -->
-            <div class="w-full md:w-auto">
-              <div class="flex justify-between items-center">
-                <div>
-                  <p class="text-xs font-bold text-gray-600 uppercase">
-                    Compte connecté
-                  </p>
-                  <p
-                    class="text-lg font-black break-all leading-tight"
-                    x-text="user?.email"
-                  ></p>
+              <!-- Section Utilisateur Connecté -->
+              <section x-show="user" style="display: none">
+                <!-- Barre Utilisateur -->
+                <div
+                  class="sticky top-0 z-40 brutal-card bg-brutal-white p-2 md:p-3 mb-2 md:mb-4 flex flex-col gap-2 md:gap-3 shadow-brutal border-b-2 border-brutal-black">
+                  <!-- Header: Info User + Cagnotte (Side by Side on mobile if possible, or stacked compact) -->
+                  <div
+                    class="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-2 md:gap-3">
+                    <!-- User Info -->
+                    <div class="w-full md:w-auto">
+                      <div class="flex justify-between items-center">
+                        <div>
+                          <p class="text-xs font-bold text-gray-600 uppercase">
+                            Compte connecté
+                          </p>
+                          <p class="text-lg font-black break-all leading-tight" x-text="user?.email"></p>
+                        </div>
+                        <!-- Mobile Cagnotte Placeholder if we wanted to move it here, but let's keep it standard -->
+                      </div>
+
+                      <span x-show="profiles.some(p => p.role === 'admin')"
+                        class="inline-block mt-1 px-2 py-0.5 bg-brutal-black text-brutal-white font-bold text-xs border border-brutal-black">
+                        Admin
+                      </span>
+                    </div>
+
+                    <!-- Actions Container -->
+                    <div class="w-full md:w-auto flex flex-col gap-2">
+                      <!-- Cagnotte Widget -->
+                      <div id="cagnotte-widget-container" class="w-full" x-effect="if(user) renderWidget($el, user.id)">
+                      </div>
+
+                      <!-- Tshirt Widget -->
+                      <div id="tshirt-widget-container" class="w-full"
+                        x-effect="if(user) renderTshirtWidget($el, user.id)"></div>
+
+                      <!-- Buttons Grid -->
+                      <div class="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full">
+                        <a x-show="profiles.some(p => p.role === 'admin')" href="admin.html"
+                          class="brutal-btn bg-brutal-ice px-3 py-2 text-sm shadow-brutal-sm text-center flex items-center justify-center font-bold">
+                          🔐 Admin
+                        </a>
+
+                        <button @click="openWizard()"
+                          class="brutal-btn bg-yellow-400 text-brutal-black px-3 py-2 text-sm shadow-brutal-sm border-2 border-brutal-black font-bold flex items-center justify-center">
+                          🧙 Assistant
+                        </button>
+
+                        <button @click="toggleProfileSection()"
+                          class="brutal-btn bg-brutal-white text-brutal-black px-3 py-2 text-sm shadow-brutal-sm border-2 border-brutal-black flex items-center justify-center font-bold">
+                          👤 Profils
+                        </button>
+
+                        <button @click="logout()"
+                          class="brutal-btn bg-brutal-black text-brutal-white px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold">
+                          Déconnexion
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <!-- Mobile Cagnotte Placeholder if we wanted to move it here, but let's keep it standard -->
-              </div>
 
-              <span
-                x-show="profiles.some(p => p.role === 'admin')"
-                class="inline-block mt-1 px-2 py-0.5 bg-brutal-black text-brutal-white font-bold text-xs border border-brutal-black"
-              >
-                Admin
-              </span>
-            </div>
+                <%- include('/src/partials/sections/index/profile-list.html') %>
+                  <%- include('/src/partials/sections/index/planning-list.html') %>
+              </section>
+          </main>
 
-            <!-- Actions Container -->
-            <div class="w-full md:w-auto flex flex-col gap-2">
-              <!-- Cagnotte Widget -->
-              <div
-                id="cagnotte-widget-container"
-                class="w-full"
-                x-effect="if(user) renderWidget($el, user.id)"
-              ></div>
-
-              <!-- Buttons Grid -->
-              <div class="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full">
-                <a
-                  x-show="profiles.some(p => p.role === 'admin')"
-                  href="admin.html"
-                  class="brutal-btn bg-brutal-ice px-3 py-2 text-sm shadow-brutal-sm text-center flex items-center justify-center font-bold"
-                >
-                  🔐 Admin
-                </a>
-
-                <button
-                  @click="openWizard()"
-                  class="brutal-btn bg-yellow-400 text-brutal-black px-3 py-2 text-sm shadow-brutal-sm border-2 border-brutal-black font-bold flex items-center justify-center"
-                >
-                  🧙 Assistant
-                </button>
-
-                <button
-                  @click="toggleProfileSection()"
-                  class="brutal-btn bg-brutal-white text-brutal-black px-3 py-2 text-sm shadow-brutal-sm border-2 border-brutal-black flex items-center justify-center font-bold"
-                >
-                  👤 Profils
-                </button>
-
-                <button
-                  @click="logout()"
-                  class="brutal-btn bg-brutal-black text-brutal-white px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold"
-                >
-                  Déconnexion
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <%- include('/src/partials/sections/index/profile-list.html') %>
-        <%- include('/src/partials/sections/index/planning-list.html') %>
-      </section>
-    </main>
-
-    <!-- Global Action Button (Floating) -->
-    <div
-      class="fixed bottom-10 right-4 z-50"
-      x-show="user && !wizardOpen"
-      style="
+          <!-- Global Action Button (Floating) -->
+          <div class="fixed bottom-10 right-4 z-50" x-show="user && !wizardOpen" style="
         position: fixed !important;
         bottom: 2.5rem !important;
         right: 1rem !important;
         z-index: 9999 !important;
-      "
-    >
-      <button
-        @click="openWizard()"
-        class="brutal-btn bg-yellow-400 text-brutal-black px-4 py-3 rounded-full shadow-brutal border-2 border-brutal-black font-black text-base flex items-center gap-2 hover:scale-105 transition-transform"
-      >
-        <span>🧙‍♂️ Assistant</span>
-      </button>
-    </div>
+      ">
+            <button @click="openWizard()"
+              class="brutal-btn bg-yellow-400 text-brutal-black px-4 py-3 rounded-full shadow-brutal border-2 border-brutal-black font-black text-base flex items-center gap-2 hover:scale-105 transition-transform">
+              <span>🧙‍♂️ Assistant</span>
+            </button>
+          </div>
 
-    <%- include('/src/partials/wizard.html') %>
+          <%- include('/src/partials/wizard.html') %>
 
-    <!-- Main Application Logic -->
-    <script type="module" src="./src/js/main.js"></script>
+            <!-- Main Application Logic -->
+            <script type="module" src="./src/js/main.js"></script>
   </body>
+
 </html>

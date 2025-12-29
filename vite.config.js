@@ -47,6 +47,19 @@ export default defineConfig({
             }
           },
         },
+        {
+          entry: 'src/js/scanner-tshirt.js',
+          filename: 'scanner-tshirt.html',
+          template: 'scanner-tshirt.html',
+          injectOptions: {
+            data: {
+              title: 'Scanner T-Shirt - Bénévoles',
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            }
+          },
+        },
       ],
     }),
   ],
@@ -58,6 +71,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
         debit: resolve(__dirname, 'debit.html'),
+        scanner: resolve(__dirname, 'scanner-tshirt.html'),
       },
     },
   }
