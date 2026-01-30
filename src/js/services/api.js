@@ -115,5 +115,15 @@ export const ApiService = {
         }
 
         return await query;
+    },
+
+    /**
+     * Invokes a Supabase Edge Function.
+     * @param {string} functionName - The name of the function.
+     * @param {object} [options] - Options for the invocation (body, headers, etc.).
+     * @returns {Promise<{ data: any, error: object|null }>} The result.
+     */
+    async invoke(functionName, options = {}) {
+        return await supabase.functions.invoke(functionName, options);
     }
 };

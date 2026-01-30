@@ -1,4 +1,5 @@
 import { ApiService } from '../../services/api.js';
+import { AuthService } from '../../services/auth.js';
 import { formatDate, formatTime } from '../../utils.js';
 
 /**
@@ -14,7 +15,6 @@ export const PlanningModule = {
     selectedPosteForRegistration: null,
 
     // Referent View State
-    showReferentView: false,
     showReferentView: false,
     referentInscriptions: [],
     referentProfiles: [],
@@ -190,7 +190,7 @@ export const PlanningModule = {
                 });
 
                 // Sort by time
-                profilePostes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut));
+                profilePostes.sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime());
 
                 return {
                     profile: profile,
@@ -382,7 +382,7 @@ export const PlanningModule = {
             .sort((a, b) => a.order - b.order)
             .map(group => {
                 const sortedPostes = Object.values(group.postes).sort((a, b) => {
-                    return new Date(a.periode_debut) - new Date(b.periode_debut);
+                    return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
                 });
 
                 // Sort volunteers in each poste
@@ -604,7 +604,7 @@ export const PlanningModule = {
                     id: 'all',
                     title: '', // Empty title triggers logic to hide header
                     expanded: true,
-                    postes: [...postes].sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut))
+                    postes: [...postes].sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime())
                 }];
             } else {
                 // GROUPED MODE for "Formulaire d'inscription"
@@ -646,7 +646,7 @@ export const PlanningModule = {
 
                 // Sort posts within subgroups
                 subgroups.forEach(subgroup => {
-                    subgroup.postes.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut));
+                    subgroup.postes.sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime());
                 });
             }
 
@@ -678,5 +678,55 @@ export const PlanningModule = {
                 if (this.viewMode !== 'list') this.viewMode = 'list';
             }
         });
+    },
+
+    /**
+     * Sends the planning by email to the connected user.
+     */
+    async sendPlanningByEmail() {
+        if (!this.user) return;
+        
+        // Prevent spam clicks
+        if (this.loading) return;
+
+        // Ask for confirmation (Optional, but nice UX)
+        if (!await this.askConfirm("Voulez-vous recevoir le récapitulatif de votre planning par email ?", "Envoi du planning")) {
+            return;
+        }
+
+        this.loading = true;
+        this.showToast('📧 Envoi en cours...', 'info');
+
+        try {
+            // Force refresh/get session to ensure token is valid just before call
+            const { session } = await AuthService.getSession();
+            const token = session?.access_token;
+            
+            if (!token) {
+                throw new Error("Impossible de récupérer votre session. Merci de recharger la page.");
+            }
+
+            console.log("Envoi du planning avec token (masked):", token.substring(0, 10) + "...");
+
+            const { data, error } = await ApiService.invoke('send-planning', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (error) throw error;
+
+            this.showToast('✅ Planning envoyé avec succès ! Vérifiez votre boîte mail.', 'success');
+
+        } catch (error) {
+            console.error('Erreur envoi planning:', error);
+            if (error && error.context) console.error('Erreur Context:', await error.context.json());
+            // Translate common edge function errors if needed
+            let msg = error.message || "Une erreur est survenue.";
+            this.showToast('❌ Erreur : ' + msg, 'error');
+        } finally {
+            this.loading = false;
+        }
     }
 };
