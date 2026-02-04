@@ -44,6 +44,15 @@ export const AdminModule = {
     showEditModal: false,    // Edit/Add modal
     selectedBenevoleName: '',
     currentBenevole: null,
+    currentUser: null,
+
+    // Add Benevole Modal
+    showAddBenevoleModal: false,
+    newBenevoleForm: {
+        email: '',
+        nom: '',
+        prenom: ''
+    },
 
     // Add Inscription Form
     newInscriptionForm: {
@@ -679,6 +688,61 @@ export const AdminModule = {
 
     getPostesCountForPeriode(periodeId) {
         return this.postes.filter(p => p.periode_id === periodeId).length;
+    },
+
+    // --- Add Benevole ---
+
+    openAddBenevoleModal() {
+        this.newBenevoleForm = { email: '', nom: '', prenom: '' };
+        this.showAddBenevoleModal = true;
+    },
+
+    closeAddBenevoleModal() {
+        this.showAddBenevoleModal = false;
+        this.newBenevoleForm = { email: '', nom: '', prenom: '' };
+    },
+
+    async createBenevole() {
+        if (!this.newBenevoleForm.email || !this.newBenevoleForm.nom || !this.newBenevoleForm.prenom) {
+            this.showToast('⚠️ Veuillez remplir tous les champs.', 'warning');
+            return;
+        }
+
+        if (!this.currentUser) {
+             this.showToast('⚠️ Erreur: Utilisateur non identifié.', 'error');
+             return;
+        }
+
+        this.loading = true;
+        try {
+            const payload = {
+                user_id: this.currentUser.id,
+                email: this.newBenevoleForm.email,
+                nom: this.newBenevoleForm.nom,
+                prenom: this.newBenevoleForm.prenom,
+                role: 'benevole'
+            };
+
+            const { data: newBenevole, error } = await ApiService.insert('benevoles', payload);
+
+            if (error) throw error;
+
+            this.showToast('✅ Bénévole ajouté avec succès !', 'success');
+            
+            this.closeAddBenevoleModal();
+            
+            // Refresh first to get updated lists
+            await this.loadBenevolesAndStats();
+
+            // Then open the edit modal for the NEW volunteer
+            // We use the new object returned by insert
+            await this.openEditBenevoleInscriptions(newBenevole);
+
+        } catch (error) {
+            this.showToast('❌ Erreur création : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
     },
 
     // --- Benevoles ---
