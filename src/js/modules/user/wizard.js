@@ -418,7 +418,7 @@ export const WizardModule = {
     },
 
     async submitWizard() {
-        console.log('🚀 submitWizard START');
+        console.log('🚀 submitWizard START (Transaction Mode)');
         
         // Mark wizard as completed for this user
         if (this.user) {
@@ -433,90 +433,106 @@ export const WizardModule = {
 
         this.loading = true;
 
-        // Safety timeout to force release
+        // 1. Safety Timeout (Extended to 60s)
+        const SAFETY_TIMEOUT_MS = 60000;
         const safetyTimeout = setTimeout(() => {
             if (this.loading) {
                 console.error('⏰ Safety Timeout Triggered');
                 this.loading = false;
-                this.showToast('❌ Le serveur ne répond pas (Timeout).', 'error');
+                this.showToast('❌ Le serveur met du temps à répondre (Timeout 60s).', 'error');
             }
-        }, 10000);
+        }, SAFETY_TIMEOUT_MS);
 
         try {
-            console.log('💾 Submitting Wizard (Arrays)...', {
+            console.log('💾 Preparing Transaction...', {
                 add: this.wizardSelections.length,
                 remove: this.wizardRemovals.length
             });
 
-            // Refresh session handled globally in store.js
+            // 2. FORCE REFRESH SESSION (Security)
+            // Critical: If user stayed on page for >1h, token might be expired.
+            // We force a refresh to ensure we have a valid access_token before sending data.
+            console.log('🔄 Refreshing session before submit...');
+            
+            // SECURITY: Refresh token with fallback timeout
+            // If Supabase network is lagging or Auth is stuck, we don't want to hang forever.
+            // valid session check (4s timeout - 2s was too aggressive)
+            const refreshPromise = ApiService.refreshSession();
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'Refresh timeout' }), 4000));
+            
+            const { error: refreshError } = await Promise.race([refreshPromise, timeoutPromise]);
+            
+            if (refreshError) {
+                console.log('ℹ️ Session refresh slowly/timed out, proceeding with current token (Resilience Mode)...', refreshError);
+            } else {
+                console.log('✅ Session refreshed.');
+            }
 
+            // 3. Prepare Payload for RPC
+            const modifications = [];
 
-            const promises = [];
-
-            // Helper to reject promise on API error / Timeout
-            const handleApiCall = async (promise, context) => {
-                let timer;
-                const timeoutPromise = new Promise((_, reject) => {
-                    timer = setTimeout(() => reject(new Error('Request timed out (20s)')), 20000);
-                });
-
-                try {
-                    console.log(`📡 Sending ${context}...`);
-                    const res = await Promise.race([promise, timeoutPromise]);
-                    clearTimeout(timer);
-
-                    if (res && res.error) {
-                        console.error('❌ API Error in ' + context, res.error);
-                        throw new Error(res.error.message || JSON.stringify(res.error));
-                    }
-                    console.log(`✅ Success ${context}`);
-                    return res;
-                } catch (e) {
-                    clearTimeout(timer);
-                    console.error('❌ Exception in ' + context, e);
-                    throw e;
-                }
-            };
-
-            // 1. REMOVALS
+            // Add Removals
             this.wizardRemovals.forEach(key => {
                 const [posteId, profileId] = key.split('::');
-                console.log('🗑️ Queueing DELETE:', { posteId, profileId });
-                promises.push(handleApiCall(
-                    ApiService.delete('inscriptions', { poste_id: posteId, benevole_id: profileId }),
-                    `DELETE ${posteId}::${profileId}`
-                ));
+                modifications.push({ action: 'remove', poste_id: posteId, benevole_id: profileId });
             });
 
-            // 2. ADDITIONS
+            // Add Selections
             this.wizardSelections.forEach(sel => {
-                console.log('💾 Queueing UPSERT:', { id: sel.posteId, profile: sel.profileId });
-                promises.push(handleApiCall(
-                    ApiService.upsert('inscriptions', { poste_id: sel.posteId, benevole_id: sel.profileId }),
-                    `UPSERT ${sel.posteId}::${sel.profileId}`
-                ));
+                modifications.push({ action: 'add', poste_id: sel.posteId, benevole_id: sel.profileId });
             });
 
-            console.log('⏳ Awaiting promises...', promises.length);
-            await Promise.all(promises);
-            console.log('✅ All promises resolved');
+            // CRITICAL: Sort by poste_id to prevent DB Deadlocks (Lock Order Policy)
+            modifications.sort((a, b) => a.poste_id.localeCompare(b.poste_id));
 
-            this.showToast('🎉 Inscriptions mises à jour !', 'success');
+            if (modifications.length === 0) {
+                this.loading = false;
+                clearTimeout(safetyTimeout);
+                return;
+            }
 
-            console.log('🔄 Reloading data...');
-            await this.loadInitialData(); // Ensure this exists and works
-            console.log('✅ Data reloaded');
+            // 4. Call RPC (Single Transaction)
+            console.log('📡 Sending RPC manage_inscriptions_transaction...', modifications);
+            
+            const { data, error } = await ApiService.rpc('manage_inscriptions_transaction', {
+                target_user_id: this.user.id, // Optional, checked by RLS/Security Definer anyway
+                modifications: modifications
+            });
 
-            this.resetWizard(); // Clears arrays
+            if (error) {
+                console.error('❌ Transaction Error:', error);
+                throw error;
+            }
+
+            console.log('✅ Transaction Success:', data);
+
+            // 5. Success Handling
+            // 5. Success Handling
+            this.showToast('🎉 Inscriptions mises à jour avec succès !', 'success');
+
+            // UX: Close immediately so user doesn't wait for data reload
+            this.resetWizard();
             this.closeWizard();
-            clearTimeout(safetyTimeout);
+            this.loading = false;
+
+            console.log('🔄 Reloading data (background)...');
+            await this.loadInitialData(); 
+            console.log('✅ Data reloaded');
+            
         } catch (error) {
             console.error('💥 Submit Error Caught:', error);
-            clearTimeout(safetyTimeout);
-            this.showToast('Erreur: ' + (error.message || error), 'error');
+            let msg = error.message || error;
+            
+            // User-friendly error mapping
+            if (msg.includes('Permission refusée')) msg = "Vous ne pouvez pas modifier ces inscriptions.";
+            if (msg.includes('complet')) msg = "Certains postes sont désormais complets.";
+            if (msg.includes('Conflit horaire')) msg = "Conflit d'horaire détecté.";
+
+            this.showToast('Erreur: ' + msg, 'error');
         } finally {
-            console.log('🏁 submitWizard FINALLY');
+            clearTimeout(safetyTimeout);
             this.loading = false;
+            console.log('🏁 submitWizard FINALLY');
         }
     },
 
