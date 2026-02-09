@@ -708,24 +708,21 @@ export const AdminModule = {
             return;
         }
 
-        if (!this.currentUser) {
-             this.showToast('⚠️ Erreur: Utilisateur non identifié.', 'error');
-             return;
-        }
-
         this.loading = true;
         try {
-            const payload = {
-                user_id: this.currentUser.id,
-                email: this.newBenevoleForm.email,
-                nom: this.newBenevoleForm.nom,
-                prenom: this.newBenevoleForm.prenom,
-                role: 'benevole'
-            };
-
-            const { data: newBenevole, error } = await ApiService.insert('benevoles', payload);
+            // Appel de l'Edge Function pour créer le compte et le bénévole
+            const { data, error } = await ApiService.invoke('create-benevole', {
+                body: {
+                    email: this.newBenevoleForm.email,
+                    nom: this.newBenevoleForm.nom,
+                    prenom: this.newBenevoleForm.prenom
+                }
+            });
 
             if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+
+            const newBenevole = data.benevole;
 
             this.showToast('✅ Bénévole ajouté avec succès !', 'success');
             
@@ -735,7 +732,6 @@ export const AdminModule = {
             await this.loadBenevolesAndStats();
 
             // Then open the edit modal for the NEW volunteer
-            // We use the new object returned by insert
             await this.openEditBenevoleInscriptions(newBenevole);
 
         } catch (error) {
