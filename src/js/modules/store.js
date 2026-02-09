@@ -27,6 +27,10 @@ export function initStore() {
             resolve: null
         },
 
+        // Polling State
+        /** @type {any} */
+        pollingInterval: null,
+
         /**
          * Opens the confirmation modal and returns a promise.
          * @param {string} message - The message to display.
@@ -153,13 +157,64 @@ export function initStore() {
                 this.showToast('Erreur d\'initialisation: ' + error.message, 'error');
             } finally {
                 this.initPlanningResponsive();
+                // Start polling for data updates
+                this.startPolling();
+
+                // Visibility API: Pause polling when tab is hidden
+                document.addEventListener('visibilitychange', () => {
+                   if (document.hidden) {
+                       this.stopPolling();
+                   } else {
+                       console.log('👀 Tab visible - Refreshing data...');
+                       this.loadInitialData(); // Immediate refresh
+                       this.startPolling();
+                   }
+                });
+            }
+        },
+
+        /**
+         * Starts the data polling interval (every 60s).
+         */
+        async startPolling() {
+            if (this.pollingInterval) return;
+            console.log('⏰ Starting secure data polling (60s)...');
+            
+            // Use an async wrapper for the interval action
+            this.pollingInterval = setInterval(async () => {
+                if (!document.hidden && this.user) {
+                    // SECURITY: Ensure we have a valid session before fetching
+                    // getSession() automatically handles token refresh if needed.
+                    const { session } = await AuthService.getSession();
+                    
+                    if (session) {
+                        // Token is valid/refreshed, proceed to fetch
+                        this.loadInitialData(true);
+                    } else {
+                        console.warn('⚠️ Polling skipped: No active session. Stopping polling.');
+                        this.stopPolling();
+                        this.logout(false); // Force logout if session is dead
+                    }
+                }
+            }, 60000);
+        },
+
+        /**
+         * Stops the data polling.
+         */
+        stopPolling() {
+            if (this.pollingInterval) {
+                console.log('🛑 Stopping data polling...');
+                clearInterval(/** @type {any} */ (this.pollingInterval));
+                this.pollingInterval = null;
             }
         },
 
         /**
          * Loads all necessary data for the authenticated user.
+         * @param {boolean} silent - If true, suppresses loading indicators or toasts if implemented.
          */
-        async loadInitialData() {
+        async loadInitialData(silent = false) {
             if (!this.user) return;
             await Promise.all([
                 this.loadProfiles(),
