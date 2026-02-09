@@ -37,7 +37,10 @@ export const ApiService = {
      * @returns {Promise<{ data: any, error: object|null }>} The result.
      */
     async rpc(rpcName, params = {}) {
-        return await supabase.rpc(rpcName, params);
+        // Enforce a 15s timeout on RPC calls to avoid infinite hanging on bad connections
+        const rpcCall = supabase.rpc(rpcName, params);
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout (15s)')), 15000));
+        return await Promise.race([rpcCall, timeout]);
     },
 
     /**

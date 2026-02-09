@@ -108,7 +108,7 @@ export const CagnotteModule = {
                     ${isActive ? `
                     <button id="show-qr-${benevoleId}" class="bg-gray-800 hover:bg-black text-white p-1 md:p-2 rounded-lg transition-colors" title="Afficher mon QR Code">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 20h14a2 0 002-2V6a2 0 00-2-2H5a2 0 00-2 2v12a2 0 002 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
                         </svg>
                     </button>
                     ` : ''}
