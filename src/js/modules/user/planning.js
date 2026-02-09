@@ -243,6 +243,11 @@ export const PlanningModule = {
             if (this.userInscriptions && this.userInscriptions.length > 0) {
                 this.reconcileLocalCounts();
             }
+
+            // Reconcile Wizard State (Optimistic Updates)
+            if (this.wizardOpen) {
+                this.reconcileWizardState();
+            }
         } catch (error) {
             this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
         }
@@ -264,6 +269,33 @@ export const PlanningModule = {
             if (Number(poste.inscrits_actuels) < myCount) {
                 console.warn(`⚠️ Fixing stale count for "${poste.titre}": ${poste.inscrits_actuels} -> ${myCount}`);
                 poste.inscrits_actuels = myCount;
+            }
+        });
+    },
+
+    /**
+     * Re-applies local Wizard modifications (selections/removals) on top of fresh server data.
+     * Prevents losing the "visual state" when polling updates the list.
+     */
+    reconcileWizardState() {
+        if (!this.postes) return;
+
+        // 1. Re-apply Removals (Visual Decrement)
+        this.wizardRemovals.forEach(key => {
+            const [posteId] = key.split('::');
+            // Loose equality for safety
+            const poste = this.postes.find(p => p.poste_id == posteId);
+            if (poste) {
+                // Ensure we don't go below zero
+                if (poste.inscrits_actuels > 0) poste.inscrits_actuels--;
+            }
+        });
+
+        // 2. Re-apply Selections (Visual Increment)
+        this.wizardSelections.forEach(sel => {
+            const poste = this.postes.find(p => p.poste_id == sel.posteId);
+            if (poste) {
+                poste.inscrits_actuels++;
             }
         });
     },
