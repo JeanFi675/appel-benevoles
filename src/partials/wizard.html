@@ -36,7 +36,7 @@
     </div>
 
     <!-- Content Scroller -->
-    <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+    <div class="wizard-content-scroller flex-1 overflow-y-auto p-6 bg-gray-50">
       <!-- STEP 1: PROFIL -->
       <div x-show="wizardStep === 1" class="text-center max-w-2xl mx-auto">
         <!-- h3 removed per user request -->
@@ -427,7 +427,7 @@
         <!-- Step 2 Next -> Validate (Last Period) -->
         <button
           x-show="wizardStep === 2 && (getWizardPeriods() && wizardPeriodIndex >= getWizardPeriods().length - 1)"
-          @click="wizardStep = 3"
+          @click="wizardStep = 3; scrollWizardToTop()"
           class="brutal-btn bg-yellow-400 text-black px-8 py-3 font-bold shadow-brutal border-2 border-black"
         >
           Vérifier et Valider (<span

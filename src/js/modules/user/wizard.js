@@ -203,12 +203,22 @@ export const WizardModule = {
         return true;
     },
 
+    /**
+     * Scrolls the wizard content area to the top.
+     */
+    scrollWizardToTop() {
+        const scroller = document.querySelector('.wizard-content-scroller');
+        if (scroller) scroller.scrollTop = 0;
+    },
+
     prevPeriod() {
         if (this.wizardPeriodIndex > 0) this.wizardPeriodIndex--;
+        this.scrollWizardToTop();
     },
 
     nextPeriod() {
         if (this.wizardPeriodIndex < this.getWizardPeriods().length - 1) this.wizardPeriodIndex++;
+        this.scrollWizardToTop();
     },
 
     // --- Profile Management (Wizard) ---
@@ -302,6 +312,7 @@ export const WizardModule = {
             this.showWizardProfileForm = true;
         } else {
             this.wizardStep = 2;
+            this.scrollWizardToTop();
         }
     },
 
