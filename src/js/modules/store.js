@@ -146,8 +146,17 @@ export function initStore() {
                         if (isAuthRedirect) {
                             console.log('🧹 Cleaning URL auth params...');
                             window.history.replaceState(null, '', window.location.pathname);
+                            
+                            // Only load data here if we are handling a redirect (Magic Link)
+                            // For normal visibility changes or refreshes, the visibility logic handles it
+                            await this.loadInitialData();
+                        } else {
+                             // For normal signed_in events (like after a refresh), we might not need to reload everything immediately
+                             // unless it's the initial session.
+                             if (event === 'INITIAL_SESSION') {
+                                 await this.loadInitialData();
+                             }
                         }
-                        await this.loadInitialData();
                     } else if (event === 'SIGNED_OUT') {
                         this.resetData();
                     }
@@ -166,8 +175,19 @@ export function initStore() {
                        this.stopPolling();
                    } else {
                        console.log('👀 Tab visible - Refreshing data...');
-                       this.loadInitialData(); // Immediate refresh
-                       this.startPolling();
+                       
+                       // SECURITY: Refresh session AVANT de charger les données
+                       // Le SDK gère le refresh automatiquement via getSession() mais on veut s'assurer
+                       // que la session est valide avant de lancer les appels RPC graphiques.
+                       AuthService.getSession().then(({ session }) => {
+                           if (session) {
+                               this.loadInitialData(); // Safe refresh with valid token
+                               this.startPolling();
+                           } else {
+                               console.warn('⚠️ Session perdue pendant inactivité');
+                               this.logout(false);
+                           }
+                       });
                    }
                 });
             }

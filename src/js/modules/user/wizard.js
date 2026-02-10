@@ -450,22 +450,38 @@ export const WizardModule = {
             });
 
             // 2. FORCE REFRESH SESSION (Security)
-            // Critical: If user stayed on page for >1h, token might be expired.
+            // Critical: If user stayed on page for >5min, token might be expired or invalid/concurrently refreshed.
             // We force a refresh to ensure we have a valid access_token before sending data.
             console.log('🔄 Refreshing session before submit...');
             
-            // SECURITY: Refresh token with fallback timeout
-            // If Supabase network is lagging or Auth is stuck, we don't want to hang forever.
-            // valid session check (4s timeout - 2s was too aggressive)
-            const refreshPromise = ApiService.refreshSession();
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'Refresh timeout' }), 4000));
+            // SECURITY: Refresh obligatoire avec retry (10s timeout, 2 tentatives)
+            let sessionValid = false;
             
-            const { error: refreshError } = await Promise.race([refreshPromise, timeoutPromise]);
-            
-            if (refreshError) {
-                console.log('ℹ️ Session refresh slowly/timed out, proceeding with current token (Resilience Mode)...', refreshError);
-            } else {
-                console.log('✅ Session refreshed.');
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    console.log(`🔄 Refresh session tentative ${attempt}/2...`);
+                    const refreshResult = await Promise.race([
+                        ApiService.refreshSession(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout (10s)')), 10000))
+                    ]); // 10s is generous but safe
+                    
+                    if (!refreshResult.error && refreshResult.data?.session) {
+                        console.log('✅ Session refreshed.');
+                        sessionValid = true;
+                        break;
+                    }
+                    console.warn(`⚠️ Refresh tentative ${attempt} échouée:`, refreshResult.error);
+                } catch (e) {
+                    console.warn(`⚠️ Refresh tentative ${attempt} exception:`, e.message);
+                }
+            }
+
+            if (!sessionValid) {
+                console.error('❌ Session refresh failed after retries.');
+                this.loading = false;
+                clearTimeout(safetyTimeout);
+                this.showToast('⚠️ Session expirée. Veuillez recharger la page.', 'error');
+                return;
             }
 
             // 3. Prepare Payload for RPC

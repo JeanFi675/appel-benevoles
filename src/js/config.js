@@ -12,7 +12,35 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // Initialisation du client Supabase
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+    },
+});
+
+// 🔒 Singleton de refresh pour éviter les race conditions
+// Permet de dédupliquer les appels simultanés au refresh (ex: retour d'onglet + polling + auto-refresh)
+let _refreshPromise = null;
+
+export async function safeRefreshSession() {
+    if (_refreshPromise) {
+        console.log('🔒 Refresh déjà en cours, attente du résultat partagé...');
+        return _refreshPromise;
+    }
+    
+    console.log('🔄 Initie un nouveau Refresh Session (Singleton)...');
+    _refreshPromise = supabase.auth.refreshSession();
+    
+    try {
+        const result = await _refreshPromise;
+        return result;
+    } finally {
+        _refreshPromise = null;
+    }
+}
 
 // Détection d'environnement
 export const isDevelopment = import.meta.env.DEV;
