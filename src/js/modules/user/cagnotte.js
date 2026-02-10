@@ -66,6 +66,10 @@ export const CagnotteModule = {
   async renderWidget(parentElement, benevoleId) {
     if (!parentElement) return;
 
+    // Store for refresh
+    this.lastParentElement = parentElement;
+    this.lastBenevoleId = benevoleId;
+
     // Simple debounce/lock to prevent double-render loop, but allow re-entry if enough time passed
     if (isRendering) return;
     isRendering = true;
@@ -176,4 +180,23 @@ export const CagnotteModule = {
       }
     );
   },
+
+  // State to remember last render parameters for refresh
+  lastParentElement: null,
+  lastBenevoleId: null,
+
+  /**
+   * Refreshes the widget if it has been rendered previously.
+   * Useful for updating the balance after a transaction.
+   */
+    async refreshWidget() {
+        if (this.lastParentElement && this.lastBenevoleId) {
+            console.log('🔄 Refreshing Cagnotte Widget...');
+            try {
+                await this.renderWidget(this.lastParentElement, this.lastBenevoleId);
+            } catch (e) {
+                console.warn('⚠️ Cagnotte refresh skipped (background update):', e.message);
+            }
+        }
+    }
 };

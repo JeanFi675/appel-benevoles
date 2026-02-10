@@ -114,6 +114,11 @@ export const WizardModule = {
     async openWizardWithContext(posteId, profileId, action = 'register') {
         this.openWizard();
 
+        // Ensure profiles are loaded to avoid false Step 1 (Creation)
+        if ((!this.profiles || this.profiles.length === 0) && this.loadProfiles) {
+            await this.loadProfiles();
+        }
+
         // Move to Step 2 (Choice) directly if profiles exist
         if (this.profiles && this.profiles.length > 0) {
             this.wizardStep = 2;
@@ -533,6 +538,14 @@ export const WizardModule = {
 
             console.log('🔄 Reloading data (background)...');
             await this.loadInitialData(); 
+            
+            // Refund/Payment made -> Update Cagnotte Widget
+            // Since WizardModule and CagnotteModule are mixed into the same Alpine store,
+            // we can access refreshWidget directly via 'this' if it exists.
+            if (typeof this.refreshWidget === 'function') {
+                this.refreshWidget();
+            }
+            
             console.log('✅ Data reloaded');
             
         } catch (error) {
@@ -557,6 +570,13 @@ export const WizardModule = {
      */
     checkWizardAutoOpen() {
         if (!this.user) return;
+        
+        // CRITICAL: Do not auto-open (and reset step!) if already open.
+        // This prevents the polling from interrupting the user's flow.
+        if (this.wizardOpen) {
+            console.log('✅ Wizard not auto-opened (Already open)', { wizardOpen: this.wizardOpen });
+            return;
+        }
 
         const key = 'wizard_completed_' + this.user.id;
         const hasCompleted = localStorage.getItem(key);
