@@ -1,4 +1,4 @@
-import { supabase } from '../config.js';
+import { supabase, safeRefreshSession } from '../config.js';
 
 /**
  * Generic service for database operations.
@@ -37,17 +37,17 @@ export const ApiService = {
      * @returns {Promise<{ data: any, error: object|null }>} The result.
      */
     async rpc(rpcName, params = {}) {
-        // Enforce a 15s timeout on RPC calls to avoid infinite hanging on bad connections
+        // Enforce a 30s timeout on RPC calls (increased from 15s for slow transactions)
         const rpcCall = supabase.rpc(rpcName, params);
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout (15s)')), 15000));
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout (30s)')), 30000));
         return await Promise.race([rpcCall, timeout]);
     },
 
     /**
-     * Refreshes the current session.
+     * Refreshes the current session safely (singleton).
      */
     async refreshSession() {
-        return await supabase.auth.refreshSession();
+        return await safeRefreshSession();
     },
 
     /**
