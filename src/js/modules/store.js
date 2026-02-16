@@ -104,33 +104,11 @@ export function initStore() {
                 // Check session safely
                 console.log('🔄 Init - Checking session...');
 
-                // Detect Magic Link flow BEFORE getSession
-                const isMagicLink =
-                    window.location.hash.includes('access_token') ||
-                    window.location.hash.includes('type=') ||
-                    window.location.search.includes('code='); // PKCE support
-
+                // STANDARD FLOW: Just check persistence, don't force refresh (avoids Race Condition with Magic Link)
                 let { user: initialUser } = await AuthService.getSession();
 
                 if (initialUser) {
-                    if (isMagicLink) {
-                        console.log('✨ Magic Link detected. Skipping strict check (Session is fresh).');
-                        // No refresh needed, we assume the token from the link is valid
-                    } else {
-                        console.log('🕵️‍♂️ Existing session found, verifying validity (Strict Mode)...');
-                        // STRICT CHECK: Attempt to refresh immediately
-                        const { data, error } = await ApiService.refreshSession();
-
-                        if (error || !data.session) {
-                            console.warn('⛔ Session is invalid or expired:', error);
-                            await this.logout(false); // Logout without confirmation
-                            return;
-                        }
-
-                        console.log('✅ Session verified & Refreshed.');
-                        initialUser = data.session.user; // Update user from refresh
-                    }
-
+                    console.log('✅ Found persisted session.');
                     this.user = initialUser;
                     await this.loadInitialData();
                 }
