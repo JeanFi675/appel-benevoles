@@ -50,6 +50,41 @@ export const AuthService = {
     },
 
     /**
+     * Signs in a user with an email and password.
+     * @param {string} email - The user's email address.
+     * @param {string} password - The user's password.
+     * @returns {Promise<{ data: object|null, error: object|null }>}
+     */
+    async signInWithPassword(email, password) {
+        return await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+    },
+
+    /**
+     * Sends a password reset email.
+     * @param {string} email - The user's email address.
+     * @returns {Promise<{ error: object|null }>}
+     */
+    async resetPasswordForEmail(email) {
+        return await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + window.location.pathname + "?type=recovery"
+        });
+    },
+
+    /**
+     * Updates the user's password. Requires an active session (e.g., from recovery link).
+     * @param {string} newPassword - The new password.
+     * @returns {Promise<{ error: object|null }>}
+     */
+    async updateUserPassword(newPassword) {
+        return await supabase.auth.updateUser({
+            password: newPassword
+        });
+    },
+
+    /**
      * Logs out the current user.
      * @returns {Promise<{ error: object|null }>} Result of the operation.
      */
