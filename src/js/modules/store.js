@@ -19,6 +19,13 @@ export function initStore() {
     toasts: [],
     lastAuthSuccess: 0, // Timestamp of last successful login
 
+    // Login View State
+    loginEmail: "",
+    loginPassword: "",
+    loginView: "magic", // 'magic', 'password', 'sent'
+    resetModalOpen: false,
+    newPassword: "",
+
     // Modal State
     confirmModal: {
       open: false,
@@ -84,6 +91,16 @@ export function initStore() {
           hash.includes("error=") ||
           search.includes("code=");
 
+        // Intercept Password Recovery link
+        let isRecovery = false;
+        // We explicitly appended ?type=recovery to the reset password redirect URI
+        if (search.includes("type=recovery") || hash.includes("type=recovery")) {
+           console.log("🔓 Explicit Type Recovery detected in URL");
+           isRecovery = true;
+           this.resetModalOpen = true; // Open the modal to ask for the new password
+           // Do not clean URL immediately so the session can be parsed by Supabase
+        }
+
         if (hash && hash.includes("error=")) {
           const params = new URLSearchParams(hash.substring(1)); // Remove #
           const errorDescription = params.get("error_description");
@@ -94,7 +111,7 @@ export function initStore() {
             let msg = errorDescription.replace(/\+/g, " ");
             if (errorCode === "otp_expired")
               msg =
-                "Ce lien de connexion a expiré. Veuillez en demander un nouveau.";
+                "Ce lien a expiré. Veuillez en demander un nouveau.";
 
             // Wait a tick for Alpine to be ready
             setTimeout(() => this.showToast("❌ " + msg, "error"), 500);
@@ -119,6 +136,11 @@ export function initStore() {
         // Listen for auth changes
         AuthService.onAuthStateChange(async (event, session) => {
           console.log("🔔 Auth Event:", event);
+          
+          if (event === "PASSWORD_RECOVERY") {
+              console.log("🔓 PASSWORD_RECOVERY event detected from Supabase");
+              this.resetModalOpen = true;
+          }
 
           this.user = session?.user || null;
 
@@ -129,7 +151,12 @@ export function initStore() {
             // Clean URL hash
             if (isAuthRedirect) {
               console.log("🧹 Cleaning URL auth params...");
-              window.history.replaceState(null, "", window.location.pathname);
+              
+              // Only clean the URL if we are NOT in the middle of a password recovery
+              // OR if it's explicitly marked as recovery from the start, we wait for the update
+              if (!isRecovery && !this.resetModalOpen) {
+                  window.history.replaceState(null, "", window.location.pathname);
+              }
 
               // Only load data here if we are handling a redirect (Magic Link)
               // For normal visibility changes or refreshes, the visibility logic handles it
@@ -265,8 +292,6 @@ export function initStore() {
 
     // --- Auth Actions ---
 
-    loginEmail: "",
-
     /**
      * Sends a magic link for login.
      */
@@ -279,12 +304,87 @@ export function initStore() {
         if (error) throw error;
 
         this.showToast("📧 Vérifiez votre boîte mail !", "success");
-        this.loginEmail = "";
       } catch (error) {
         this.showToast("❌ Erreur : " + error.message, "error");
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * Signs in with password.
+     */
+    async loginWithPassword() {
+        if (!this.loginEmail || !this.loginPassword) return;
+
+        this.loading = true;
+        try {
+            const { error } = await AuthService.signInWithPassword(this.loginEmail, this.loginPassword);
+            if (error) throw error;
+            
+            this.showToast("✅ Connecté avec succès", "success");
+            this.loginPassword = "";
+        } catch (error) {
+            let msg = error.message;
+            if (error.message.includes("Invalid login credentials")) {
+                msg = "Email ou mot de passe incorrect.";
+            }
+            this.showToast("❌ Erreur : " + msg, "error");
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Requests a password reset email.
+     */
+    async requestPasswordReset() {
+        if (!this.loginEmail) {
+            this.showToast("⚠️ Veuillez entrer votre email d'abord", "error");
+            return;
+        }
+
+        this.loading = true;
+        try {
+            const { error } = await AuthService.resetPasswordForEmail(this.loginEmail);
+            if (error) throw error;
+
+            this.showToast("📧 Email de réinitialisation envoyé !", "success");
+            this.loginView = "magic"; // Reset view
+        } catch (error) {
+            this.showToast("❌ Erreur : " + error.message, "error");
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /**
+     * Updates the user's password after clicking the reset link.
+     */
+    async updatePassword() {
+        if (!this.newPassword || this.newPassword.length < 6) {
+            this.showToast("⚠️ Le mot de passe doit faire au moins 6 caractères", "error");
+            return;
+        }
+
+        this.loading = true;
+        try {
+            const { error } = await AuthService.updateUserPassword(this.newPassword);
+            if (error) throw error;
+
+            this.showToast("✅ Mot de passe mis à jour avec succès !", "success");
+            this.resetModalOpen = false;
+            this.newPassword = "";
+             // Clean URL now that we are done
+            window.history.replaceState(null, "", window.location.pathname);
+            
+            // Check if wizard needs to open now that the reset modal is gone
+            this.checkWizardAutoOpen();
+        } catch (error) {
+            this.showToast("❌ Erreur : " + error.message, "error");
+        } finally {
+            this.loading = false;
+        }
     },
 
     /**

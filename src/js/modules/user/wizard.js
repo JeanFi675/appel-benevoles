@@ -571,6 +571,12 @@ export const WizardModule = {
     checkWizardAutoOpen() {
         if (!this.user) return;
         
+        // Delay wizard if password reset modal is active
+        if (this.resetModalOpen) {
+            console.log('⏰ Wizard auto-open delayed (Password Reset pending)');
+            return;
+        }
+
         // CRITICAL: Do not auto-open (and reset step!) if already open.
         // This prevents the polling from interrupting the user's flow.
         if (this.wizardOpen) {
