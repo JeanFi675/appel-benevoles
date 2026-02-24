@@ -77,6 +77,17 @@ export function initStore() {
         const hash = window.location.hash;
         const search = window.location.search;
 
+        // Check for manual verification token (PKCE workaround for email scanners)
+        if (hash && hash.includes("token_hash=")) {
+          const params = new URLSearchParams(hash.substring(1));
+          this.magicLinkToken = params.get("token_hash");
+          this.magicLinkType = params.get("type") || 'magiclink';
+          
+          // Clear URL to prevent leaking the token
+          const cleanUrl = window.location.href.split('#')[0];
+          window.history.replaceState(null, "", cleanUrl);
+        }
+
         // Helper to check for auth params in Hash or Search (PKCE)
         const isAuthRedirect =
           hash.includes("access_token") ||
@@ -266,6 +277,9 @@ export function initStore() {
     // --- Auth Actions ---
 
     loginEmail: "",
+    magicLinkToken: null,
+    magicLinkType: "magiclink",
+    magicLinkError: "",
 
     /**
      * Sends a magic link for login.
@@ -282,6 +296,45 @@ export function initStore() {
         this.loginEmail = "";
       } catch (error) {
         this.showToast("❌ Erreur : " + error.message, "error");
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Verifies the magic link token manually (Email scanner PKCE workaround)
+     */
+    async verifyMagicLink() {
+      if (!this.magicLinkToken) return;
+
+      this.loading = true;
+      this.magicLinkError = "";
+      
+      try {
+        const { data, error } = await AuthService.verifyOtp({
+          token_hash: this.magicLinkToken,
+          type: this.magicLinkType
+        });
+        
+        if (error) {
+          // Detect missing code verifier error
+          if (error.message && error.message.toLowerCase().includes("code verifier")) {
+            throw new Error("Votre application mail bloque la connexion sécurisée. Veuillez copier le lien reçu par mail et l'ouvrir dans Safari ou Chrome.");
+          }
+          throw error;
+        }
+
+        // Force session update immediately for new users
+        if (data && (data.session || data.user)) {
+           this.user = data.session?.user || data.user;
+           await this.loadInitialData(); // Ensure wizard or dashboard is loaded
+        }
+
+        this.showToast("✅ Connecté avec succès !", "success");
+        this.magicLinkToken = null;
+      } catch (error) {
+        this.magicLinkError = error.message || "Le lien a expiré ou a déjà été utilisé.";
+        this.showToast("❌ " + this.magicLinkError, "error");
       } finally {
         this.loading = false;
       }
