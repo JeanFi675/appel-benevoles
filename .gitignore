@@ -24,6 +24,8 @@ logs/
 *.swp
 *.swo
 *~
+.vite_restarter
+vite.config.js.timestamp-*.mjs
 
 # OS
 .DS_Store
