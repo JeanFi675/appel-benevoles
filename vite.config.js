@@ -60,6 +60,19 @@ export default defineConfig({
             }
           },
         },
+        {
+          entry: 'src/js/juges.js',
+          filename: 'juges.html',
+          template: 'juges.html',
+          injectOptions: {
+            data: {
+              title: 'Bénévoles Escalade - Juges',
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            }
+          },
+        },
       ],
     }),
   ],
@@ -72,6 +85,7 @@ export default defineConfig({
         admin: resolve(__dirname, 'admin.html'),
         debit: resolve(__dirname, 'debit.html'),
         scanner: resolve(__dirname, 'scanner-tshirt.html'),
+        juges: resolve(__dirname, 'juges.html'),
       },
     },
   }

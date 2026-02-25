@@ -1,0 +1,75 @@
+<div class="brutal-card bg-brutal-white p-4 md:p-8" x-show="isLoaded && showForm">
+    <h2 class="text-2xl font-black mb-6 uppercase border-b-4 border-brutal-black inline-block pb-2">Profil Juge</h2>
+
+    <form @submit.prevent="saveProfile()" class="space-y-6">
+        <!-- Nom / Prénom -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="prenom" class="block font-bold mb-2 uppercase text-sm">Prénom *</label>
+                <input type="text" id="prenom" x-model="profileForm.prenom" required class="brutal-input w-full px-4 py-3" />
+            </div>
+            <div>
+                <label for="nom" class="block font-bold mb-2 uppercase text-sm">Nom *</label>
+                <input type="text" id="nom" x-model="profileForm.nom" required class="brutal-input w-full px-4 py-3" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="telephone" class="block font-bold mb-2 uppercase text-sm">Téléphone *</label>
+                <input type="tel" id="telephone" x-model="profileForm.telephone" required class="brutal-input w-full px-4 py-3" />
+            </div>
+            <div>
+                <label for="taille_tshirt" class="block font-bold mb-2 uppercase text-sm">Taille T-Shirt *</label>
+                <select id="taille_tshirt" x-model="profileForm.taille_tshirt" required class="brutal-select w-full px-4 py-3 bg-white">
+                    <option value="" disabled selected>Sélectionner...</option>
+                    <option value="XS">XS</option>
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="XXL">XXL</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Jours de Présence -->
+        <div class="border-t-2 border-brutal-black pt-6 mt-6">
+            <h3 class="text-xl font-bold mb-4 uppercase">Jours de présence (Juge)</h3>
+            <p class="text-sm border-l-4 border-yellow-400 pl-3 mb-4 font-bold">Ces cases configurent automatiquement vos droits pour la buvette (dégaines).</p>
+            <div class="flex flex-col gap-4">
+                <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
+                    <input type="checkbox" x-model="profileForm.presence_samedi" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
+                    <span class="font-bold flex-1 select-none">Je serai présent(e) le Samedi</span>
+                </label>
+                <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
+                    <input type="checkbox" x-model="profileForm.presence_dimanche" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
+                    <span class="font-bold flex-1 select-none">Je serai présent(e) le Dimanche</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Repas bénévoles (Réservation) -->
+        <div class="border-t-2 border-brutal-black pt-6 mt-6">
+            <h3 class="text-xl font-bold mb-4 uppercase">Réservation Repas</h3>
+            <div class="flex flex-col gap-4">
+                <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
+                    <input type="checkbox" x-model="profileForm.repas_vendredi" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
+                    <span class="font-bold flex-1 select-none">Repas du Vendredi soir offert</span>
+                </label>
+                <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
+                    <input type="checkbox" x-model="profileForm.repas_samedi" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
+                    <span class="font-bold flex-1 select-none">Repas du Samedi soir offert</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-4 pt-6 mt-6 border-t-2 border-brutal-black">
+            <button type="submit" :disabled="loading" class="brutal-btn flex-1 bg-yellow-400 py-4 shadow-brutal border-2 border-brutal-black font-black uppercase tracking-wider hover:bg-yellow-300 transition-colors">
+                <span x-show="!loading">💾 Enregistrer Mon Profil Juge</span>
+                <span x-show="loading" x-cloak>⏳ Sauvegarde...</span>
+            </button>
+        </div>
+    </form>
+</div>
