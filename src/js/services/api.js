@@ -11,6 +11,7 @@ export const ApiService = {
      * @param {object} [options] - Query options.
      * @param {string} [options.select='*'] - Columns to select.
      * @param {object} [options.eq] - Equality filter { column: value }.
+     * @param {object} [options.in] - In filter { column: [values] }.
      * @param {object} [options.order] - Ordering { column: 'name', ascending: true }.
      * @returns {Promise<{ data: any[], error: object|null }>} The query result.
      */
@@ -20,6 +21,12 @@ export const ApiService = {
         if (options.eq) {
             for (const [key, value] of Object.entries(options.eq)) {
                 query = query.eq(key, value);
+            }
+        }
+
+        if (options.in) {
+            for (const [key, value] of Object.entries(options.in)) {
+                query = query.in(key, value);
             }
         }
 

@@ -14,7 +14,6 @@ export const ProfilesModule = {
         prenom: '',
         nom: '',
         telephone: '',
-        telephone: '',
         taille_tshirt: '',
         repas_vendredi: false,
         repas_samedi: false
@@ -44,7 +43,6 @@ export const ProfilesModule = {
                 prenom: profile.prenom || '',
                 nom: profile.nom || '',
                 telephone: profile.telephone || '',
-                telephone: profile.telephone || '',
                 taille_tshirt: profile.taille_tshirt || '',
                 repas_vendredi: profile.repas_vendredi || false,
                 repas_samedi: profile.repas_samedi || false
@@ -62,7 +60,6 @@ export const ProfilesModule = {
             id: null,
             prenom: '',
             nom: '',
-            telephone: '',
             telephone: '',
             taille_tshirt: '',
             repas_vendredi: false,
@@ -94,6 +91,16 @@ export const ProfilesModule = {
             if (error) throw error;
             this.profiles = data || [];
 
+            // Redirection des profils strictement juges vers leur interface dédiée
+            const hasJuge = this.profiles.some(p => p.role === 'juge' || p.role === 'admin-juge');
+            const hasAdmin = this.profiles.some(p => p.role === 'admin');
+            const hasBenevole = this.profiles.some(p => p.role === 'benevole' || p.role === 'referent');
+
+            if (hasJuge && !hasAdmin && !hasBenevole) {
+                window.location.href = "juges.html";
+                return;
+            }
+
             // Auto-open logic is now handled by WizardModule.checkWizardAutoOpen()
 
         } catch (error) {
@@ -120,7 +127,6 @@ export const ProfilesModule = {
                 email: this.user.email,
                 prenom: this.profileForm.prenom,
                 nom: this.profileForm.nom,
-                telephone: this.profileForm.telephone,
                 telephone: this.profileForm.telephone,
                 taille_tshirt: this.profileForm.taille_tshirt,
                 repas_vendredi: this.profileForm.repas_vendredi,

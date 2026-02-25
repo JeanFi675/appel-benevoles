@@ -58,4 +58,24 @@
             </button>
         </div>
     </form>
+
+    <!-- Présences (Lecture Seule, gérées depuis Admin Juges) - Déplacé hors du formulaire -->
+    <div class="border-t-4 border-brutal-black pt-6 mt-8">
+        <h3 class="text-xl font-black mb-4 uppercase flex items-center gap-2">⏱️ Vos Présences Juge</h3>
+        <div class="p-4 bg-gray-50 border-2 border-brutal-black grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex items-center gap-3">
+                <span class="font-bold uppercase text-sm">Présent Samedi :</span>
+                <span class="px-3 py-1 text-sm font-black border-2 border-brutal-black select-none" 
+                      :class="profileForm.presence_samedi ? 'bg-brutal-black text-brutal-white' : 'bg-white text-gray-400'" 
+                      x-text="profileForm.presence_samedi ? 'OUI' : 'NON'"></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="font-bold uppercase text-sm">Présent Dimanche :</span>
+                <span class="px-3 py-1 text-sm font-black border-2 border-brutal-black select-none" 
+                      :class="profileForm.presence_dimanche ? 'bg-brutal-black text-brutal-white' : 'bg-white text-gray-400'" 
+                      x-text="profileForm.presence_dimanche ? 'OUI' : 'NON'"></span>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-3 font-bold italic">* L'assignation des présences est exclusivement gérée par les administrateurs.</p>
+    </div>
 </div>

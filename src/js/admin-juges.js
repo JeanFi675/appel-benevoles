@@ -7,6 +7,7 @@ function initAdminJugesApp() {
     user: null,
     loading: true,
     isAdmin: false,
+    isGlobalAdmin: false,
     juges: [],
     toasts: [],
     configMontant: 10,
@@ -36,10 +37,12 @@ function initAdminJugesApp() {
         // Check if user has 'admin' or 'admin-juge' role
         if (data && data.some(p => p.role === 'admin' || p.role === 'admin-juge')) {
           this.isAdmin = true;
+          this.isGlobalAdmin = data.some(p => p.role === 'admin');
           await this.loadConfig();
           await this.loadJuges();
         } else {
-            this.isAdmin = false;
+          this.isAdmin = false;
+          window.location.href = "index.html";
         }
       } catch (err) {
         console.error("Erreur vérification droits admin-juge:", err);
@@ -67,10 +70,9 @@ function initAdminJugesApp() {
     async updateConfig() {
         this.savingConfig = true;
         try {
-            const { error } = await ApiService.upsert('config', {
-                key: 'tarif_degaines_juge',
-                value: this.configMontant.toString()
-            });
+            const { error } = await ApiService.update('config', {
+                value: this.configMontant
+            }, { key: 'tarif_degaines_juge' });
             if (error) throw error;
             this.showToast("✅ Montant de la cagnotte sauvegardé !", "success");
         } catch(err) {
@@ -84,7 +86,7 @@ function initAdminJugesApp() {
     async loadJuges() {
         try {
             const { data, error } = await ApiService.fetch('benevoles', {
-                eq: { role: 'juge' }
+                in: { role: ['juge', 'admin-juge'] }
             });
             if (error) throw error;
             // Trier par nom alphabétique
@@ -99,13 +101,11 @@ function initAdminJugesApp() {
     async updatePresence(juge) {
         try {
              const currentUser = /** @type {any} */ (juge);
-             // Il n'y a pas besoin de renvoyer email ou role si upsert demande que les champs modifiés, mais Supabase req toute la ligne si PK, ou juste update. L'API Service gère ca.
-             // On utilise update pour être sûr de ne pas écraser d'autres champs.
-             const { error } = await ApiService.upsert('benevoles', {
-                 id: currentUser.id,
+             // On utilise update pour être sûr de ne pas écraser d'autres champs, et éviter les erreurs RLS sur l'insert.
+             const { error } = await ApiService.update('benevoles', {
                  presence_samedi: currentUser.presence_samedi,
                  presence_dimanche: currentUser.presence_dimanche
-             });
+             }, { id: currentUser.id });
              if (error) throw error;
              this.showToast(`✅ Présence mise à jour pour ${juge.prenom} ${juge.nom}`, "success");
         } catch (err) {

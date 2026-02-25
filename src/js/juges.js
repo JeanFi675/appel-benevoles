@@ -12,6 +12,7 @@ function initJugesApp() {
     isLoaded: false,
     showForm: false, // Wait until profile loads to show form
     isAdmin: false,
+    isAdminJuge: false,
     
     profileForm: {
       id: null,
@@ -82,19 +83,24 @@ function initJugesApp() {
         
         if (data && data.length > 0) {
           // Check if user is an admin for the top-bar "Retour Accueil" button
+          const hasJuge = data.some(p => p.role === 'juge' || p.role === 'admin-juge');
+          const hasAdmin = data.some(p => p.role === 'admin');
+
+          if (!hasJuge && !hasAdmin) {
+              // Si connecté en tant que simple bénévole, on redirige vers l'index
+              window.location.href = "index.html";
+              return;
+          }
+
           if (data.some(p => p.role === 'admin')) {
              this.isAdmin = true;
           }
-
-          // Smart redirect: if profile is purely 'benevole', redirect to index.html?
-          // We look for a 'juge' profile. If not found, we just take their first profile and update its role to juge if they save.
-          const jugeProfile = data.find(p => p.role === 'juge');
-          const profile = jugeProfile || data[0];
-          
-          if (!jugeProfile && data[0].role === 'benevole') {
-             // For UX, we could warn them, but for now we just load their existing info.
-             console.log("Connecté en tant que bénévole, adaptation vers le profil Juge.");
+          if (data.some(p => p.role === 'admin' || p.role === 'admin-juge')) {
+             this.isAdminJuge = true;
           }
+
+          const jugeProfile = data.find(p => p.role === 'juge' || p.role === 'admin-juge' || p.role === 'admin');
+          const profile = jugeProfile || data[0];
 
           this.profileForm = {
             id: profile.id,
@@ -126,10 +132,14 @@ function initJugesApp() {
 
       this.loading = true;
       try {
+        let roleToSave = 'juge';
+        if (this.isAdminJuge) roleToSave = 'admin-juge';
+        if (this.isAdmin) roleToSave = 'admin';
+
         const profileData = {
           user_id: currentUser.id,
           email: currentUser.email,
-          role: 'juge', // Force 'juge' format for new ones, or update existing one to 'juge'
+          role: roleToSave,
           prenom: this.profileForm.prenom,
           nom: this.profileForm.nom,
           telephone: this.profileForm.telephone,
