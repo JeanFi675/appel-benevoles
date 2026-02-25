@@ -69,12 +69,13 @@ function initJugesApp() {
     },
 
     async loadJugeProfile() {
-      if (!this.user) return;
+      const currentUser = /** @type {any} */ (this.user);
+      if (!currentUser) return;
       this.isLoaded = false;
       this.isAdmin = false;
       try {
         const { data, error } = await ApiService.fetch('benevoles', {
-          eq: { user_id: this.user.id }
+          eq: { user_id: currentUser.id }
         });
 
         if (error) throw error;
@@ -116,7 +117,8 @@ function initJugesApp() {
     },
 
     async saveProfile() {
-      if (!this.user) return;
+      const currentUser = /** @type {any} */ (this.user);
+      if (!currentUser) return;
       if (!this.profileForm.prenom || !this.profileForm.nom || !this.profileForm.telephone || !this.profileForm.taille_tshirt) {
         this.showToast("❌ Veuillez remplir tous les champs obligatoires (*)", "error");
         return;
@@ -125,15 +127,13 @@ function initJugesApp() {
       this.loading = true;
       try {
         const profileData = {
-          user_id: this.user.id,
-          email: this.user.email,
+          user_id: currentUser.id,
+          email: currentUser.email,
           role: 'juge', // Force 'juge' format for new ones, or update existing one to 'juge'
           prenom: this.profileForm.prenom,
           nom: this.profileForm.nom,
           telephone: this.profileForm.telephone,
           taille_tshirt: this.profileForm.taille_tshirt,
-          presence_samedi: this.profileForm.presence_samedi,
-          presence_dimanche: this.profileForm.presence_dimanche,
           repas_vendredi: this.profileForm.repas_vendredi,
           repas_samedi: this.profileForm.repas_samedi,
         };
@@ -150,7 +150,7 @@ function initJugesApp() {
         
         // Refresh the cagnotte widget manually if present
         if (document.getElementById('cagnotte-widget-container')) {
-             this.renderWidget(document.getElementById('cagnotte-widget-container'), this.user.id);
+             this.renderWidget(document.getElementById('cagnotte-widget-container'), currentUser.id);
         }
 
       } catch (error) {
