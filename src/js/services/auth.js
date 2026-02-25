@@ -50,15 +50,6 @@ export const AuthService = {
     },
 
     /**
-     * Verifies an OTP code or token hash.
-     * @param {object} params - Parameters like { token_hash, type } or { email, token, type }
-     * @returns {Promise<{ data: object|null, error: object|null }>} Result of the operation.
-     */
-    async verifyOtp(params) {
-        return await supabase.auth.verifyOtp(params);
-    },
-
-    /**
      * Logs out the current user.
      * @returns {Promise<{ error: object|null }>} Result of the operation.
      */
