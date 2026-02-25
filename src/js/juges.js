@@ -2,6 +2,7 @@ import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
 import { CagnotteModule } from "./modules/user/cagnotte.js";
+import { TshirtModule } from "./modules/user/tshirt.js";
 
 function initJugesApp() {
   Alpine.data("jugesApp", () => ({
@@ -28,6 +29,7 @@ function initJugesApp() {
 
     // Include modules we need
     ...CagnotteModule,
+    ...TshirtModule,
 
     async init() {
       // Magic link error handling
