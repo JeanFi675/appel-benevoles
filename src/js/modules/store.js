@@ -19,6 +19,10 @@ export function initStore() {
     toasts: [],
     lastAuthSuccess: 0, // Timestamp of last successful login
 
+    // Auth State
+    step: 1, // 1: Email, 2: OTP
+    otpCode: "",
+
     // Modal State
     confirmModal: {
       open: false,
@@ -159,6 +163,9 @@ export function initStore() {
             this.stopPolling();
           } else {
             console.log("👀 Tab visible - Refreshing data...");
+            
+            // Si on n'est pas encore connecté (ex: en pleine saisie d'OTP), on ne fait rien
+            if (!this.user) return;
 
             // SECURITY: Refresh session AVANT de charger les données
             // Le SDK gère le refresh automatiquement via getSession() mais on veut s'assurer
@@ -268,9 +275,9 @@ export function initStore() {
     loginEmail: "",
 
     /**
-     * Sends a magic link for login.
+     * Requests an OTP code for login.
      */
-    async sendMagicLink() {
+    async requestOtp() {
       if (!this.loginEmail) return;
 
       this.loading = true;
@@ -278,13 +285,64 @@ export function initStore() {
         const { error } = await AuthService.signInWithOtp(this.loginEmail);
         if (error) throw error;
 
-        this.showToast("📧 Vérifiez votre boîte mail !", "success");
-        this.loginEmail = "";
+        this.showToast("📧 Code envoyé ! Vérifiez votre boîte mail.", "success");
+        this.step = 2; // Move to step 2
+        
+        // Focus on the OTP input after DOM upate
+        setTimeout(() => {
+            const otpInput = document.getElementById('otp');
+            if (otpInput) otpInput.focus();
+        }, 100);
+
       } catch (error) {
+        console.error("Error requesting OTP:", error);
         this.showToast("❌ Erreur : " + error.message, "error");
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * Verifies the OTP code.
+     */
+    async verifyOtp() {
+        if (!this.loginEmail || !this.otpCode || this.otpCode.length !== 6) {
+            this.showToast("❌ Veuillez entrer un code à 6 chiffres.", "error");
+            return;
+        }
+
+        this.loading = true;
+        try {
+            const { data, error } = await AuthService.verifyOtp(this.loginEmail, this.otpCode);
+            
+            if (error) throw error;
+            
+            if (data && data.session) {
+                this.showToast("✅ Connexion réussie !", "success");
+                
+                // Track auth time
+                this.lastAuthSuccess = Date.now();
+                this.user = data.session.user;
+                
+                // Clean URL hash
+                window.history.replaceState(null, "", window.location.pathname);
+                
+                await this.loadInitialData();
+            } else {
+                throw new Error("Code invalide ou expiré.");
+            }
+
+        } catch (error) {
+            console.error("Error verifying OTP:", error);
+            let msg = error.message;
+            if (msg.includes("Token has expired or is invalid")) {
+                msg = "Code invalide ou expiré. Veuillez vérifier ou demander un nouveau code.";
+            }
+            this.showToast("❌ Erreur : " + msg, "error");
+            this.otpCode = ''; 
+        } finally {
+            this.loading = false;
+        }
     },
 
     /**
