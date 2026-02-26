@@ -119,7 +119,7 @@ function initAdminJugesApp() {
       const id = Date.now() + Math.random().toString(36).substr(2, 9);
       this.toasts.push({ id, message, type });
       setTimeout(() => {
-        this.toasts = this.toasts.filter(t => t.id !== id);
+        this.toasts = this.toasts.filter(t => /** @type {any} */ (t).id !== id);
       }, 5000);
     }
   }));
