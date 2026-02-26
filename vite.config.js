@@ -86,6 +86,19 @@ export default defineConfig({
             },
           },
         },
+        {
+          entry: "src/js/admin-connexions.js",
+          filename: "admin-connexions.html",
+          template: "admin-connexions.html",
+          injectOptions: {
+            data: {
+              title: "Diagnostic Connexions - Bénévoles Escalade",
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            },
+          },
+        },
       ],
     }),
   ],
@@ -100,6 +113,7 @@ export default defineConfig({
         scanner: resolve(__dirname, "scanner-tshirt.html"),
         juges: resolve(__dirname, "juges.html"),
         "admin-juges": resolve(__dirname, "admin-juges.html"),
+        "admin-connexions": resolve(__dirname, "admin-connexions.html"),
       },
     },
   },

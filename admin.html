@@ -10,16 +10,24 @@
       <!-- Header -->
       <header class="bg-brutal-black text-brutal-white py-6 mb-6 border-b-4 border-brutal-black">
         <div class="container mx-auto px-4">
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
             <div>
               <h1 class="text-3xl font-black tracking-tight">
                 🔐 ADMIN PANEL
               </h1>
               <p class="text-xl font-body mt-2">Gestion des bénévoles et postes</p>
             </div>
-            <a href="index.html" class="brutal-btn bg-brutal-ice text-brutal-black px-4 py-2 shadow-brutal-sm">
-              ← Retour
-            </a>
+            <div class="flex flex-wrap gap-2 text-sm font-bold">
+              <a href="admin-connexions.html" class="brutal-btn bg-brutal-white text-brutal-black px-3 py-2 border-2 border-brutal-black shadow-brutal-sm flex items-center gap-2">
+                🔌 Connexions
+              </a>
+              <a href="admin-juges.html" class="brutal-btn bg-yellow-400 text-brutal-black px-3 py-2 border-2 border-brutal-black shadow-brutal-sm flex items-center gap-2">
+                ⚖️ Juges
+              </a>
+              <a href="index.html" class="brutal-btn bg-brutal-ice text-brutal-black px-3 py-2 border-2 border-transparent shadow-brutal-sm flex items-center gap-2">
+                ← Retour
+              </a>
+            </div>
           </div>
         </div>
       </header>
