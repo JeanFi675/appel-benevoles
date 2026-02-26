@@ -99,6 +99,19 @@ export default defineConfig({
             },
           },
         },
+        {
+          entry: "src/js/login-code.js",
+          filename: "login-code.html",
+          template: "login-code.html",
+          injectOptions: {
+            data: {
+              title: "Connexion par Code - Bénévoles Escalade",
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            },
+          },
+        },
       ],
     }),
   ],
@@ -114,6 +127,7 @@ export default defineConfig({
         juges: resolve(__dirname, "juges.html"),
         "admin-juges": resolve(__dirname, "admin-juges.html"),
         "admin-connexions": resolve(__dirname, "admin-connexions.html"),
+        "login-code": resolve(__dirname, "login-code.html"),
       },
     },
   },
