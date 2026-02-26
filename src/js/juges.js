@@ -10,6 +10,11 @@ function initJugesApp() {
     user: null,
     loading: false,
     toasts: [],
+    
+    // Auth State
+    step: 1, // 1: Email, 2: OTP
+    otpCode: "",
+    
     isLoaded: false,
     showForm: false, // Wait until profile loads to show form
     isAdmin: false,
@@ -174,19 +179,70 @@ function initJugesApp() {
 
     // Auth actions
     loginEmail: "",
-    async sendMagicLink() {
+    
+    /**
+     * Requests an OTP code for login.
+     */
+    async requestOtp() {
       if (!this.loginEmail) return;
       this.loading = true;
       try {
         const { error } = await AuthService.signInWithOtp(this.loginEmail);
         if (error) throw error;
-        this.showToast("📧 Vérifiez votre boîte mail !", "success");
-        this.loginEmail = "";
+        
+        this.showToast("📧 Code envoyé ! Vérifiez votre boîte mail.", "success");
+        this.step = 2;
+        
+        // Focus on the OTP input after DOM upate
+        setTimeout(() => {
+            const otpInput = document.getElementById('otp');
+            if (otpInput) otpInput.focus();
+        }, 100);
+
       } catch (err) {
         this.showToast("❌ Erreur : " + err.message, "error");
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * Verifies the OTP code.
+     */
+    async verifyOtp() {
+        if (!this.loginEmail || !this.otpCode || this.otpCode.length !== 6) {
+            this.showToast("❌ Veuillez entrer un code à 6 chiffres.", "error");
+            return;
+        }
+
+        this.loading = true;
+        try {
+            const { data, error } = await AuthService.verifyOtp(this.loginEmail, this.otpCode);
+            if (error) throw error;
+            
+            if (data && data.session) {
+                this.showToast("✅ Connexion réussie !", "success");
+                this.user = data.session.user;
+                
+                // Clean URL hash
+                window.history.replaceState(null, "", window.location.pathname);
+                
+                // On charge le profil juge correspondant
+                await this.loadJugeProfile();
+            } else {
+                throw new Error("Code invalide ou expiré.");
+            }
+        } catch (error) {
+            console.error("Error verifying OTP:", error);
+            let msg = error.message;
+            if (msg.includes("Token has expired or is invalid")) {
+                msg = "Code invalide ou expiré. Veuillez vérifier ou demander un nouveau code.";
+            }
+            this.showToast("❌ Erreur : " + msg, "error");
+            this.otpCode = ''; 
+        } finally {
+            this.loading = false;
+        }
     },
 
     async logout() {
