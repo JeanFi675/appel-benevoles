@@ -13,7 +13,7 @@ function setupLoginCodeApp() {
             // Check if user is already logged in
             const { session } = await AuthService.getSession();
             if (session && session.user) {
-                window.location.href = 'index.html';
+                window.location.replace('./index.html');
             }
         },
 
@@ -57,10 +57,8 @@ function setupLoginCodeApp() {
                 
                 if (data && data.session) {
                     this.showToast("✅ Connexion réussie !", "success");
-                    // Redirect to home page
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 500);
+                    // Redirect to home page immediately to prevent Safari from blocking it
+                    window.location.replace('./index.html');
                 } else {
                     throw new Error("Code invalide ou expiré.");
                 }
