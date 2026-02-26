@@ -50,6 +50,20 @@ export const AuthService = {
     },
 
     /**
+     * Verifies an OTP code for the given email.
+     * @param {string} email - The user's email address.
+     * @param {string} token - The 6-digit OTP code.
+     * @returns {Promise<{ data: object|null, error: object|null }>} Result of the operation.
+     */
+    async verifyOtp(email, token) {
+        return await supabase.auth.verifyOtp({
+            email,
+            token,
+            type: 'magiclink'
+        });
+    },
+
+    /**
      * Logs out the current user.
      * @returns {Promise<{ error: object|null }>} Result of the operation.
      */
