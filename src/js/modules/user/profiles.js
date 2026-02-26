@@ -91,10 +91,16 @@ export const ProfilesModule = {
             if (error) throw error;
             this.profiles = data || [];
 
-            // Redirection des profils strictement juges vers leur interface dédiée
+            // Redirection des profils strictement juges ou officiels vers leur interface dédiée
             const hasJuge = this.profiles.some(p => p.role === 'juge' || p.role === 'admin-juge');
+            const hasOfficiel = this.profiles.some(p => p.role === 'officiel');
             const hasAdmin = this.profiles.some(p => p.role === 'admin');
             const hasBenevole = this.profiles.some(p => p.role === 'benevole' || p.role === 'referent');
+
+            if (hasOfficiel && !hasAdmin && !hasBenevole && !hasJuge) {
+                window.location.href = "officiels.html";
+                return;
+            }
 
             if (hasJuge && !hasAdmin && !hasBenevole) {
                 window.location.href = "juges.html";
