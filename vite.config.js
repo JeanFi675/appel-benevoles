@@ -9,6 +9,19 @@ export default defineConfig({
       minify: true,
       pages: [
         {
+          entry: "src/js/officiels.js",
+          filename: "officiels.html",
+          template: "officiels.html",
+          injectOptions: {
+            data: {
+              title: "Bénévoles Escalade - Officiels",
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            },
+          },
+        },
+        {
           entry: "src/js/main.js",
           filename: "index.html",
           template: "index.html",
@@ -114,6 +127,7 @@ export default defineConfig({
         juges: resolve(__dirname, "juges.html"),
         "admin-juges": resolve(__dirname, "admin-juges.html"),
         "admin-connexions": resolve(__dirname, "admin-connexions.html"),
+        officiels: resolve(__dirname, "officiels.html"),
       },
     },
   },
