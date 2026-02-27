@@ -120,6 +120,15 @@ function initJugesApp() {
             repas_vendredi: profile.repas_vendredi || false,
             repas_samedi: profile.repas_samedi || false,
           };
+        } else {
+             // AUTO-CREATION: Le compte est nouveau, on verrouille immédiatement le rôle "juge" en base
+             await ApiService.upsert("benevoles", {
+                user_id: currentUser.id,
+                email: currentUser.email,
+                role: 'juge'
+             });
+             // On rappelle immédiatement le chargement une fois le profil vide en base
+             return this.loadJugeProfile();
         }
       } catch (error) {
         console.error("Erreur chargement profil juge:", error);
