@@ -10,16 +10,16 @@ function initJugesApp() {
     user: null,
     loading: false,
     toasts: [],
-    
+
     // Auth State
     step: 1, // 1: Email, 2: OTP
     otpCode: "",
-    
+
     isLoaded: false,
     showForm: false, // Wait until profile loads to show form
     isAdmin: false,
     isAdminJuge: false,
-    
+
     profileForm: {
       id: null,
       prenom: "",
@@ -40,7 +40,11 @@ function initJugesApp() {
       // Magic link error handling
       const hash = window.location.hash;
       const search = window.location.search;
-      const isAuthRedirect = hash.includes("access_token") || hash.includes("type=") || hash.includes("error=") || search.includes("code=");
+      const isAuthRedirect =
+        hash.includes("access_token") ||
+        hash.includes("type=") ||
+        hash.includes("error=") ||
+        search.includes("code=");
 
       if (hash && hash.includes("error=")) {
         const params = new URLSearchParams(hash.substring(1));
@@ -63,10 +67,11 @@ function initJugesApp() {
       AuthService.onAuthStateChange(async (event, session) => {
         this.user = session?.user || null;
         if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-          if (isAuthRedirect) window.history.replaceState(null, "", window.location.pathname);
+          if (isAuthRedirect)
+            window.history.replaceState(null, "", window.location.pathname);
           // Wait briefly to allow auth token propagation
           setTimeout(async () => {
-             await this.loadJugeProfile();
+            await this.loadJugeProfile();
           }, 300);
         } else if (event === "SIGNED_OUT") {
           this.user = null;
@@ -82,31 +87,38 @@ function initJugesApp() {
       this.isLoaded = false;
       this.isAdmin = false;
       try {
-        const { data, error } = await ApiService.fetch('benevoles', {
-          eq: { user_id: currentUser.id }
+        const { data, error } = await ApiService.fetch("benevoles", {
+          eq: { user_id: currentUser.id },
         });
 
         if (error) throw error;
-        
+
         if (data && data.length > 0) {
           // Check if user is an admin for the top-bar "Retour Accueil" button
-          const hasJuge = data.some(p => p.role === 'juge' || p.role === 'admin-juge');
-          const hasAdmin = data.some(p => p.role === 'admin');
+          const hasJuge = data.some(
+            (p) => p.role === "juge" || p.role === "admin-juge",
+          );
+          const hasAdmin = data.some((p) => p.role === "admin");
 
           if (!hasJuge && !hasAdmin) {
-              // Si connecté en tant que simple bénévole, on redirige vers l'index
-              window.location.href = "index.html";
-              return;
+            // Si connecté en tant que simple bénévole, on redirige vers l'index
+            window.location.href = "index.html";
+            return;
           }
 
-          if (data.some(p => p.role === 'admin')) {
-             this.isAdmin = true;
+          if (data.some((p) => p.role === "admin")) {
+            this.isAdmin = true;
           }
-          if (data.some(p => p.role === 'admin' || p.role === 'admin-juge')) {
-             this.isAdminJuge = true;
+          if (data.some((p) => p.role === "admin" || p.role === "admin-juge")) {
+            this.isAdminJuge = true;
           }
 
-          const jugeProfile = data.find(p => p.role === 'juge' || p.role === 'admin-juge' || p.role === 'admin');
+          const jugeProfile = data.find(
+            (p) =>
+              p.role === "juge" ||
+              p.role === "admin-juge" ||
+              p.role === "admin",
+          );
           const profile = jugeProfile || data[0];
 
           this.profileForm = {
@@ -121,14 +133,16 @@ function initJugesApp() {
             repas_samedi: profile.repas_samedi || false,
           };
         } else {
-             // AUTO-CREATION: Le compte est nouveau, on verrouille immédiatement le rôle "juge" en base
-             await ApiService.upsert("benevoles", {
-                user_id: currentUser.id,
-                email: currentUser.email,
-                role: 'juge'
-             });
-             // On rappelle immédiatement le chargement une fois le profil vide en base
-             return this.loadJugeProfile();
+          // AUTO-CREATION: Le compte est nouveau, on verrouille immédiatement le rôle "juge" en base
+          await ApiService.upsert("benevoles", {
+            user_id: currentUser.id,
+            email: currentUser.email,
+            role: "juge",
+            prenom: "",
+            nom: "",
+          });
+          // On rappelle immédiatement le chargement une fois le profil vide en base
+          return this.loadJugeProfile();
         }
       } catch (error) {
         console.error("Erreur chargement profil juge:", error);
@@ -141,16 +155,24 @@ function initJugesApp() {
     async saveProfile() {
       const currentUser = /** @type {any} */ (this.user);
       if (!currentUser) return;
-      if (!this.profileForm.prenom || !this.profileForm.nom || !this.profileForm.telephone || !this.profileForm.taille_tshirt) {
-        this.showToast("❌ Veuillez remplir tous les champs obligatoires (*)", "error");
+      if (
+        !this.profileForm.prenom ||
+        !this.profileForm.nom ||
+        !this.profileForm.telephone ||
+        !this.profileForm.taille_tshirt
+      ) {
+        this.showToast(
+          "❌ Veuillez remplir tous les champs obligatoires (*)",
+          "error",
+        );
         return;
       }
 
       this.loading = true;
       try {
-        let roleToSave = 'juge';
-        if (this.isAdminJuge) roleToSave = 'admin-juge';
-        if (this.isAdmin) roleToSave = 'admin';
+        let roleToSave = "juge";
+        if (this.isAdminJuge) roleToSave = "admin-juge";
+        if (this.isAdmin) roleToSave = "admin";
 
         const profileData = {
           user_id: currentUser.id,
@@ -173,12 +195,14 @@ function initJugesApp() {
 
         this.showToast("✅ Profil Juge enregistré !", "success");
         await this.loadJugeProfile(); // reload to get Cagnotte updated
-        
-        // Refresh the cagnotte widget manually if present
-        if (document.getElementById('cagnotte-widget-container')) {
-             this.renderWidget(document.getElementById('cagnotte-widget-container'), currentUser.id);
-        }
 
+        // Refresh the cagnotte widget manually if present
+        if (document.getElementById("cagnotte-widget-container")) {
+          this.renderWidget(
+            document.getElementById("cagnotte-widget-container"),
+            currentUser.id,
+          );
+        }
       } catch (error) {
         this.showToast("❌ Erreur : " + error.message, "error");
       } finally {
@@ -188,7 +212,7 @@ function initJugesApp() {
 
     // Auth actions
     loginEmail: "",
-    
+
     /**
      * Requests an OTP code for login.
      */
@@ -198,16 +222,18 @@ function initJugesApp() {
       try {
         const { error } = await AuthService.signInWithOtp(this.loginEmail);
         if (error) throw error;
-        
-        this.showToast("📧 Code envoyé ! Vérifiez votre boîte mail.", "success");
+
+        this.showToast(
+          "📧 Code envoyé ! Vérifiez votre boîte mail.",
+          "success",
+        );
         this.step = 2;
-        
+
         // Focus on the OTP input after DOM upate
         setTimeout(() => {
-            const otpInput = document.getElementById('otp');
-            if (otpInput) otpInput.focus();
+          const otpInput = document.getElementById("otp");
+          if (otpInput) otpInput.focus();
         }, 100);
-
       } catch (err) {
         this.showToast("❌ Erreur : " + err.message, "error");
       } finally {
@@ -219,48 +245,53 @@ function initJugesApp() {
      * Verifies the OTP code.
      */
     async verifyOtp() {
-        if (!this.loginEmail || !this.otpCode || this.otpCode.length !== 6) {
-            this.showToast("❌ Veuillez entrer un code à 6 chiffres.", "error");
-            return;
-        }
+      if (!this.loginEmail || !this.otpCode || this.otpCode.length !== 6) {
+        this.showToast("❌ Veuillez entrer un code à 6 chiffres.", "error");
+        return;
+      }
 
-        this.loading = true;
-        try {
-            const { data, error } = await AuthService.verifyOtp(this.loginEmail, this.otpCode);
-            if (error) throw error;
-            
-            if (data && data.session) {
-                this.showToast("✅ Connexion réussie !", "success");
-                this.user = data.session.user;
-                
-                // Clean URL hash
-                window.history.replaceState(null, "", window.location.pathname);
-                
-                // On charge le profil juge correspondant
-                await this.loadJugeProfile();
-            } else {
-                throw new Error("Code invalide ou expiré.");
-            }
-        } catch (error) {
-            console.error("Error verifying OTP:", error);
-            let msg = error.message;
-            if (msg.includes("Token has expired or is invalid")) {
-                msg = "Code invalide ou expiré. Veuillez vérifier ou demander un nouveau code.";
-            }
-            this.showToast("❌ Erreur : " + msg, "error");
-            this.otpCode = ''; 
-        } finally {
-            this.loading = false;
+      this.loading = true;
+      try {
+        const { data, error } = await AuthService.verifyOtp(
+          this.loginEmail,
+          this.otpCode,
+        );
+        if (error) throw error;
+
+        if (data && data.session) {
+          this.showToast("✅ Connexion réussie !", "success");
+          this.user = data.session.user;
+
+          // Clean URL hash
+          window.history.replaceState(null, "", window.location.pathname);
+
+          // On charge le profil juge correspondant
+          await this.loadJugeProfile();
+        } else {
+          throw new Error("Code invalide ou expiré.");
         }
+      } catch (error) {
+        console.error("Error verifying OTP:", error);
+        let msg = error.message;
+        if (msg.includes("Token has expired or is invalid")) {
+          msg =
+            "Code invalide ou expiré. Veuillez vérifier ou demander un nouveau code.";
+        }
+        this.showToast("❌ Erreur : " + msg, "error");
+        this.otpCode = "";
+      } finally {
+        this.loading = false;
+      }
     },
 
     async logout() {
-       this.user = null;
-       await AuthService.signOut();
-       Object.keys(localStorage).forEach((key) => {
-         if (key.startsWith("sb-") || key.includes("supabase")) localStorage.removeItem(key);
-       });
-       window.location.href = window.location.pathname;
+      this.user = null;
+      await AuthService.signOut();
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key.includes("supabase"))
+          localStorage.removeItem(key);
+      });
+      window.location.href = window.location.pathname;
     },
 
     showToast(message, type = "success") {
@@ -269,9 +300,9 @@ function initJugesApp() {
       this.toasts.push({ id, message, type });
       setTimeout(() => {
         // @ts-ignore
-        this.toasts = this.toasts.filter(t => t.id !== id);
+        this.toasts = this.toasts.filter((t) => t.id !== id);
       }, 5000);
-    }
+    },
   }));
 }
 
