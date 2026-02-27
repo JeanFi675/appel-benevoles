@@ -21,8 +21,13 @@ export const TshirtModule = {
                 return;
             }
 
-            // Check if ANYONE is eligible
-            const eligibles = data.filter(v => v.has_registrations);
+            // Check if ANYONE is eligible AND has a valid t-shirt size
+            const eligibles = data.filter(v => 
+                v.has_registrations && 
+                v.taille_tshirt && 
+                v.taille_tshirt !== 'SANS' && 
+                v.taille_tshirt.trim() !== ''
+            );
             if (eligibles.length === 0) {
                 parentElement.innerHTML = "";
                 return; // No T-shirts to give
