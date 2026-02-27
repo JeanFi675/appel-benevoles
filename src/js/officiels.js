@@ -113,7 +113,9 @@ function initOfficielsApp() {
              await ApiService.upsert("benevoles", {
                 user_id: currentUser.id,
                 email: currentUser.email,
-                role: 'officiel'
+                role: 'officiel',
+                prenom: '',
+                nom: ''
              });
              // On rappelle immédiatement le chargement une fois le profil vide en base
              return this.loadOfficielProfile();
