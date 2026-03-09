@@ -25,6 +25,7 @@ function initOfficielsApp() {
       taille_tshirt: "",
       repas_vendredi: false,
       repas_samedi: false,
+      vegetarien: false,
     },
 
     // Include modules we need
@@ -107,6 +108,7 @@ function initOfficielsApp() {
             taille_tshirt: profile.taille_tshirt || "",
             repas_vendredi: profile.repas_vendredi || false,
             repas_samedi: profile.repas_samedi || false,
+            vegetarien: profile.vegetarien || false,
           };
         } else {
              // AUTO-CREATION: Le compte est nouveau, on verrouille immédiatement le rôle "officiel" en base
@@ -158,6 +160,7 @@ function initOfficielsApp() {
           taille_tshirt: this.profileForm.taille_tshirt,
           repas_vendredi: this.profileForm.repas_vendredi,
           repas_samedi: this.profileForm.repas_samedi,
+          vegetarien: this.profileForm.vegetarien,
         };
 
         if (this.profileForm.id) {

@@ -20,8 +20,8 @@ export const AdminModule = {
     stats: {
         tshirts: {},
         repas: {
-            vendredi: 0,
-            samedi: 0
+            vendredi: { normal: 0, vege: 0, total: 0 },
+            samedi: { normal: 0, vege: 0, total: 0 }
         },
         cagnotte: {
             total_distribue: 0,
@@ -314,7 +314,7 @@ export const AdminModule = {
                 if (a.periode_ordre !== b.periode_ordre) {
                     return a.periode_ordre - b.periode_ordre;
                 }
-                return new Date(a.periode_debut) - new Date(b.periode_debut);
+                return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
             });
         } catch (error) {
             this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
@@ -771,8 +771,8 @@ export const AdminModule = {
 
     calculateStats() {
         const tshirts = {};
-        let vendredi = 0;
-        let samedi = 0;
+        let vendredi = { normal: 0, vege: 0, total: 0 };
+        let samedi = { normal: 0, vege: 0, total: 0 };
 
         this.benevoles.forEach(b => {
             // T-Shirts
@@ -780,8 +780,14 @@ export const AdminModule = {
             tshirts[size] = (tshirts[size] || 0) + 1;
 
             // Repas
-            if (b.repas_vendredi) vendredi++;
-            if (b.repas_samedi) samedi++;
+            if (b.repas_vendredi) {
+                vendredi.total++;
+                if (b.vegetarien) vendredi.vege++; else vendredi.normal++;
+            }
+            if (b.repas_samedi) {
+                samedi.total++;
+                if (b.vegetarien) samedi.vege++; else samedi.normal++;
+            }
         });
 
         // CAGNOTTE STATS

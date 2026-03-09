@@ -16,7 +16,8 @@ export const ProfilesModule = {
         telephone: '',
         taille_tshirt: '',
         repas_vendredi: false,
-        repas_samedi: false
+        repas_samedi: false,
+        vegetarien: false
     },
 
     /**
@@ -45,7 +46,8 @@ export const ProfilesModule = {
                 telephone: profile.telephone || '',
                 taille_tshirt: profile.taille_tshirt || '',
                 repas_vendredi: profile.repas_vendredi || false,
-                repas_samedi: profile.repas_samedi || false
+                repas_samedi: profile.repas_samedi || false,
+                vegetarien: profile.vegetarien || false
             };
             this.isEditingProfile = true;
         }
@@ -63,7 +65,8 @@ export const ProfilesModule = {
             telephone: '',
             taille_tshirt: '',
             repas_vendredi: false,
-            repas_samedi: false
+            repas_samedi: false,
+            vegetarien: false
         };
         this.isEditingProfile = true;
     },
@@ -73,7 +76,7 @@ export const ProfilesModule = {
      */
     cancelEdit() {
         this.isEditingProfile = false;
-        this.profileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+        this.profileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
     },
 
     /**
@@ -136,7 +139,8 @@ export const ProfilesModule = {
                 telephone: this.profileForm.telephone,
                 taille_tshirt: this.profileForm.taille_tshirt,
                 repas_vendredi: this.profileForm.repas_vendredi,
-                repas_samedi: this.profileForm.repas_samedi
+                repas_samedi: this.profileForm.repas_samedi,
+                vegetarien: this.profileForm.vegetarien
             };
 
             if (this.profileForm.id) {

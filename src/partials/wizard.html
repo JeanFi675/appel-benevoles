@@ -101,7 +101,7 @@
 
             <div class="p-2 bg-yellow-50 border-2 border-yellow-400">
               <h3 class="font-bold text-sm mb-2">🍽️ Repas Bénévoles (soir)</h3>
-              <div class="grid sm:grid-cols-2 gap-2">
+              <div class="grid sm:grid-cols-2 gap-2 mb-2">
                 <div class="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -129,6 +129,21 @@
                     >Repas Sam. soir 16/05</label
                   >
                 </div>
+              </div>
+              <div
+                class="flex items-center gap-2 pt-2 border-t border-yellow-200"
+              >
+                <input
+                  type="checkbox"
+                  id="wizard_vegetarien"
+                  x-model="wizardProfileForm.vegetarien"
+                  class="w-5 h-5 accent-green-600"
+                />
+                <label
+                  for="wizard_vegetarien"
+                  class="font-bold cursor-pointer text-sm text-green-800"
+                  >🥬 Option Végétarien</label
+                >
               </div>
             </div>
 
