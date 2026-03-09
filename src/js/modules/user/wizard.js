@@ -21,7 +21,8 @@ export const WizardModule = {
         telephone: '',
         taille_tshirt: '',
         repas_vendredi: false,
-        repas_samedi: false
+        repas_samedi: false,
+        vegetarien: false
     },
 
     // Data for public view
@@ -242,14 +243,15 @@ export const WizardModule = {
             telephone: profile.telephone,
             taille_tshirt: profile.taille_tshirt,
             repas_vendredi: profile.repas_vendredi || false,
-            repas_samedi: profile.repas_samedi || false
+            repas_samedi: profile.repas_samedi || false,
+            vegetarien: profile.vegetarien || false
         };
         this.showWizardProfileForm = true;
     },
 
     cancelWizardEdit() {
         this.showWizardProfileForm = false;
-        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
     },
 
     async createProfileAndContinue() {
@@ -277,7 +279,8 @@ export const WizardModule = {
                 telephone: f.telephone,
                 taille_tshirt: f.taille_tshirt,
                 repas_vendredi: f.repas_vendredi,
-                repas_samedi: f.repas_samedi
+                repas_samedi: f.repas_samedi,
+                vegetarien: f.vegetarien
             };
 
             if (f.id) {
@@ -296,7 +299,7 @@ export const WizardModule = {
             if (f.id) {
                 this.showToast('✅ Profil mis à jour !', 'success');
                 this.showWizardProfileForm = false;
-                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
             } else {
                 this.showToast('✅ Profil créé !', 'success');
                 this.showPostCreationModal = true;
@@ -317,7 +320,7 @@ export const WizardModule = {
         this.loading = false;
         this.showPostCreationModal = false;
         if (choice === 'add') {
-            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
             this.showWizardProfileForm = true;
         } else {
             this.wizardStep = 2;

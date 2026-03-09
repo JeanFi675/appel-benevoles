@@ -33,7 +33,7 @@
         <!-- Repas bénévoles (Réservation) -->
         <div class="border-t-2 border-brutal-black pt-6 mt-6">
             <h3 class="text-xl font-bold mb-4 uppercase">Réservation Repas</h3>
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-4 mb-4">
                 <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
                     <input type="checkbox" x-model="profileForm.repas_vendredi" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
                     <span class="font-bold flex-1 select-none">Repas du Vendredi soir</span>
@@ -41,6 +41,12 @@
                 <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
                     <input type="checkbox" x-model="profileForm.repas_samedi" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
                     <span class="font-bold flex-1 select-none">Repas du Samedi soir</span>
+                </label>
+            </div>
+            <div class="flex flex-col gap-4 pt-4 border-t-2 border-gray-200">
+                <label class="flex items-center gap-3 brutal-checkbox-label w-fit cursor-pointer">
+                    <input type="checkbox" x-model="profileForm.vegetarien" class="brutal-checkbox w-6 h-6 border-green-600 accent-green-600 cursor-pointer" />
+                    <span class="font-bold flex-1 select-none text-green-800">🥬 Option Végétarien</span>
                 </label>
             </div>
         </div>
