@@ -327,6 +327,11 @@ export function initStore() {
                 // Clean URL hash
                 window.history.replaceState(null, "", window.location.pathname);
                 
+                // FIX CRITIQUE: remettre loading=false AVANT loadInitialData()
+                // car checkWizardAutoOpen() (appelée dans loadInitialData) ouvre le wizard
+                // pendant que loading est encore true → bouton Enregistrer désactivé dès l'ouverture
+                this.loading = false;
+                
                 await this.loadInitialData();
             } else {
                 throw new Error("Code invalide ou expiré.");
