@@ -250,6 +250,7 @@ export const WizardModule = {
     },
 
     cancelWizardEdit() {
+        this.loading = false; // FIX: s'assurer que loading est libéré si on annule
         this.showWizardProfileForm = false;
         this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
     },
@@ -312,7 +313,11 @@ export const WizardModule = {
             this.showToast('❌ Erreur : ' + error.message, 'error');
             this.loading = false;
         } finally {
-            if (!this.showPostCreationModal) this.loading = false;
+            // FIX: toujours libérer loading ici.
+            // handlePostProfileCreation() gère l'affichage du modal post-création sans bloquer loading.
+            // Le cas showPostCreationModal n'a pas besoin de garder loading=true.
+            clearTimeout(safetyTimeout);
+            this.loading = false;
         }
     },
 
