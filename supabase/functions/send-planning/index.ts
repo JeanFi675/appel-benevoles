@@ -152,8 +152,8 @@ Deno.serve(async (req) => {
         `;
 
         missions.forEach(m => {
-            const dateStr = m.debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
-            const timeStr = `${m.debut.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})} - ${m.fin.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}`;
+            const dateStr = m.debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
+            const timeStr = `${m.debut.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', timeZone: 'Europe/Paris'})} - ${m.fin.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', timeZone: 'Europe/Paris'})}`;
             
             htmlContent += `
                 <tr style="border-bottom: 1px solid #ddd;">
