@@ -39,6 +39,7 @@ export const AdminModule = {
 
     // Search & Modal
     searchQuery: '',
+    posteFilterPeriode: '',
     selectedBenevoleInscriptions: [],
     showDetailsModal: false, // Read-only modal
     showEditModal: false,    // Edit/Add modal
@@ -84,6 +85,22 @@ export const AdminModule = {
 
     getReferents() {
         return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
+    },
+
+    getFilteredPostes() {
+        if (!this.posteFilterPeriode) return this.postes;
+        return this.postes.filter(p => String(p.periode_id) === String(this.posteFilterPeriode));
+    },
+
+    async updatePosteReferent(posteId, referentId) {
+        try {
+            const { error } = await ApiService.update('postes', { referent_id: referentId || null }, { id: posteId });
+            if (error) throw error;
+            this.showToast('✅ Référent mis à jour', 'success');
+            await this.loadPostes();
+        } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        }
     },
 
     getFilteredBenevoles() {

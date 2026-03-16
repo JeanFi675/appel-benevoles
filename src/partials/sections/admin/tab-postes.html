@@ -83,7 +83,15 @@
 
     <!-- Liste des postes -->
     <div class="brutal-card bg-brutal-white p-8">
-        <h2 class="text-3xl font-black mb-6">Liste des postes</h2>
+        <div class="flex flex-wrap items-center gap-4 mb-6">
+            <h2 class="text-3xl font-black">Liste des postes</h2>
+            <select x-model="posteFilterPeriode" class="brutal-input px-4 py-2 font-bold">
+                <option value="">— Toutes les périodes —</option>
+                <template x-for="periode in periodes" :key="periode.id">
+                    <option :value="periode.id" x-text="periode.nom"></option>
+                </template>
+            </select>
+        </div>
 
         <!-- Vue Desktop (Tableau) -->
         <div class="hidden md:block overflow-x-auto">
@@ -100,7 +108,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="poste in postes" :key="poste.id">
+                    <template x-for="poste in getFilteredPostes()" :key="poste.id">
                         <tr class="border-b-2 border-gray-300"
                             :class="{
                                 'bg-red-100':   (poste.inscrits_actuels || 0) < poste.nb_min,
@@ -113,7 +121,18 @@
                                 <span x-text="formatDateTime(poste.periode_debut)"></span><br>
                                 <span x-text="formatDateTime(poste.periode_fin)"></span>
                             </td>
-                            <td class="py-3 px-2 font-bold" x-text="poste.referent_identite"></td>
+                            <td class="py-3 px-2">
+                                <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
+                                    :value="poste.referent_id || ''"
+                                    @change="updatePosteReferent(poste.id, $event.target.value)">
+                                    <option value="">— Aucun —</option>
+                                    <template x-for="ref in getReferents()" :key="ref.id">
+                                        <option :value="ref.id"
+                                            :selected="poste.referent_id === ref.id"
+                                            x-text="ref.prenom + ' ' + ref.nom"></option>
+                                    </template>
+                                </select>
+                            </td>
                             <td class="py-3 px-2 font-bold text-center">
                                 <span x-text="poste.nb_min"></span> / <span x-text="poste.nb_max"></span>
                             </td>
@@ -140,7 +159,7 @@
 
         <!-- Vue Mobile (Cartes) -->
         <div class="md:hidden space-y-4">
-            <template x-for="poste in postes" :key="poste.id">
+            <template x-for="poste in getFilteredPostes()" :key="poste.id">
                 <div class="border-2 border-brutal-black p-4 shadow-brutal-sm"
                     :class="{
                         'bg-red-100':    (poste.inscrits_actuels || 0) < poste.nb_min,
@@ -165,8 +184,17 @@
                     </div>
 
                     <div class="mb-3">
-                        <span class="font-bold block text-gray-600 text-sm">Référent:</span>
-                        <span x-text="poste.referent_identite || 'Aucun'" class="font-medium"></span>
+                        <span class="font-bold block text-gray-600 text-sm mb-1">Référent:</span>
+                        <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
+                            :value="poste.referent_id || ''"
+                            @change="updatePosteReferent(poste.id, $event.target.value)">
+                            <option value="">— Aucun —</option>
+                            <template x-for="ref in getReferents()" :key="ref.id">
+                                <option :value="ref.id"
+                                    :selected="poste.referent_id === ref.id"
+                                    x-text="ref.prenom + ' ' + ref.nom"></option>
+                            </template>
+                        </select>
                     </div>
 
                     <div class="flex justify-between items-center bg-white border border-gray-200 p-2 mb-4">
