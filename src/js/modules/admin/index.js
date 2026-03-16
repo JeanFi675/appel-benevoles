@@ -535,7 +535,10 @@ export const AdminModule = {
         try {
             const payload = {
                 ...this.posteForm,
-                referent_id: this.posteForm.referent_id || null
+                referent_id: this.posteForm.referent_id || null,
+                // L'input datetime-local est en heure locale → convertir en UTC pour Supabase
+                periode_debut: new Date(this.posteForm.periode_debut).toISOString(),
+                periode_fin: new Date(this.posteForm.periode_fin).toISOString()
             };
 
             if (this.editingPoste) {
