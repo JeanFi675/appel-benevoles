@@ -46,6 +46,8 @@ coverage/
 # Supabase
 .supabase/
 
-# Documentation (sauf README.md)
+# Documentation (sauf fichiers racine)
 *.md
 !README.md
+!ARCHITECTURE.md
+!CLAUDE.md
