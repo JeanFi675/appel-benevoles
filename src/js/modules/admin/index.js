@@ -280,24 +280,19 @@ export const AdminModule = {
     async loadPostes() {
         try {
             const { data, error } = await ApiService.fetch('postes', {
-                select: '*, periodes(nom, ordre)'
+                select: '*, periodes(nom, ordre), benevoles(prenom, nom)'
             });
 
             if (error) throw error;
 
-            // Count inscriptions manually as Supabase JS client doesn't support count in select easily without foreign key alias tricks sometimes
-            // But we can do it in a loop or use a view. The original code used a loop.
             const postesWithCounts = await Promise.all(
                 (data || []).map(async (poste) => {
                     const { data: inscriptions } = await ApiService.fetch('inscriptions', { eq: { poste_id: poste.id } });
                     const count = inscriptions ? inscriptions.length : 0;
 
                     let referentIdentite = '-';
-                    if (poste.referent_id) {
-                        const referent = this.benevoles.find(b => b.id === poste.referent_id);
-                        if (referent) {
-                            referentIdentite = `${referent.prenom} ${referent.nom}`;
-                        }
+                    if (poste.benevoles) {
+                        referentIdentite = `${poste.benevoles.prenom} ${poste.benevoles.nom}`;
                     }
 
                     return {
