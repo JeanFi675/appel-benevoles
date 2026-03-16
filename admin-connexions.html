@@ -78,9 +78,10 @@
             <button
               @click="copyEmails()"
               x-show="users.length > 0"
-              class="brutal-btn bg-yellow-400 py-2 px-4 shadow-brutal-sm border-2 border-brutal-black font-black uppercase whitespace-nowrap"
+              class="brutal-btn py-2 px-4 shadow-brutal-sm border-2 border-brutal-black font-black uppercase whitespace-nowrap"
+              :class="someChecked ? 'bg-green-400' : 'bg-yellow-400'"
             >
-              📋 Copier les emails
+              📋 Copier <span x-text="someChecked ? selectedIds.length + ' email(s) sélectionné(s)' : 'tous les emails'"></span>
             </button>
           </div>
 
@@ -93,20 +94,43 @@
 
           <!-- Mobile List -->
           <div class="md:hidden space-y-4">
-            <template x-for="user in users" :key="user.id">
+            <!-- Tri mobile -->
+            <div class="flex gap-2 mb-2">
+              <button
+                @click="sortBy('email')"
+                class="brutal-btn text-sm py-1 px-3 border-2 border-brutal-black font-black"
+                :class="sortField === 'email' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-white'"
+              >
+                Email <span x-text="sortIcon('email')"></span>
+              </button>
+              <button
+                @click="sortBy('created_at')"
+                class="brutal-btn text-sm py-1 px-3 border-2 border-brutal-black font-black"
+                :class="sortField === 'created_at' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-white'"
+              >
+                Date <span x-text="sortIcon('created_at')"></span>
+              </button>
+            </div>
+            <template x-for="user in sortedUsers" :key="user.id">
               <div
                 class="border-2 border-brutal-black p-4 shadow-brutal-sm bg-brutal-white relative"
+                :class="selectedIds.includes(user.id) ? 'bg-yellow-50 border-yellow-500' : ''"
               >
-                <div class="mb-3">
-                  <div
-                    class="font-black text-lg break-all"
-                    x-text="user.email"
-                  ></div>
-                  <div class="font-bold text-sm text-gray-500 mt-2">
-                    Inscrit le:
-                    <span x-text="formatDate(user.created_at)"></span>
+                <label class="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="mt-1 w-5 h-5 accent-yellow-400 border-2 border-brutal-black cursor-pointer flex-shrink-0"
+                    :value="user.id"
+                    x-model="selectedIds"
+                  />
+                  <div>
+                    <div class="font-black text-lg break-all" x-text="user.email"></div>
+                    <div class="font-bold text-sm text-gray-500 mt-2">
+                      Inscrit le:
+                      <span x-text="formatDate(user.created_at)"></span>
+                    </div>
                   </div>
-                </div>
+                </label>
               </div>
             </template>
             <div x-show="users.length === 0" class="text-center py-8">
@@ -123,17 +147,44 @@
             <table class="w-full text-left bg-white border-collapse">
               <thead>
                 <tr class="bg-brutal-black text-brutal-white uppercase text-sm">
-                  <th class="p-3 border-r-2 border-white">
-                    Email (Compte de connexion)
+                  <th class="p-3 border-r-2 border-white w-10">
+                    <input
+                      type="checkbox"
+                      class="w-4 h-4 accent-yellow-400 cursor-pointer"
+                      :checked="allChecked"
+                      @change="toggleAll($event.target.checked)"
+                      title="Tout sélectionner"
+                    />
                   </th>
-                  <th class="p-3 border-white">Date de création du compte</th>
+                  <th
+                    class="p-3 border-r-2 border-white cursor-pointer select-none hover:bg-gray-700"
+                    @click="sortBy('email')"
+                  >
+                    Email (Compte de connexion) <span x-text="sortIcon('email')"></span>
+                  </th>
+                  <th
+                    class="p-3 border-white cursor-pointer select-none hover:bg-gray-700"
+                    @click="sortBy('created_at')"
+                  >
+                    Date de création du compte <span x-text="sortIcon('created_at')"></span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <template x-for="user in users" :key="user.id">
+                <template x-for="user in sortedUsers" :key="user.id">
                   <tr
-                    class="border-b-4 border-brutal-black hover:bg-gray-100 transition-colors"
+                    class="border-b-4 border-brutal-black hover:bg-gray-100 transition-colors cursor-pointer"
+                    :class="selectedIds.includes(user.id) ? 'bg-yellow-50' : ''"
+                    @click="selectedIds.includes(user.id) ? selectedIds = selectedIds.filter(id => id !== user.id) : selectedIds.push(user.id)"
                   >
+                    <td class="p-3 border-r-4 border-brutal-black" @click.stop>
+                      <input
+                        type="checkbox"
+                        class="w-4 h-4 accent-yellow-400 cursor-pointer"
+                        :value="user.id"
+                        x-model="selectedIds"
+                      />
+                    </td>
                     <td
                       class="p-3 font-bold border-r-4 border-brutal-black font-mono"
                       x-text="user.email"
@@ -146,7 +197,7 @@
                 </template>
                 <tr x-show="users.length === 0">
                   <td
-                    colspan="2"
+                    colspan="3"
                     class="p-6 text-center font-bold text-gray-500 italic"
                   >
                     Aucun compte orphelin détecté. Tout fonctionne bien ! 🎉

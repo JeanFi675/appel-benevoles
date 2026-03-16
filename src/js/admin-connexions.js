@@ -8,7 +8,46 @@ function initAdminConnexionsApp() {
     loading: true,
     isAdmin: false,
     users: [],
+    selectedIds: [],
+    sortField: 'email',
+    sortDir: 'asc',
     toasts: [],
+
+    get sortedUsers() {
+      return [...this.users].sort((a, b) => {
+        const va = this.sortField === 'email' ? (a.email || '').toLowerCase() : (a.created_at || '');
+        const vb = this.sortField === 'email' ? (b.email || '').toLowerCase() : (b.created_at || '');
+        if (va < vb) return this.sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return this.sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    },
+
+    get allChecked() {
+      return this.users.length > 0 && this.selectedIds.length === this.users.length;
+    },
+
+    get someChecked() {
+      return this.selectedIds.length > 0;
+    },
+
+    toggleAll(checked) {
+      this.selectedIds = checked ? this.users.map(u => /** @type {any} */ (u).id) : [];
+    },
+
+    sortBy(field) {
+      if (this.sortField === field) {
+        this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortField = field;
+        this.sortDir = 'asc';
+      }
+    },
+
+    sortIcon(field) {
+      if (this.sortField !== field) return '↕';
+      return this.sortDir === 'asc' ? '↑' : '↓';
+    },
 
     async init() {
       let { user } = await AuthService.getSession();
@@ -60,10 +99,14 @@ function initAdminConnexionsApp() {
     },
 
     copyEmails() {
-        if (!this.users.length) return;
-        const emails = this.users.map(u => /** @type {any} */ (u).email).join(', ');
+        const source = this.someChecked
+            ? this.users.filter(u => this.selectedIds.includes(/** @type {any} */ (u).id))
+            : this.users;
+        if (!source.length) return;
+        const emails = source.map(u => /** @type {any} */ (u).email).join(', ');
         navigator.clipboard.writeText(emails).then(() => {
-            this.showToast("✅ Emails copiés dans le presse-papier !");
+            const nb = source.length;
+            this.showToast(`✅ ${nb} email${nb > 1 ? 's' : ''} copié${nb > 1 ? 's' : ''} dans le presse-papier !`);
         }).catch(err => {
             console.error('Erreur copie presse-papier:', err);
             this.showToast("❌ Erreur lors de la copie des emails", "error");
