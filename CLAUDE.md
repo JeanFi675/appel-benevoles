@@ -135,12 +135,8 @@ Chaque nouvelle page suit ce patron :
 
 ## Pièges et points d'attention
 
-### Double client Supabase
-Il existe deux initialisations du client Supabase :
-- `src/js/config.js` — client npm ES module, utilisé par les pages principales
-- `public/config.js` — client CDN (`window.supabase`), expose `window.appConfig`
-
-Si une page a un comportement Supabase bizarre, vérifier lequel des deux elle utilise. Idéalement n'en utiliser qu'un seul. La version npm (`src/js/config.js`) est la référence.
+### Client Supabase unique
+Le client Supabase est initialisé dans `src/js/config.js` (ES module npm). C'est le seul client — ne pas en créer un second.
 
 ### Singleton de refresh Supabase
 `src/js/config.js` contient un mécanisme de déduplication des appels de refresh de token. Ne pas le modifier — il évite des race conditions lors du chargement de pages avec plusieurs appels Supabase simultanés.

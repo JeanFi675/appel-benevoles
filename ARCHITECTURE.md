@@ -234,16 +234,9 @@ Chaque module expose son propre state et ses méthodes. L'état est plat dans le
 
 ---
 
-## Double client Supabase — Point d'attention
+## Client Supabase
 
-Il existe deux manières d'initialiser le client Supabase dans ce projet :
-
-| Fichier | Mécanisme | Exposé via |
-|---------|-----------|------------|
-| `src/js/config.js` | `import` npm | Export ES module |
-| `public/config.js` | `window.supabase` CDN | `window.appConfig` |
-
-Les pages principales (`index.html`, `admin.html`) utilisent le client npm via les modules ES. Certaines pages secondaires ou fonctionnalités issues de génération IA peuvent utiliser `window.appConfig`. Si une page se comporte bizarrement avec Supabase, vérifier lequel des deux clients est utilisé.
+Le client Supabase est initialisé dans `src/js/config.js` (ES module npm, via `@supabase/supabase-js`). C'est le seul point d'initialisation — toutes les pages l'utilisent via les services `api.js` et `auth.js`.
 
 ---
 
