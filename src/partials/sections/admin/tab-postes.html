@@ -101,7 +101,12 @@
                 </thead>
                 <tbody>
                     <template x-for="poste in postes" :key="poste.id">
-                        <tr class="border-b-2 border-gray-300">
+                        <tr class="border-b-2 border-gray-300"
+                            :class="{
+                                'bg-red-100':   (poste.inscrits_actuels || 0) < poste.nb_min,
+                                'bg-yellow-100': (poste.inscrits_actuels || 0) >= poste.nb_min && (poste.inscrits_actuels || 0) < poste.nb_max,
+                                'bg-green-100': (poste.inscrits_actuels || 0) >= poste.nb_max
+                            }">
                             <td class="py-3 px-2 font-bold" x-text="poste.titre"></td>
                             <td class="py-3 px-2 font-bold" x-text="poste.periode_nom"></td>
                             <td class="py-3 px-2 font-bold text-sm">
@@ -136,7 +141,12 @@
         <!-- Vue Mobile (Cartes) -->
         <div class="md:hidden space-y-4">
             <template x-for="poste in postes" :key="poste.id">
-                <div class="border-2 border-brutal-black bg-gray-50 p-4 shadow-brutal-sm">
+                <div class="border-2 border-brutal-black p-4 shadow-brutal-sm"
+                    :class="{
+                        'bg-red-100':    (poste.inscrits_actuels || 0) < poste.nb_min,
+                        'bg-yellow-100': (poste.inscrits_actuels || 0) >= poste.nb_min && (poste.inscrits_actuels || 0) < poste.nb_max,
+                        'bg-green-100':  (poste.inscrits_actuels || 0) >= poste.nb_max
+                    }">
                     <div class="flex justify-between items-start mb-2">
                         <h3 class="font-black text-lg" x-text="poste.titre"></h3>
                         <span class="bg-brutal-yellow px-2 py-1 text-xs font-bold border border-brutal-black"
