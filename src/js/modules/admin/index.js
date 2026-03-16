@@ -87,6 +87,11 @@ export const AdminModule = {
         return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
     },
 
+    isReferentInscritPeriode(referentId, periodeId) {
+        if (!referentId) return false;
+        return this.postes.some(p => p.periode_id === periodeId && (p.inscrits_ids || []).includes(referentId));
+    },
+
     getFilteredPostes() {
         if (!this.posteFilterPeriode) return this.postes;
         return this.postes.filter(p => String(p.periode_id) === String(this.posteFilterPeriode));
@@ -306,6 +311,7 @@ export const AdminModule = {
                 (data || []).map(async (poste) => {
                     const { data: inscriptions } = await ApiService.fetch('inscriptions', { eq: { poste_id: poste.id } });
                     const count = inscriptions ? inscriptions.length : 0;
+                    const inscrits_ids = (inscriptions || []).map(i => i.benevole_id);
 
                     let referentIdentite = '-';
                     if (poste.benevoles) {
@@ -317,6 +323,7 @@ export const AdminModule = {
                         periode_nom: poste.periodes?.nom || '-',
                         periode_ordre: poste.periodes?.ordre || 999,
                         inscrits_actuels: count,
+                        inscrits_ids,
                         referent_identite: referentIdentite
                     };
                 })

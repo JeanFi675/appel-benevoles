@@ -122,16 +122,24 @@
                                 <span x-text="formatDateTime(poste.periode_fin)"></span>
                             </td>
                             <td class="py-3 px-2">
-                                <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
-                                    :value="poste.referent_id || ''"
-                                    @change="updatePosteReferent(poste.id, $event.target.value)">
-                                    <option value="">— Aucun —</option>
-                                    <template x-for="ref in getReferents()" :key="ref.id">
-                                        <option :value="ref.id"
-                                            :selected="poste.referent_id === ref.id"
-                                            x-text="ref.prenom + ' ' + ref.nom"></option>
+                                <div class="flex items-center gap-2">
+                                    <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
+                                        :value="poste.referent_id || ''"
+                                        @change="updatePosteReferent(poste.id, $event.target.value)">
+                                        <option value="">— Aucun —</option>
+                                        <template x-for="ref in getReferents()" :key="ref.id">
+                                            <option :value="ref.id"
+                                                :selected="poste.referent_id === ref.id"
+                                                x-text="ref.prenom + ' ' + ref.nom"></option>
+                                        </template>
+                                    </select>
+                                    <template x-if="poste.referent_id">
+                                        <span class="w-3 h-3 rounded-full flex-shrink-0 border border-brutal-black"
+                                            :class="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'bg-green-500' : 'bg-red-500'"
+                                            :title="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'Référent inscrit sur cette période' : 'Référent non inscrit sur cette période'">
+                                        </span>
                                     </template>
-                                </select>
+                                </div>
                             </td>
                             <td class="py-3 px-2 font-bold text-center">
                                 <span x-text="poste.nb_min"></span> / <span x-text="poste.nb_max"></span>
@@ -184,7 +192,15 @@
                     </div>
 
                     <div class="mb-3">
-                        <span class="font-bold block text-gray-600 text-sm mb-1">Référent:</span>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-bold text-gray-600 text-sm">Référent:</span>
+                            <template x-if="poste.referent_id">
+                                <span class="w-3 h-3 rounded-full flex-shrink-0 border border-brutal-black"
+                                    :class="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'bg-green-500' : 'bg-red-500'"
+                                    :title="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'Référent inscrit sur cette période' : 'Référent non inscrit sur cette période'">
+                                </span>
+                            </template>
+                        </div>
                         <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
                             :value="poste.referent_id || ''"
                             @change="updatePosteReferent(poste.id, $event.target.value)">
