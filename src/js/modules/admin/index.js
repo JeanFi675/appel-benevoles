@@ -87,6 +87,14 @@ export const AdminModule = {
         return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
     },
 
+    getBenevoleAvecInscriptions() {
+        return this.benevoles.filter(b => (b.nb_inscriptions || 0) > 0).length;
+    },
+
+    getBenevolesSansInscriptions() {
+        return this.benevoles.filter(b => (b.nb_inscriptions || 0) === 0).length;
+    },
+
     isReferentInscritPeriode(referentId, periodeId) {
         if (!referentId) return false;
         return this.postes.some(p => p.periode_id === periodeId && (p.inscrits_ids || []).includes(referentId));
