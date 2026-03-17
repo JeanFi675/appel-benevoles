@@ -47,6 +47,11 @@ export const AdminModule = {
     currentBenevole: null,
     currentUser: null,
 
+    // Poste Inscrits Modal
+    showPosteInscritsModal: false,
+    selectedPoste: null,
+    selectedPosteInscrits: [],
+
     // Add Benevole Modal
     showAddBenevoleModal: false,
     newBenevoleForm: {
@@ -287,6 +292,36 @@ export const AdminModule = {
         this.selectedBenevoleInscriptions = [];
         this.selectedBenevoleName = '';
         this.currentBenevole = null;
+    },
+
+    async viewPosteInscrits(poste) {
+        this.selectedPoste = poste;
+        this.selectedPosteInscrits = [];
+        this.showPosteInscritsModal = true;
+
+        try {
+            const { data, error } = await ApiService.fetch('inscriptions', {
+                select: '*, benevoles(prenom, nom, email, taille_tshirt)',
+                eq: { poste_id: poste.id }
+            });
+            if (error) throw error;
+
+            this.selectedPosteInscrits = (data || []).map(i => ({
+                id: i.id,
+                prenom: i.benevoles?.prenom || '?',
+                nom: i.benevoles?.nom || '?',
+                email: i.benevoles?.email || '',
+                taille_tshirt: i.benevoles?.taille_tshirt || ''
+            })).sort((a, b) => a.nom.localeCompare(b.nom));
+        } catch (error) {
+            this.showToast('❌ Erreur chargement inscrits : ' + error.message, 'error');
+        }
+    },
+
+    closePosteInscritsModal() {
+        this.showPosteInscritsModal = false;
+        this.selectedPoste = null;
+        this.selectedPosteInscrits = [];
     },
 
     /**
