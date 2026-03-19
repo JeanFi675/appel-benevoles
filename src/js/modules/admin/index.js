@@ -836,13 +836,21 @@ export const AdminModule = {
 
     calculateStats() {
         const tshirts = {};
+        let total_tshirts = 0;
         let vendredi = { normal: 0, vege: 0, total: 0 };
         let samedi = { normal: 0, vege: 0, total: 0 };
 
         this.benevoles.forEach(b => {
-            // T-Shirts
-            const size = b.taille_tshirt || 'Non défini';
-            tshirts[size] = (tshirts[size] || 0) + 1;
+            // T-Shirts: les bénévoles (rôle "benevole") sans aucune inscription n'ont pas de T-shirt
+            const skipTshirt = b.role === 'benevole' && (b.nb_inscriptions || 0) === 0;
+            if (!skipTshirt) {
+                const size = b.taille_tshirt || 'Non défini';
+                tshirts[size] = (tshirts[size] || 0) + 1;
+                // Le total exclut SANS et Non défini (pas de T-shirt réel à commander)
+                if (size !== 'SANS' && size !== 'Non défini') {
+                    total_tshirts++;
+                }
+            }
 
             // Repas
             if (b.repas_vendredi) {
@@ -878,6 +886,7 @@ export const AdminModule = {
 
         this.stats = {
             tshirts: sortedTshirts,
+            total_tshirts,
             repas: {
                 vendredi,
                 samedi
