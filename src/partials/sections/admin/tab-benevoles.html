@@ -96,6 +96,24 @@
                   >Référent</span
                 >
               </template>
+              <template x-if="benevole.role === 'juge'">
+                <span
+                  class="px-2 py-1 text-xs font-black uppercase text-white bg-purple-600 border border-brutal-black"
+                  >Juge</span
+                >
+              </template>
+              <template x-if="benevole.role === 'admin-juge'">
+                <span
+                  class="px-2 py-1 text-xs font-black uppercase text-white bg-purple-900 border border-brutal-black"
+                  >Admin-Juge</span
+                >
+              </template>
+              <template x-if="benevole.role === 'officiel'">
+                <span
+                  class="px-2 py-1 text-xs font-black uppercase text-white bg-emerald-600 border border-brutal-black"
+                  >Officiel</span
+                >
+              </template>
             </div>
 
             <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
@@ -179,10 +197,18 @@
                     :value="benevole.role"
                     @change="updateBenevoleRole(benevole.id, $event.target.value)"
                     class="appearance-none w-full bg-gray-50 border-2 border-brutal-black px-3 py-2 text-sm font-bold focus:shadow-brutal-sm focus:outline-none cursor-pointer"
-                    :class="{'bg-brutal-ice': benevole.role === 'referent'}"
+                    :class="{
+                      'bg-brutal-ice': benevole.role === 'referent',
+                      'bg-purple-100': benevole.role === 'juge',
+                      'bg-purple-200': benevole.role === 'admin-juge',
+                      'bg-emerald-100': benevole.role === 'officiel'
+                    }"
                   >
                     <option value="benevole">👤 Bénévole</option>
                     <option value="referent">👔 Référent</option>
+                    <option value="juge">⚖️ Juge</option>
+                    <option value="admin-juge">🔑 Admin-Juge</option>
+                    <option value="officiel">🎖️ Officiel</option>
                   </select>
                   <div
                     class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brutal-black"
@@ -365,11 +391,17 @@
                         @change="updateBenevoleRole(benevole.id, $event.target.value)"
                         class="appearance-none w-full bg-white border-2 border-brutal-black px-3 py-1 pr-8 text-sm font-bold focus:shadow-brutal-sm focus:outline-none cursor-pointer transition-shadow"
                         :class="{
-                                                    'bg-brutal-ice': benevole.role === 'referent'
-                                                }"
+                          'bg-brutal-ice': benevole.role === 'referent',
+                          'bg-purple-100': benevole.role === 'juge',
+                          'bg-purple-200': benevole.role === 'admin-juge',
+                          'bg-emerald-100': benevole.role === 'officiel'
+                        }"
                       >
                         <option value="benevole">👤 Bénévole</option>
                         <option value="referent">👔 Référent</option>
+                        <option value="juge">⚖️ Juge</option>
+                        <option value="admin-juge">🔑 Admin-Juge</option>
+                        <option value="officiel">🎖️ Officiel</option>
                       </select>
                       <div
                         class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-brutal-black"

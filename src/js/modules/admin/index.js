@@ -813,8 +813,8 @@ export const AdminModule = {
             const { error } = await ApiService.update('benevoles', { role: newRole }, { id: benevoleId });
             if (error) throw error;
 
-            // If demoted to simple volunteer, remove them from being referent on any post
-            if (newRole === 'benevole') {
+            // If changing away from referent, remove them from being referent on any post
+            if (newRole !== 'referent') {
                 const { error: updatePostesError } = await ApiService.updateMany('postes', { referent_id: null }, { referent_id: benevoleId });
                 if (updatePostesError) {
                     console.error('Error removing referent from posts:', updatePostesError);
@@ -825,7 +825,7 @@ export const AdminModule = {
                 }
             }
 
-            const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin' };
+            const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin', 'juge': 'Juge', 'admin-juge': 'Admin-Juge', 'officiel': 'Officiel' };
             this.showToast(`✅ Rôle changé en ${roleNames[newRole]}`, 'success');
             await this.loadBenevolesAndStats();
         } catch (error) {
