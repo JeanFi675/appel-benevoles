@@ -17,6 +17,7 @@ function initOfficielsApp() {
     isLoaded: false,
     showForm: false, // Wait until profile loads to show form
     isAdmin: false,
+    _loadingProfile: false,
     
     profileForm: {
       id: null,
@@ -74,6 +75,8 @@ function initOfficielsApp() {
     async loadOfficielProfile() {
       const currentUser = /** @type {any} */ (this.user);
       if (!currentUser) return;
+      if (this._loadingProfile) return;
+      this._loadingProfile = true;
       this.isLoaded = false;
       this.isAdmin = false;
       try {
@@ -133,6 +136,7 @@ function initOfficielsApp() {
       } catch (error) {
         console.error("Erreur chargement profil officiel:", error);
       } finally {
+        this._loadingProfile = false;
         this.isLoaded = true;
         this.showForm = true;
       }

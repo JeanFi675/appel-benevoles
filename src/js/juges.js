@@ -19,6 +19,7 @@ function initJugesApp() {
     showForm: false, // Wait until profile loads to show form
     isAdmin: false,
     isAdminJuge: false,
+    _loadingProfile: false,
 
     profileForm: {
       id: null,
@@ -85,6 +86,8 @@ function initJugesApp() {
     async loadJugeProfile() {
       const currentUser = /** @type {any} */ (this.user);
       if (!currentUser) return;
+      if (this._loadingProfile) return;
+      this._loadingProfile = true;
       this.isLoaded = false;
       this.isAdmin = false;
       try {
@@ -157,6 +160,7 @@ function initJugesApp() {
       } catch (error) {
         console.error("Erreur chargement profil juge:", error);
       } finally {
+        this._loadingProfile = false;
         this.isLoaded = true;
         this.showForm = true;
       }
