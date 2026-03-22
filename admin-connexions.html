@@ -207,6 +207,146 @@
             </table>
           </div>
         </section>
+
+        <!-- Tableau Bénévoles (Sans Inscr.) -->
+        <section
+          class="brutal-card bg-brutal-white p-6 border-4 border-brutal-black shadow-brutal mt-8"
+        >
+          <div
+            class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4"
+          >
+            <h2 class="text-2xl font-black uppercase flex items-center gap-2">
+              ⏳ Bénévoles (Sans inscr.) (<span x-text="benevolesSansInscr.length"></span
+              >)
+            </h2>
+            <button
+              @click="copyBenevolesEmails()"
+              x-show="benevolesSansInscr.length > 0"
+              class="brutal-btn py-2 px-4 shadow-brutal-sm border-2 border-brutal-black font-black uppercase whitespace-nowrap"
+              :class="someBenevolesChecked ? 'bg-green-400' : 'bg-yellow-400'"
+            >
+              📋 Copier <span x-text="someBenevolesChecked ? selectedBenevolesIds.length + ' email(s) sélectionné(s)' : 'tous les emails'"></span>
+            </button>
+          </div>
+
+          <p class="mb-6 font-bold text-gray-700">
+            Ces personnes ont un compte bénévole valide mais ne se sont inscrites à aucun poste pour l'instant.
+          </p>
+
+          <!-- Mobile List -->
+          <div class="md:hidden space-y-4">
+            <!-- Tri mobile -->
+            <div class="flex gap-2 mb-2">
+              <button
+                @click="sortByBenevoles('email')"
+                class="brutal-btn text-sm py-1 px-3 border-2 border-brutal-black font-black"
+                :class="sortFieldBenevoles === 'email' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-white'"
+              >
+                Email <span x-text="sortIconBenevoles('email')"></span>
+              </button>
+              <button
+                @click="sortByBenevoles('created_at')"
+                class="brutal-btn text-sm py-1 px-3 border-2 border-brutal-black font-black"
+                :class="sortFieldBenevoles === 'created_at' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-white'"
+              >
+                Date <span x-text="sortIconBenevoles('created_at')"></span>
+              </button>
+            </div>
+            <template x-for="user in sortedBenevoles" :key="user.id">
+              <div
+                class="border-2 border-brutal-black p-4 shadow-brutal-sm bg-brutal-white relative"
+                :class="selectedBenevolesIds.includes(user.id) ? 'bg-yellow-50 border-yellow-500' : ''"
+              >
+                <label class="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="mt-1 w-5 h-5 accent-yellow-400 border-2 border-brutal-black cursor-pointer flex-shrink-0"
+                    :value="user.id"
+                    x-model="selectedBenevolesIds"
+                  />
+                  <div>
+                    <div class="font-black text-lg break-all" x-text="user.email || 'Sans email'"></div>
+                    <div class="font-bold text-sm text-gray-500 mt-2">
+                      Nom: <span x-text="user.prenom + ' ' + user.nom"></span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </template>
+            <div x-show="benevolesSansInscr.length === 0" class="text-center py-8">
+              <p class="font-bold text-gray-500 italic">
+                Aucun bénévole sans inscription détecté. Tout fonctionne bien ! 🎉
+              </p>
+            </div>
+          </div>
+
+          <!-- Desktop Table -->
+          <div
+            class="hidden md:block overflow-x-auto border-4 border-brutal-black shadow-brutal"
+          >
+            <table class="w-full text-left bg-white border-collapse">
+              <thead>
+                <tr class="bg-brutal-black text-brutal-white uppercase text-sm">
+                  <th class="p-3 border-r-2 border-white w-10">
+                    <input
+                      type="checkbox"
+                      class="w-4 h-4 accent-yellow-400 cursor-pointer"
+                      :checked="allBenevolesChecked"
+                      @change="toggleAllBenevoles($event.target.checked)"
+                      title="Tout sélectionner"
+                    />
+                  </th>
+                  <th
+                    class="p-3 border-r-2 border-white cursor-pointer select-none hover:bg-gray-700"
+                    @click="sortByBenevoles('email')"
+                  >
+                    Email (Compte bénévole) <span x-text="sortIconBenevoles('email')"></span>
+                  </th>
+                  <th
+                    class="p-3 border-white cursor-pointer select-none hover:bg-gray-700"
+                    @click="sortByBenevoles('created_at')"
+                  >
+                    Identité <span x-text="sortIconBenevoles('created_at')"></span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="user in sortedBenevoles" :key="user.id">
+                  <tr
+                    class="border-b-4 border-brutal-black hover:bg-gray-100 transition-colors cursor-pointer"
+                    :class="selectedBenevolesIds.includes(user.id) ? 'bg-yellow-50' : ''"
+                    @click="selectedBenevolesIds.includes(user.id) ? selectedBenevolesIds = selectedBenevolesIds.filter(id => id !== user.id) : selectedBenevolesIds.push(user.id)"
+                  >
+                    <td class="p-3 border-r-4 border-brutal-black" @click.stop>
+                      <input
+                        type="checkbox"
+                        class="w-4 h-4 accent-yellow-400 cursor-pointer"
+                        :value="user.id"
+                        x-model="selectedBenevolesIds"
+                      />
+                    </td>
+                    <td
+                      class="p-3 font-bold border-r-4 border-brutal-black font-mono"
+                      x-text="user.email || '-'"
+                    ></td>
+                    <td
+                      class="p-3 font-bold text-gray-700"
+                      x-text="user.prenom + ' ' + user.nom"
+                    ></td>
+                  </tr>
+                </template>
+                <tr x-show="benevolesSansInscr.length === 0">
+                  <td
+                    colspan="3"
+                    class="p-6 text-center font-bold text-gray-500 italic"
+                  >
+                    Aucun bénévole sans inscription détecté. Tout fonctionne bien ! 🎉
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </main>
 

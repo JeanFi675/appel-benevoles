@@ -11,6 +11,12 @@ function initAdminConnexionsApp() {
     selectedIds: [],
     sortField: 'email',
     sortDir: 'asc',
+    
+    benevolesSansInscr: [],
+    selectedBenevolesIds: [],
+    sortFieldBenevoles: 'email',
+    sortDirBenevoles: 'asc',
+    
     toasts: [],
 
     get sortedUsers() {
@@ -47,6 +53,42 @@ function initAdminConnexionsApp() {
     sortIcon(field) {
       if (this.sortField !== field) return '↕';
       return this.sortDir === 'asc' ? '↑' : '↓';
+    },
+
+    get sortedBenevoles() {
+      return [...this.benevolesSansInscr].sort((a, b) => {
+        const va = this.sortFieldBenevoles === 'email' ? (a.email || '').toLowerCase() : (a.created_at || a.nom || '');
+        const vb = this.sortFieldBenevoles === 'email' ? (b.email || '').toLowerCase() : (b.created_at || b.nom || '');
+        if (va < vb) return this.sortDirBenevoles === 'asc' ? -1 : 1;
+        if (va > vb) return this.sortDirBenevoles === 'asc' ? 1 : -1;
+        return 0;
+      });
+    },
+
+    get allBenevolesChecked() {
+      return this.benevolesSansInscr.length > 0 && this.selectedBenevolesIds.length === this.benevolesSansInscr.length;
+    },
+
+    get someBenevolesChecked() {
+      return this.selectedBenevolesIds.length > 0;
+    },
+
+    toggleAllBenevoles(checked) {
+      this.selectedBenevolesIds = checked ? this.benevolesSansInscr.map(u => u.id) : [];
+    },
+
+    sortByBenevoles(field) {
+      if (this.sortFieldBenevoles === field) {
+        this.sortDirBenevoles = this.sortDirBenevoles === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortFieldBenevoles = field;
+        this.sortDirBenevoles = 'asc';
+      }
+    },
+
+    sortIconBenevoles(field) {
+      if (this.sortFieldBenevoles !== field) return '↕';
+      return this.sortDirBenevoles === 'asc' ? '↑' : '↓';
     },
 
     async init() {
@@ -88,12 +130,24 @@ function initAdminConnexionsApp() {
 
     async loadUsers() {
         try {
-            const { data, error } = await ApiService.rpc('get_auth_users_without_benevole');
+            const [orphelinsRes, benevolesRes] = await Promise.all([
+                ApiService.rpc('get_auth_users_without_benevole'),
+                ApiService.fetch('admin_benevoles')
+            ]);
             
-            if (error) throw error;
-            this.users = data || [];
+            if (orphelinsRes.error) throw orphelinsRes.error;
+            if (benevolesRes.error) throw benevolesRes.error;
+            
+            this.users = orphelinsRes.data || [];
+            
+            const allBenevoles = benevolesRes.data || [];
+            this.benevolesSansInscr = allBenevoles.filter(b => 
+                ['admin', 'referent', 'benevole'].includes(b.role || 'benevole') && 
+                (b.nb_inscriptions || 0) === 0
+            );
+
         } catch(err) {
-            console.error("Erreur chargement utilisateurs orphelins:", err);
+            console.error("Erreur chargement:", err);
             this.showToast("❌ Impossible de charger la liste", "error");
         }
     },
@@ -104,6 +158,21 @@ function initAdminConnexionsApp() {
             : this.users;
         if (!source.length) return;
         const emails = source.map(u => /** @type {any} */ (u).email).join(', ');
+        navigator.clipboard.writeText(emails).then(() => {
+            const nb = source.length;
+            this.showToast(`✅ ${nb} email${nb > 1 ? 's' : ''} copié${nb > 1 ? 's' : ''} dans le presse-papier !`);
+        }).catch(err => {
+            console.error('Erreur copie presse-papier:', err);
+            this.showToast("❌ Erreur lors de la copie des emails", "error");
+        });
+    },
+
+    copyBenevolesEmails() {
+        const source = this.someBenevolesChecked
+            ? this.benevolesSansInscr.filter(u => this.selectedBenevolesIds.includes(u.id))
+            : this.benevolesSansInscr;
+        if (!source.length) return;
+        const emails = source.map(u => u.email).filter(e => e).join(', ');
         navigator.clipboard.writeText(emails).then(() => {
             const nb = source.length;
             this.showToast(`✅ ${nb} email${nb > 1 ? 's' : ''} copié${nb > 1 ? 's' : ''} dans le presse-papier !`);
