@@ -5,7 +5,11 @@
       "Bash(supabase db:*)",
       "Bash(npx supabase:*)",
       "Bash(bash C:/Users/duher/.claude/plugins/cache/nyldn-plugins/octo/9.10.2/scripts/install-deps.sh check)",
-      "Bash(C:/Users/duher/.claude/plugins/cache/nyldn-plugins/octo/9.10.2/scripts/orchestrate.sh detect-providers:*)"
+      "Bash(C:/Users/duher/.claude/plugins/cache/nyldn-plugins/octo/9.10.2/scripts/orchestrate.sh detect-providers:*)",
+      "Bash(where supabase:*)",
+      "Bash(supabase --version)",
+      "Read(//c/Users/duher/.supabase/**)",
+      "Read(//usr/local/bin/**)"
     ]
   }
 }

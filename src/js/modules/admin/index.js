@@ -425,19 +425,22 @@ export const AdminModule = {
                 select: 'benevole_id, poste_id, postes(periode_id, periodes(montant_credit))'
             });
             const allInscriptions = inscriptionsError ? [] : (inscriptionsData || []);
-            
+
+            // 4. Fetch all periodes (needed for benevoles d'or)
+            const { data: periodesData } = await ApiService.fetch('periodes', { select: 'montant_credit' });
+            const totalAllPeriodes = (periodesData || []).reduce((sum, p) => sum + parseFloat(p.montant_credit || 0), 0);
 
 
             // Process Stats
             const userStats = {}; // Map user_id -> stats (Family Wallet)
             const benevoleCredits = {}; // Map benevole_id -> credit (Individual contribution)
-            
+
             // Helper to get user stats object
             const getUserStats = (userId) => {
                 if (!userId) return null;
                 if (!userStats[userId]) {
-                    userStats[userId] = { 
-                        inscriptions_credit: 0, 
+                    userStats[userId] = {
+                        inscriptions_credit: 0,
                         transactions_solde: 0, // Sum of ALL transactions (positive and negative)
                         transaction_debit_abs: 0 // Sum of ABS(negative transactions)
                     };
@@ -449,21 +452,33 @@ export const AdminModule = {
             // We need to map benevole_id to user_id (if exists).
             const benevoleMap = {}; // benevole_id -> user_id
             (benevolesData || []).forEach(b => { benevoleMap[b.id] = b.user_id; });
-            
+
             allInscriptions.forEach(insc => {
                 // 1. Calculate Credit for this inscription
                 if (insc.postes && insc.postes.periodes) {
                     const credit = parseFloat(insc.postes.periodes.montant_credit || 0);
-                    
-                    // A. Store individual credit
-                    benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
 
-                    // B. Store family credit if user attached
-                    const userId = benevoleMap[insc.benevole_id];
-                    if (userId) {
-                        const stats = getUserStats(userId);
-                        stats.inscriptions_credit += credit;
+                    // A. Store individual credit (only for non benevole_or)
+                    const benevoleOr = (benevolesData || []).find(b => b.id === insc.benevole_id)?.benevole_or;
+                    if (!benevoleOr) {
+                        benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
+
+                        // B. Store family credit if user attached
+                        const userId = benevoleMap[insc.benevole_id];
+                        if (userId) {
+                            const stats = getUserStats(userId);
+                            stats.inscriptions_credit += credit;
+                        }
                     }
+                }
+            });
+
+            // Crédits pour les bénévoles d'or : toutes les périodes
+            (benevolesData || []).filter(b => b.benevole_or).forEach(b => {
+                benevoleCredits[b.id] = totalAllPeriodes;
+                if (b.user_id) {
+                    const stats = getUserStats(b.user_id);
+                    stats.inscriptions_credit += totalAllPeriodes;
                 }
             });
 
