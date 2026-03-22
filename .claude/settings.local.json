@@ -3,7 +3,9 @@
     "allow": [
       "Bash(ls -la /c/Users/jpduheron/Annonceurs/appel-benevoles/src/js/*.js)",
       "Bash(supabase db:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(bash C:/Users/duher/.claude/plugins/cache/nyldn-plugins/octo/9.10.2/scripts/install-deps.sh check)",
+      "Bash(C:/Users/duher/.claude/plugins/cache/nyldn-plugins/octo/9.10.2/scripts/orchestrate.sh detect-providers:*)"
     ]
   }
 }
