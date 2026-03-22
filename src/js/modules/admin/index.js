@@ -92,12 +92,20 @@ export const AdminModule = {
         return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
     },
 
-    getBenevoleAvecInscriptions() {
-        return this.benevoles.filter(b => (b.nb_inscriptions || 0) > 0).length;
+    getBenevolesStandardAvecInscriptions() {
+        return this.benevoles.filter(b => ['admin', 'referent', 'benevole'].includes(b.role || 'benevole') && (b.nb_inscriptions || 0) > 0).length;
     },
 
-    getBenevolesSansInscriptions() {
-        return this.benevoles.filter(b => (b.nb_inscriptions || 0) === 0).length;
+    getBenevolesStandardSansInscriptions() {
+        return this.benevoles.filter(b => ['admin', 'referent', 'benevole'].includes(b.role || 'benevole') && (b.nb_inscriptions || 0) === 0).length;
+    },
+
+    getJugesTotal() {
+        return this.benevoles.filter(b => ['juge', 'admin-juge'].includes(b.role)).length;
+    },
+
+    getOfficielsTotal() {
+        return this.benevoles.filter(b => b.role === 'officiel').length;
     },
 
     isReferentInscritPeriode(referentId, periodeId) {
