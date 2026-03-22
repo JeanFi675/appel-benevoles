@@ -83,7 +83,15 @@
 
     <!-- Liste des postes -->
     <div class="brutal-card bg-brutal-white p-8">
-        <h2 class="text-3xl font-black mb-6">Liste des postes</h2>
+        <div class="flex flex-wrap items-center gap-4 mb-6">
+            <h2 class="text-3xl font-black">Liste des postes</h2>
+            <select x-model="posteFilterPeriode" class="brutal-input px-4 py-2 font-bold">
+                <option value="">— Toutes les périodes —</option>
+                <template x-for="periode in periodes" :key="periode.id">
+                    <option :value="periode.id" x-text="periode.nom"></option>
+                </template>
+            </select>
+        </div>
 
         <!-- Vue Desktop (Tableau) -->
         <div class="hidden md:block overflow-x-auto">
@@ -100,15 +108,39 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="poste in postes" :key="poste.id">
-                        <tr class="border-b-2 border-gray-300">
+                    <template x-for="poste in getFilteredPostes()" :key="poste.id">
+                        <tr class="border-b-2 border-gray-300"
+                            :class="{
+                                'bg-red-100':   (poste.inscrits_actuels || 0) < poste.nb_min,
+                                'bg-yellow-100': (poste.inscrits_actuels || 0) >= poste.nb_min && (poste.inscrits_actuels || 0) < poste.nb_max,
+                                'bg-green-100': (poste.inscrits_actuels || 0) >= poste.nb_max
+                            }">
                             <td class="py-3 px-2 font-bold" x-text="poste.titre"></td>
                             <td class="py-3 px-2 font-bold" x-text="poste.periode_nom"></td>
                             <td class="py-3 px-2 font-bold text-sm">
                                 <span x-text="formatDateTime(poste.periode_debut)"></span><br>
                                 <span x-text="formatDateTime(poste.periode_fin)"></span>
                             </td>
-                            <td class="py-3 px-2 font-bold" x-text="poste.referent_identite"></td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center gap-2">
+                                    <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
+                                        :value="poste.referent_id || ''"
+                                        @change="updatePosteReferent(poste.id, $event.target.value)">
+                                        <option value="">— Aucun —</option>
+                                        <template x-for="ref in getReferents()" :key="ref.id">
+                                            <option :value="ref.id"
+                                                :selected="poste.referent_id === ref.id"
+                                                x-text="ref.prenom + ' ' + ref.nom"></option>
+                                        </template>
+                                    </select>
+                                    <template x-if="poste.referent_id">
+                                        <span class="w-3 h-3 rounded-full flex-shrink-0 border border-brutal-black"
+                                            :class="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'bg-green-500' : 'bg-red-500'"
+                                            :title="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'Référent inscrit sur cette période' : 'Référent non inscrit sur cette période'">
+                                        </span>
+                                    </template>
+                                </div>
+                            </td>
                             <td class="py-3 px-2 font-bold text-center">
                                 <span x-text="poste.nb_min"></span> / <span x-text="poste.nb_max"></span>
                             </td>
@@ -117,6 +149,10 @@
                             </td>
                             <td class="py-3 px-2">
                                 <div class="flex gap-2">
+                                    <button @click="viewPosteInscrits(poste)"
+                                        class="brutal-btn bg-brutal-yellow px-4 py-2 shadow-brutal-sm text-sm">
+                                        👥 Inscrits
+                                    </button>
                                     <button @click="editPoste(poste)"
                                         class="brutal-btn bg-brutal-ice px-4 py-2 shadow-brutal-sm text-sm">
                                         ✏️ Modifier
@@ -133,10 +169,94 @@
             </table>
         </div>
 
+        <!-- Modal : Inscrits au poste -->
+        <div x-show="showPosteInscritsModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            @keydown.escape.window="closePosteInscritsModal()">
+            <div class="absolute inset-0 bg-brutal-black opacity-80" @click="closePosteInscritsModal()"></div>
+            <div class="relative bg-brutal-white border-4 border-brutal-black shadow-brutal w-full max-w-2xl max-h-[90vh] flex flex-col"
+                @click.stop>
+
+                <!-- Header -->
+                <div class="flex items-center justify-between p-6 border-b-4 border-brutal-black flex-shrink-0">
+                    <div>
+                        <h2 class="text-2xl font-black" x-text="selectedPoste?.titre"></h2>
+                        <p class="text-sm font-bold text-gray-600 mt-1">
+                            <span x-text="selectedPoste?.periode_nom"></span>
+                            &mdash;
+                            <span x-text="(selectedPosteInscrits.length) + ' / ' + (selectedPoste?.nb_max || '?') + ' inscrits'"></span>
+                        </p>
+                    </div>
+                    <button @click="closePosteInscritsModal()"
+                        class="brutal-btn bg-gray-200 px-4 py-2 text-xl font-black shadow-brutal-sm">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="overflow-y-auto flex-1 p-6">
+                    <template x-if="selectedPosteInscrits.length === 0">
+                        <p class="text-center text-gray-500 font-bold py-8">Aucun bénévole inscrit à ce poste.</p>
+                    </template>
+
+                    <!-- Vue Desktop -->
+                    <div class="hidden md:block" x-show="selectedPosteInscrits.length > 0">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b-4 border-brutal-black">
+                                    <th class="text-left py-3 px-3 font-black">#</th>
+                                    <th class="text-left py-3 px-3 font-black">Nom</th>
+                                    <th class="text-left py-3 px-3 font-black">Prénom</th>
+                                    <th class="text-left py-3 px-3 font-black">Email</th>
+                                    <th class="text-left py-3 px-3 font-black">T-shirt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(inscrit, index) in selectedPosteInscrits" :key="inscrit.id">
+                                    <tr class="border-b-2 border-gray-200"
+                                        :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
+                                        <td class="py-3 px-3 font-bold text-gray-500" x-text="index + 1"></td>
+                                        <td class="py-3 px-3 font-black" x-text="inscrit.nom"></td>
+                                        <td class="py-3 px-3 font-bold" x-text="inscrit.prenom"></td>
+                                        <td class="py-3 px-3 text-sm text-gray-600" x-text="inscrit.email"></td>
+                                        <td class="py-3 px-3 text-sm font-bold" x-text="inscrit.taille_tshirt || '—'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Vue Mobile -->
+                    <div class="md:hidden space-y-3" x-show="selectedPosteInscrits.length > 0">
+                        <template x-for="(inscrit, index) in selectedPosteInscrits" :key="inscrit.id">
+                            <div class="border-2 border-brutal-black p-3 flex items-center gap-3"
+                                :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
+                                <span class="w-8 h-8 rounded-full bg-brutal-ice border-2 border-brutal-black flex items-center justify-center text-xs font-black flex-shrink-0"
+                                    x-text="index + 1"></span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-black" x-text="inscrit.prenom + ' ' + inscrit.nom"></p>
+                                    <p class="text-xs text-gray-600 truncate" x-text="inscrit.email"></p>
+                                </div>
+                                <template x-if="inscrit.taille_tshirt">
+                                    <span class="bg-brutal-yellow px-2 py-1 text-xs font-bold border border-brutal-black flex-shrink-0"
+                                        x-text="inscrit.taille_tshirt"></span>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
         <!-- Vue Mobile (Cartes) -->
         <div class="md:hidden space-y-4">
-            <template x-for="poste in postes" :key="poste.id">
-                <div class="border-2 border-brutal-black bg-gray-50 p-4 shadow-brutal-sm">
+            <template x-for="poste in getFilteredPostes()" :key="poste.id">
+                <div class="border-2 border-brutal-black p-4 shadow-brutal-sm"
+                    :class="{
+                        'bg-red-100':    (poste.inscrits_actuels || 0) < poste.nb_min,
+                        'bg-yellow-100': (poste.inscrits_actuels || 0) >= poste.nb_min && (poste.inscrits_actuels || 0) < poste.nb_max,
+                        'bg-green-100':  (poste.inscrits_actuels || 0) >= poste.nb_max
+                    }">
                     <div class="flex justify-between items-start mb-2">
                         <h3 class="font-black text-lg" x-text="poste.titre"></h3>
                         <span class="bg-brutal-yellow px-2 py-1 text-xs font-bold border border-brutal-black"
@@ -155,8 +275,25 @@
                     </div>
 
                     <div class="mb-3">
-                        <span class="font-bold block text-gray-600 text-sm">Référent:</span>
-                        <span x-text="poste.referent_identite || 'Aucun'" class="font-medium"></span>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-bold text-gray-600 text-sm">Référent:</span>
+                            <template x-if="poste.referent_id">
+                                <span class="w-3 h-3 rounded-full flex-shrink-0 border border-brutal-black"
+                                    :class="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'bg-green-500' : 'bg-red-500'"
+                                    :title="isReferentInscritPeriode(poste.referent_id, poste.periode_id) ? 'Référent inscrit sur cette période' : 'Référent non inscrit sur cette période'">
+                                </span>
+                            </template>
+                        </div>
+                        <select class="brutal-input px-2 py-1 text-sm font-bold w-full"
+                            :value="poste.referent_id || ''"
+                            @change="updatePosteReferent(poste.id, $event.target.value)">
+                            <option value="">— Aucun —</option>
+                            <template x-for="ref in getReferents()" :key="ref.id">
+                                <option :value="ref.id"
+                                    :selected="poste.referent_id === ref.id"
+                                    x-text="ref.prenom + ' ' + ref.nom"></option>
+                            </template>
+                        </select>
                     </div>
 
                     <div class="flex justify-between items-center bg-white border border-gray-200 p-2 mb-4">
@@ -175,7 +312,11 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button @click="viewPosteInscrits(poste)"
+                            class="brutal-btn bg-brutal-yellow w-full py-2 text-sm shadow-brutal-sm flex justify-center items-center gap-1">
+                            👥 Inscrits
+                        </button>
                         <button @click="editPoste(poste)"
                             class="brutal-btn bg-brutal-ice w-full py-2 text-sm shadow-brutal-sm flex justify-center items-center gap-1">
                             ✏️ Modifier

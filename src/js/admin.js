@@ -27,6 +27,14 @@ document.addEventListener("alpine:init", () => {
       if (error || !hasAdminRole) {
         this.isAdmin = false;
         this.loading = false;
+        
+        // Rediriger vers juges.html si c'est un admin-juge, sinon vers index.html
+        const isJugeAdmin = profiles && profiles.some(p => p.role === 'admin-juge' || p.role === 'juge');
+        if (isJugeAdmin) {
+            window.location.href = "juges.html";
+        } else {
+            window.location.href = "index.html";
+        }
         return;
       }
 

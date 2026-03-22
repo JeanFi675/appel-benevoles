@@ -67,7 +67,7 @@
             <tr class="bg-brutal-black text-brutal-white">
               <td class="py-2 pl-2 font-black">TOTAL</td>
               <td class="py-2 pr-2 text-right font-mono text-lg"
-                x-text="Object.values(stats.tshirts).reduce((a, b) => a + b, 0)"></td>
+                x-text="stats.total_tshirts"></td>
             </tr>
           </tbody>
         </table>
@@ -87,11 +87,23 @@
         <tbody>
           <tr class="border-b-2 border-brutal-black">
             <td class="py-4 font-bold text-lg">Vendredi soir (15 mai)</td>
-            <td class="py-4 text-right font-black text-2xl" x-text="stats.repas.vendredi"></td>
+            <td class="py-4 text-right">
+              <span class="font-black text-2xl" x-text="stats.repas.vendredi.total"></span>
+              <div class="text-sm text-gray-600 font-bold mt-1">
+                <span x-text="stats.repas.vendredi.normal"></span> normaux, 
+                <span class="text-green-600" x-text="stats.repas.vendredi.vege"></span> végé
+              </div>
+            </td>
           </tr>
           <tr>
             <td class="py-4 font-bold text-lg">Samedi soir (16 mai)</td>
-            <td class="py-4 text-right font-black text-2xl" x-text="stats.repas.samedi"></td>
+            <td class="py-4 text-right">
+              <span class="font-black text-2xl" x-text="stats.repas.samedi.total"></span>
+              <div class="text-sm text-gray-600 font-bold mt-1">
+                <span x-text="stats.repas.samedi.normal"></span> normaux, 
+                <span class="text-green-600" x-text="stats.repas.samedi.vege"></span> végé
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>

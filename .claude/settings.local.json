@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /c/Users/jpduheron/Annonceurs/appel-benevoles/src/js/*.js)",
+      "Bash(supabase db:*)",
+      "Bash(npx supabase:*)"
+    ]
+  }
+}

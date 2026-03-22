@@ -21,7 +21,8 @@ export const WizardModule = {
         telephone: '',
         taille_tshirt: '',
         repas_vendredi: false,
-        repas_samedi: false
+        repas_samedi: false,
+        vegetarien: false
     },
 
     // Data for public view
@@ -182,6 +183,10 @@ export const WizardModule = {
 
         this.resetWizard();
         this.wizardOpen = false;
+        // Mémoriser que l'utilisateur a fermé l'assistant pour cette session
+        if (this.user) {
+            sessionStorage.setItem('wizard_dismissed_' + this.user.id, 'true');
+        }
         // Still reload to be safe, but UI is fixed instantly
         this.loadPostes();
     },
@@ -238,14 +243,16 @@ export const WizardModule = {
             telephone: profile.telephone,
             taille_tshirt: profile.taille_tshirt,
             repas_vendredi: profile.repas_vendredi || false,
-            repas_samedi: profile.repas_samedi || false
+            repas_samedi: profile.repas_samedi || false,
+            vegetarien: profile.vegetarien || false
         };
         this.showWizardProfileForm = true;
     },
 
     cancelWizardEdit() {
+        this.loading = false; // FIX: s'assurer que loading est libéré si on annule
         this.showWizardProfileForm = false;
-        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
     },
 
     async createProfileAndContinue() {
@@ -273,7 +280,8 @@ export const WizardModule = {
                 telephone: f.telephone,
                 taille_tshirt: f.taille_tshirt,
                 repas_vendredi: f.repas_vendredi,
-                repas_samedi: f.repas_samedi
+                repas_samedi: f.repas_samedi,
+                vegetarien: f.vegetarien
             };
 
             if (f.id) {
@@ -292,7 +300,7 @@ export const WizardModule = {
             if (f.id) {
                 this.showToast('✅ Profil mis à jour !', 'success');
                 this.showWizardProfileForm = false;
-                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
             } else {
                 this.showToast('✅ Profil créé !', 'success');
                 this.showPostCreationModal = true;
@@ -305,7 +313,11 @@ export const WizardModule = {
             this.showToast('❌ Erreur : ' + error.message, 'error');
             this.loading = false;
         } finally {
-            if (!this.showPostCreationModal) this.loading = false;
+            // FIX: toujours libérer loading ici.
+            // handlePostProfileCreation() gère l'affichage du modal post-création sans bloquer loading.
+            // Le cas showPostCreationModal n'a pas besoin de garder loading=true.
+            clearTimeout(safetyTimeout);
+            this.loading = false;
         }
     },
 
@@ -313,7 +325,7 @@ export const WizardModule = {
         this.loading = false;
         this.showPostCreationModal = false;
         if (choice === 'add') {
-            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
             this.showWizardProfileForm = true;
         } else {
             this.wizardStep = 2;
@@ -425,10 +437,10 @@ export const WizardModule = {
     async submitWizard() {
         console.log('🚀 submitWizard START (Transaction Mode)');
         
-        // Mark wizard as completed for this user
-        if (this.user) {
-            localStorage.setItem('wizard_completed_' + this.user.id, 'true');
-        }
+        // Mark wizard as completed (removed localStorage storage to ensure it opens when needed, relying on inscriptions check instead)
+        // if (this.user) {
+        //     localStorage.setItem('wizard_completed_' + this.user.id, 'true');
+        // }
 
         if (this.wizardSelections.length === 0 && this.wizardRemovals.length === 0) {
             this.showToast('Aucune modification à enregistrer.', 'info');
@@ -578,24 +590,26 @@ export const WizardModule = {
             return;
         }
 
-        const key = 'wizard_completed_' + this.user.id;
-        const hasCompleted = localStorage.getItem(key);
+        // Check if the user voluntarily dismissed the wizard in this active tab session
+        const dismissedKey = 'wizard_dismissed_' + this.user.id;
+        const hasDismissedInSession = sessionStorage.getItem(dismissedKey);
+
+        const hasProfiles = this.profiles && this.profiles.length > 0;
+
         // Check if there are VALID inscriptions (linking to an existing profile)
         // This handles cases where a profile was deleted but inscriptions remain (orphans)
         const hasInscriptions = this.userInscriptions && this.userInscriptions.some(ins => {
             return this.profiles.some(p => p.id === ins.benevole_id);
         });
 
-        // Condition: Open if (No Inscriptions) AND (Not already marked as completed)
-        // Note: checking hasInscriptions covers "New User". 
-        // Checking !hasCompleted ensures it persists until they validate (which sets the flag).
-        // If they have inscriptions, we assume they are done.
+        // Condition: Open if (No Profiles) OR (No Inscriptions)
+        // But respect the session dismissal if the user clicked the close button (X/Annuler)
         
-        if (!hasInscriptions && !hasCompleted) {
-            console.log('🪄 Wizard auto-opening (First time/Incomplete)...');
+        if (!hasDismissedInSession && (!hasProfiles || !hasInscriptions)) {
+            console.log('🪄 Wizard auto-opening (First time, incomplete profile or zero inscriptions)...');
             this.openWizard();
         } else {
-            console.log('✅ Wizard not auto-opened', { hasInscriptions, hasCompleted });
+            console.log('✅ Wizard not auto-opened', { hasDismissedInSession, hasProfiles, hasInscriptions });
         }
     }
 };

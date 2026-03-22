@@ -1,260 +1,176 @@
-# 🧗 Système de Gestion de Bénévoles pour Compétition d'Escalade
+# Appel Bénévoles — Gestion des bénévoles pour compétition d'escalade
 
-![Project Status: Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)
+Système de gestion des bénévoles pour le **Championnat de France d'escalade de difficulté jeunes**. Permet aux bénévoles de s'inscrire sur des créneaux, aux juges de s'enregistrer, et aux administrateurs de piloter l'ensemble de l'organisation.
 
-Application web moderne pour gérer les inscriptions de bénévoles avec authentification Magic Link, gestion des conflits temporels et design neo-brutaliste.
+---
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
-- ✅ **Authentification sans mot de passe** (Magic Link par email)
-- ✅ **Gestion des profils** bénévoles (nom, prénom, téléphone, taille t-shirt)
-- ✅ **Planning des postes** avec horaires et descriptions
-- ✅ **Blocage automatique** si capacité maximale atteinte
-- ✅ **Détection des conflits temporels** (impossible de s'inscrire sur 2 créneaux qui se chevauchent)
-- ✅ **Anonymisation des données** (affichage Prénom + Initiale du nom)
-- ✅ **Design neo-brutaliste** moderne et impactant
-- ✅ **100% gratuit** (Supabase + GitHub Pages)
+### Pour les bénévoles
+- Authentification sans mot de passe (magic link / OTP email)
+- Gestion de profils multiples (famille)
+- Inscription sur des créneaux avec détection de conflits horaires
+- Vue planning en liste ou calendrier
+- Suivi du T-shirt (taille, retrait)
+- Cagnotte : solde de crédits utilisables à la buvette
 
-## 🏗️ Architecture Technique
+### Pour les juges
+- Page dédiée (`juges.html`) avec suivi de présence samedi/dimanche
+- Cagnotte calculée selon les dégainés effectués (`tarif_degaines_juge`)
 
-### Stack
+### Pour les administrateurs
+- Gestion des postes, périodes, bénévoles
+- Statistiques : T-shirts par taille, repas, solde cagnotte
+- Création de comptes bénévoles
+- Page de diagnostic des connexions
 
-- **Frontend** : HTML + Alpine.js + Tailwind CSS (via CDN, pas de build)
-- **Backend** : Supabase (PostgreSQL + Auth + Row Level Security)
-- **Hébergement** : GitHub Pages (statique)
-- **Code Quality** : JSDoc + `jsconfig.json` (Type Checking)
+### Sur le terrain
+- `scanner-tshirt.html` : scan QR code pour marquer un T-shirt comme retiré
+- `debit.html` : clavier de saisie pour débiter la cagnotte à la buvette
 
-### Structure du Code
+---
 
-- `src/js/modules/` : Logique métier (Store, User, Admin)
-- `src/js/services/` : Couche d'abstraction API & Auth
-- `src/js/utils.js` : Utilitaires formatés et documentés
+## Stack technique
 
-### Base de Données
+| Composant | Technologie |
+|-----------|-------------|
+| Frontend | Alpine.js 3.13 + Tailwind CSS 3.3 |
+| Build | Vite 7 + vite-plugin-html |
+| Backend | Supabase (PostgreSQL + Auth + RLS + Edge Functions) |
+| Hébergement | GitHub Pages (frontend) + Supabase free tier (backend) |
+| QR code | html5-qrcode (scan) + qrcode (génération) |
 
-- `postes` : Créneaux de bénévolat (titre, horaires, capacité min/max, catégorie)
-- `benevoles` : Profils utilisateurs (prénom, nom, téléphone, taille t-shirt)
-- `inscriptions` : Liaison bénévoles ↔ postes
-- `public_planning` : Vue anonymisée pour affichage public
+---
 
-### Sécurité
+## Installation
 
-- **Row Level Security (RLS)** : Chaque utilisateur ne peut modifier que ses propres données
-- **Optimisation** : Index sur les clés étrangères (`user_id`, `auteur_id`, etc.)
-- **Triggers PostgreSQL** : Validation atomique des capacités et conflits temporels
-- **Clé API publique** : Sûre car protégée par RLS
+### Prérequis
+- Node.js 20+
+- Compte Supabase
+- CLI Supabase (pour les migrations)
 
-## 📦 Installation et Configuration
-
-### 1. Configuration Supabase
-
-#### A. Créer un projet Supabase
-
-1. Allez sur [supabase.com](https://supabase.com)
-2. Créez un nouveau projet (plan gratuit)
-3. Notez votre **Project URL** et **Anon Key**
-
-#### B. Appliquer le schéma de base de données
-
-1. Dans le dashboard Supabase, allez dans **SQL Editor**
-2. Collez le contenu du fichier `supabase/migrations/001_init_schema.sql`
-3. Exécutez le script
-
-#### C. Configurer l'authentification Magic Link
-
-1. **Authentication** → **Providers** → **Email**
-2. Activez "Enable Email provider"
-3. **Authentication** → **URL Configuration**
-   - **Site URL** : `https://votre-username.github.io/appel-benevoles`
-   - **Redirect URLs** : Ajoutez `https://votre-username.github.io/appel-benevoles/**` (avec wildcard)
-
-#### D. Ajouter des postes de test
-
-Dans le **Table Editor**, ajoutez quelques postes :
-
-```sql
-INSERT INTO postes (titre, periode_debut, periode_fin, categorie, description, nb_min, nb_max) VALUES
-('Juge de bloc', '2025-06-14 08:00:00+02', '2025-06-14 12:00:00+02', 'Qualifications Samedi', 'Connaissance des règles FFME requise', 2, 4),
-('Assureur', '2025-06-14 08:00:00+02', '2025-06-14 12:00:00+02', 'Qualifications Samedi', 'Doit savoir assurer en tête', 3, 6),
-('Buvette', '2025-06-14 12:00:00+02', '2025-06-14 18:00:00+02', 'Qualifications Samedi', 'Service boissons et snacks', 1, 3);
-```
-
-### 2. Configuration du Frontend
-
-#### A. Créer le fichier `.env`
-
-Créez un fichier `.env` à la racine du projet :
-
-```env
-# Frontend Configuration (VITE_ prefix = exposé au client)
-VITE_SUPABASE_URL=https://VOTRE_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=VOTRE_ANON_KEY
-VITE_APP_URL_LOCAL=http://localhost:5500
-VITE_APP_URL_PRODUCTION=https://VOTRE_USERNAME.github.io/appel-benevoles
-```
-
-⚠️ **ATTENTION** : Vérifiez bien l'orthographe du nom de votre repo GitHub (avec ou sans "s") !
-
-#### B. Installer les dépendances
+### 1. Cloner et installer
 
 ```bash
+git clone <repo>
+cd appel-benevoles
 npm install
 ```
 
-### 3. Déploiement sur GitHub Pages
-
-#### A. Créer un repository GitHub
+### 2. Configurer les variables d'environnement
 
 ```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M master
-git remote add origin https://github.com/VOTRE_USERNAME/appel-benevoles.git
-git push -u origin master
+cp .env.example .env
 ```
 
-#### B. Configurer les GitHub Secrets
+Remplir `.env` :
 
-1. Allez dans **Settings** → **Secrets and variables** → **Actions**
-2. Cliquez sur **New repository secret**
-3. Ajoutez ces 3 secrets :
-   - `VITE_SUPABASE_URL` : `https://VOTRE_PROJECT.supabase.co`
-   - `VITE_SUPABASE_ANON_KEY` : `VOTRE_ANON_KEY`
-   - `VITE_APP_URL_PRODUCTION` : `https://VOTRE_USERNAME.github.io/appel-benevoles`
-
-⚠️ **ATTENTION** : Vérifiez bien l'orthographe du nom de votre repo dans `VITE_APP_URL_PRODUCTION` !
-
-#### C. Activer GitHub Pages
-
-1. Allez dans **Settings** → **Pages**
-2. Source : **GitHub Actions**
-3. Le workflow `.github/workflows/deploy.yml` se déclenchera automatiquement
-
-Votre site sera disponible à : `https://VOTRE_USERNAME.github.io/appel-benevoles`
-
-⚠️ **Important** : Retournez dans Supabase → Authentication → URL Configuration et vérifiez que l'URL correspond exactement au nom de votre repo GitHub.
-
-## 🎨 Personnalisation
-
-### Couleurs
-
-Modifiez les couleurs dans `index.html` (ligne 27-31) :
-
-```javascript
-colors: {
-  'brutal-black': '#000000',
-  'brutal-ice': '#8bbfd5',    // Changez cette couleur
-  'brutal-white': '#ffffff',
-}
+```env
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_APP_URL_LOCAL=http://localhost:5173
+VITE_APP_URL_PRODUCTION=https://username.github.io/appel-benevoles
 ```
 
-### Typographies
+### 3. Appliquer les migrations Supabase
 
-Changez les fonts Google Fonts (ligne 9) :
-
-```html
-<link
-  href="https://fonts.googleapis.com/css2?family=VotreFontTitre&family=VotreFontBody&display=swap"
-  rel="stylesheet"
-/>
+```bash
+supabase db push
 ```
 
-## 📊 Administration
+Ou depuis le dashboard Supabase, exécuter les fichiers SQL dans `supabase/migrations/` dans l'ordre numérique.
 
-### Ajouter des postes
+### 4. Déployer les Edge Functions
 
-**Via le Table Editor Supabase** (recommandé) :
-
-1. Ouvrez **Table Editor** → **postes**
-2. Cliquez sur **Insert row**
-3. Remplissez les champs directement comme dans Excel
-
-**Via SQL** :
-
-```sql
-INSERT INTO postes (titre, periode_debut, periode_fin, categorie, description, nb_min, nb_max)
-VALUES ('Nouveau poste', '2025-06-14 14:00:00+02', '2025-06-14 18:00:00+02', 'Catégorie', 'Description', 2, 5);
+```bash
+supabase functions deploy send-planning
+supabase functions deploy create-benevole
 ```
 
-### Exporter les données
+Configurer les secrets SMTP pour `send-planning` :
 
-Dans **Table Editor** → Sélectionnez la table → **Export to CSV**
-
-Ou via SQL :
-
-```sql
-SELECT
-  p.titre as Poste,
-  p.periode_debut as Debut,
-  p.periode_fin as Fin,
-  b.prenom as Prenom,
-  b.nom as Nom,
-  b.telephone as Telephone,
-  b.taille_tshirt as Taille
-FROM inscriptions i
-JOIN postes p ON i.poste_id = p.id
-JOIN benevoles b ON i.benevole_id = b.id
-ORDER BY p.periode_debut, p.titre;
+```bash
+supabase secrets set SMTP_HOST=smtp.gmail.com
+supabase secrets set SMTP_PORT=465
+supabase secrets set SMTP_USER=email@gmail.com
+supabase secrets set SMTP_PASS=app_password
 ```
 
-### Supprimer les données après l'événement (RGPD)
+---
 
-```sql
--- Anonymiser les données personnelles
-UPDATE benevoles
-SET nom = 'ANONYME',
-    prenom = 'ANONYME',
-    telephone = NULL,
-    email = 'anonyme@example.com';
+## Développement local
 
--- Ou supprimer complètement
-DELETE FROM inscriptions;
-DELETE FROM benevoles;
+```bash
+npm run dev
+# http://localhost:5173
 ```
 
-## 🔒 Sécurité
+> **ATTENTION** : Le `.env` local pointe sur la **base Supabase de production**. Toute modification de données en développement affecte la prod.
 
-- ✅ Row Level Security (RLS) activé sur toutes les tables
-- ✅ Un bénévole ne peut voir/modifier que ses propres données
-- ✅ Les postes sont en lecture seule pour les utilisateurs
-- ✅ Les triggers empêchent les race conditions
-- ✅ Anonymisation automatique via la vue `public_planning`
+---
 
-## 🐛 Résolution de Problèmes
+## Build et déploiement
 
-### Le Magic Link n'arrive pas
+### Build manuel
 
-1. Vérifiez vos spams
-2. Vérifiez que l'email provider est activé dans Supabase
-3. Vérifiez les quotas du plan gratuit (limite d'emails/jour)
+```bash
+npm run build
+# Sortie dans dist/
+npm run preview  # Prévisualiser le build
+```
 
-### Erreur "Ce créneau est complet"
+### Déploiement automatique (GitHub Actions)
 
-Normal ! Le trigger fonctionne. Le créneau a été pris entre-temps.
+Chaque push sur `master` déclenche `.github/workflows/deploy.yml` qui :
+1. Build le projet avec injection des secrets GitHub
+2. Déploie `dist/` sur GitHub Pages
 
-### Erreur "Conflit horaire"
+Secrets GitHub requis :
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_APP_URL_PRODUCTION`
 
-Normal ! Vous essayez de vous inscrire sur un créneau qui chevauche une inscription existante.
+---
 
-### Les RLS bloquent tout
+## Pages disponibles
 
-Vérifiez que vous êtes bien connecté (`auth.uid()` doit retourner votre user ID).
+| URL | Usage |
+|-----|-------|
+| `/` | Page principale bénévoles |
+| `/admin.html` | Administration |
+| `/juges.html` | Interface juges |
+| `/admin-juges.html` | Administration juges |
+| `/officiels.html` | Interface officiels |
+| `/debit.html` | Débit cagnotte à la buvette |
+| `/scanner-tshirt.html` | Scan distribution T-shirts |
+| `/admin-connexions.html` | Diagnostic connexions |
 
-## 📈 Limites du Plan Gratuit Supabase
+---
 
-- 500 MB de stockage (largement suffisant)
-- 50 000 utilisateurs actifs/mois
-- 2 GB de bande passante/mois
-- Envoi d'emails limité (quelques centaines/jour)
+## Configuration en base de données
 
-## 📝 Licence
+Paramètres stockés dans la table `config` Supabase :
 
-MIT - Libre d'utilisation pour votre compétition d'escalade !
+| Clé | Type | Description |
+|-----|------|-------------|
+| `cagnotte_active` | boolean | Active/désactive le système de cagnotte |
+| `tarif_degaines_juge` | decimal | Crédit par dégainé pour les juges (défaut : 10.00) |
 
-## 🙏 Crédits
+---
 
-- Framework CSS : [Tailwind CSS](https://tailwindcss.com)
-- Framework JS : [Alpine.js](https://alpinejs.dev)
-- Backend : [Supabase](https://supabase.com)
-- Fonts : [Google Fonts](https://fonts.google.com)
+## Rôles utilisateurs
+
+| Rôle | Accès |
+|------|-------|
+| `benevole` | Page principale, inscription créneaux |
+| `referent` | Idem + vue des inscriptions de ses postes |
+| `admin` | Toutes les pages, CRUD complet |
+| `juge` | Page juges + cagnotte (calcul dégainés) |
+| `admin-juge` | Administration des juges |
+| `officiel` | Page officiels (repas, T-shirt) — sans cagnotte |
+
+---
+
+## Licence
+
+MIT

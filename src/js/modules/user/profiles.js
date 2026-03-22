@@ -14,10 +14,10 @@ export const ProfilesModule = {
         prenom: '',
         nom: '',
         telephone: '',
-        telephone: '',
         taille_tshirt: '',
         repas_vendredi: false,
-        repas_samedi: false
+        repas_samedi: false,
+        vegetarien: false
     },
 
     /**
@@ -44,10 +44,10 @@ export const ProfilesModule = {
                 prenom: profile.prenom || '',
                 nom: profile.nom || '',
                 telephone: profile.telephone || '',
-                telephone: profile.telephone || '',
                 taille_tshirt: profile.taille_tshirt || '',
                 repas_vendredi: profile.repas_vendredi || false,
-                repas_samedi: profile.repas_samedi || false
+                repas_samedi: profile.repas_samedi || false,
+                vegetarien: profile.vegetarien || false
             };
             this.isEditingProfile = true;
         }
@@ -63,10 +63,10 @@ export const ProfilesModule = {
             prenom: '',
             nom: '',
             telephone: '',
-            telephone: '',
             taille_tshirt: '',
             repas_vendredi: false,
-            repas_samedi: false
+            repas_samedi: false,
+            vegetarien: false
         };
         this.isEditingProfile = true;
     },
@@ -76,7 +76,7 @@ export const ProfilesModule = {
      */
     cancelEdit() {
         this.isEditingProfile = false;
-        this.profileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false };
+        this.profileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
     },
 
     /**
@@ -93,6 +93,22 @@ export const ProfilesModule = {
 
             if (error) throw error;
             this.profiles = data || [];
+
+            // Redirection des profils strictement juges ou officiels vers leur interface dédiée
+            const hasJuge = this.profiles.some(p => p.role === 'juge' || p.role === 'admin-juge');
+            const hasOfficiel = this.profiles.some(p => p.role === 'officiel');
+            const hasAdmin = this.profiles.some(p => p.role === 'admin');
+            const hasBenevole = this.profiles.some(p => p.role === 'benevole' || p.role === 'referent');
+
+            if (hasOfficiel && !hasAdmin && !hasBenevole && !hasJuge) {
+                window.location.href = "officiels.html";
+                return;
+            }
+
+            if (hasJuge && !hasAdmin && !hasBenevole) {
+                window.location.href = "juges.html";
+                return;
+            }
 
             // Auto-open logic is now handled by WizardModule.checkWizardAutoOpen()
 
@@ -121,10 +137,10 @@ export const ProfilesModule = {
                 prenom: this.profileForm.prenom,
                 nom: this.profileForm.nom,
                 telephone: this.profileForm.telephone,
-                telephone: this.profileForm.telephone,
                 taille_tshirt: this.profileForm.taille_tshirt,
                 repas_vendredi: this.profileForm.repas_vendredi,
-                repas_samedi: this.profileForm.repas_samedi
+                repas_samedi: this.profileForm.repas_samedi,
+                vegetarien: this.profileForm.vegetarien
             };
 
             if (this.profileForm.id) {

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+  <%- include('/src/partials/layout/head.html', { title: 'Bénévoles Escalade - Juges' }) %>
+
+  <body class="bg-brutal-ice min-h-screen overflow-x-hidden" x-data="jugesApp()" x-init="init()">
+    <%- include('/src/partials/components/toast.html') %>
+    <%- include('/src/partials/layout/header.html') %>
+
+    <main class="container mx-auto px-4 pb-24">
+      <%- include('/src/partials/sections/index/login.html') %>
+
+      <!-- Section Utilisateur Connecté -->
+      <section x-show="user" style="display: none">
+        <!-- Barre Utilisateur (simplifiée) -->
+        <div class="sticky top-0 z-40 brutal-card bg-brutal-white p-2 md:p-3 mb-4 flex flex-col gap-2 md:gap-3 shadow-brutal border-b-2 border-brutal-black">
+          <div class="flex flex-col xl:flex-row justify-between xl:justify-start items-start xl:items-center w-full gap-2 xl:gap-4">
+            <div class="w-full xl:w-auto shrink-0 pr-4 xl:border-r border-gray-200">
+              <div>
+                <p class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Compte Juge</p>
+                <div class="flex items-center gap-2 mt-1">
+                  <p class="text-sm md:text-base font-black break-all leading-none focus:outline-none" x-text="user?.email"></p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Widgets Group (Milieu sur desktop) -->
+            <div class="w-full xl:w-auto flex-1 grid grid-cols-2 xl:flex xl:flex-row gap-2">
+              <div id="cagnotte-widget-container" class="w-full xl:w-64 shrink-0" x-effect="if(user) renderWidget($el, user.id)"></div>
+
+              <!-- Tshirt Widget -->
+              <div
+                id="tshirt-widget-container"
+                class="w-full xl:w-64 shrink-0"
+                x-effect="if(user) renderTshirtWidget($el, user.id)"
+              ></div>
+            </div>
+            <div class="grid grid-cols-1 md:flex md:flex-row gap-2 w-full xl:w-auto shrink-0 justify-start xl:justify-end ml-auto">
+              <!-- Helper button si c'est admin -->
+              <a x-show="isAdmin" href="index.html" class="brutal-btn bg-brutal-ice text-brutal-black px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold whitespace-nowrap">
+                🔙 Bénévoles Accueil
+              </a>
+              <a x-show="isAdminJuge" href="admin-juges.html" class="brutal-btn bg-brutal-ice text-brutal-black px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold whitespace-nowrap">
+                ⚙️ Admin Juges
+              </a>
+              <button @click="logout()" class="brutal-btn bg-brutal-black text-brutal-white px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold whitespace-nowrap">
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <%- include('/src/partials/sections/juges/form.html') %>
+      </section>
+    </main>
+
+    <!-- Main Application Logic -->
+    <script type="module" src="./src/js/juges.js"></script>
+  </body>
+</html>

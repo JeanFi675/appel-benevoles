@@ -24,6 +24,8 @@ logs/
 *.swp
 *.swo
 *~
+.vite_restarter
+vite.config.js.timestamp-*.mjs
 
 # OS
 .DS_Store
@@ -44,6 +46,8 @@ coverage/
 # Supabase
 .supabase/
 
-# Documentation (sauf README.md)
+# Documentation (sauf fichiers racine)
 *.md
 !README.md
+!ARCHITECTURE.md
+!CLAUDE.md

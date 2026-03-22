@@ -20,8 +20,8 @@ export const AdminModule = {
     stats: {
         tshirts: {},
         repas: {
-            vendredi: 0,
-            samedi: 0
+            vendredi: { normal: 0, vege: 0, total: 0 },
+            samedi: { normal: 0, vege: 0, total: 0 }
         },
         cagnotte: {
             total_distribue: 0,
@@ -39,12 +39,18 @@ export const AdminModule = {
 
     // Search & Modal
     searchQuery: '',
+    posteFilterPeriode: '',
     selectedBenevoleInscriptions: [],
     showDetailsModal: false, // Read-only modal
     showEditModal: false,    // Edit/Add modal
     selectedBenevoleName: '',
     currentBenevole: null,
     currentUser: null,
+
+    // Poste Inscrits Modal
+    showPosteInscritsModal: false,
+    selectedPoste: null,
+    selectedPosteInscrits: [],
 
     // Add Benevole Modal
     showAddBenevoleModal: false,
@@ -84,6 +90,35 @@ export const AdminModule = {
 
     getReferents() {
         return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
+    },
+
+    getBenevoleAvecInscriptions() {
+        return this.benevoles.filter(b => (b.nb_inscriptions || 0) > 0).length;
+    },
+
+    getBenevolesSansInscriptions() {
+        return this.benevoles.filter(b => (b.nb_inscriptions || 0) === 0).length;
+    },
+
+    isReferentInscritPeriode(referentId, periodeId) {
+        if (!referentId) return false;
+        return this.postes.some(p => p.periode_id === periodeId && (p.inscrits_ids || []).includes(referentId));
+    },
+
+    getFilteredPostes() {
+        if (!this.posteFilterPeriode) return this.postes;
+        return this.postes.filter(p => String(p.periode_id) === String(this.posteFilterPeriode));
+    },
+
+    async updatePosteReferent(posteId, referentId) {
+        try {
+            const { error } = await ApiService.update('postes', { referent_id: referentId || null }, { id: posteId });
+            if (error) throw error;
+            this.showToast('✅ Référent mis à jour', 'success');
+            await this.loadPostes();
+        } catch (error) {
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        }
     },
 
     getFilteredBenevoles() {
@@ -259,6 +294,36 @@ export const AdminModule = {
         this.currentBenevole = null;
     },
 
+    async viewPosteInscrits(poste) {
+        this.selectedPoste = poste;
+        this.selectedPosteInscrits = [];
+        this.showPosteInscritsModal = true;
+
+        try {
+            const { data, error } = await ApiService.fetch('inscriptions', {
+                select: '*, benevoles(prenom, nom, email, taille_tshirt)',
+                eq: { poste_id: poste.id }
+            });
+            if (error) throw error;
+
+            this.selectedPosteInscrits = (data || []).map(i => ({
+                id: i.id,
+                prenom: i.benevoles?.prenom || '?',
+                nom: i.benevoles?.nom || '?',
+                email: i.benevoles?.email || '',
+                taille_tshirt: i.benevoles?.taille_tshirt || ''
+            })).sort((a, b) => a.nom.localeCompare(b.nom));
+        } catch (error) {
+            this.showToast('❌ Erreur chargement inscrits : ' + error.message, 'error');
+        }
+    },
+
+    closePosteInscritsModal() {
+        this.showPosteInscritsModal = false;
+        this.selectedPoste = null;
+        this.selectedPosteInscrits = [];
+    },
+
     /**
      * Loads all admin data.
      */
@@ -280,24 +345,20 @@ export const AdminModule = {
     async loadPostes() {
         try {
             const { data, error } = await ApiService.fetch('postes', {
-                select: '*, periodes(nom, ordre)'
+                select: '*, periodes(nom, ordre), benevoles(prenom, nom)'
             });
 
             if (error) throw error;
 
-            // Count inscriptions manually as Supabase JS client doesn't support count in select easily without foreign key alias tricks sometimes
-            // But we can do it in a loop or use a view. The original code used a loop.
             const postesWithCounts = await Promise.all(
                 (data || []).map(async (poste) => {
                     const { data: inscriptions } = await ApiService.fetch('inscriptions', { eq: { poste_id: poste.id } });
                     const count = inscriptions ? inscriptions.length : 0;
+                    const inscrits_ids = (inscriptions || []).map(i => i.benevole_id);
 
                     let referentIdentite = '-';
-                    if (poste.referent_id) {
-                        const referent = this.benevoles.find(b => b.id === poste.referent_id);
-                        if (referent) {
-                            referentIdentite = `${referent.prenom} ${referent.nom}`;
-                        }
+                    if (poste.benevoles) {
+                        referentIdentite = `${poste.benevoles.prenom} ${poste.benevoles.nom}`;
                     }
 
                     return {
@@ -305,6 +366,7 @@ export const AdminModule = {
                         periode_nom: poste.periodes?.nom || '-',
                         periode_ordre: poste.periodes?.ordre || 999,
                         inscrits_actuels: count,
+                        inscrits_ids,
                         referent_identite: referentIdentite
                     };
                 })
@@ -314,7 +376,7 @@ export const AdminModule = {
                 if (a.periode_ordre !== b.periode_ordre) {
                     return a.periode_ordre - b.periode_ordre;
                 }
-                return new Date(a.periode_debut) - new Date(b.periode_debut);
+                return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
             });
         } catch (error) {
             this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
@@ -540,7 +602,10 @@ export const AdminModule = {
         try {
             const payload = {
                 ...this.posteForm,
-                referent_id: this.posteForm.referent_id || null
+                referent_id: this.posteForm.referent_id || null,
+                // L'input datetime-local est en heure locale → convertir en UTC pour Supabase
+                periode_debut: new Date(this.posteForm.periode_debut).toISOString(),
+                periode_fin: new Date(this.posteForm.periode_fin).toISOString()
             };
 
             if (this.editingPoste) {
@@ -748,8 +813,8 @@ export const AdminModule = {
             const { error } = await ApiService.update('benevoles', { role: newRole }, { id: benevoleId });
             if (error) throw error;
 
-            // If demoted to simple volunteer, remove them from being referent on any post
-            if (newRole === 'benevole') {
+            // If changing away from referent, remove them from being referent on any post
+            if (newRole !== 'referent') {
                 const { error: updatePostesError } = await ApiService.updateMany('postes', { referent_id: null }, { referent_id: benevoleId });
                 if (updatePostesError) {
                     console.error('Error removing referent from posts:', updatePostesError);
@@ -760,7 +825,7 @@ export const AdminModule = {
                 }
             }
 
-            const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin' };
+            const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin', 'juge': 'Juge', 'admin-juge': 'Admin-Juge', 'officiel': 'Officiel' };
             this.showToast(`✅ Rôle changé en ${roleNames[newRole]}`, 'success');
             await this.loadBenevolesAndStats();
         } catch (error) {
@@ -771,17 +836,31 @@ export const AdminModule = {
 
     calculateStats() {
         const tshirts = {};
-        let vendredi = 0;
-        let samedi = 0;
+        let total_tshirts = 0;
+        let vendredi = { normal: 0, vege: 0, total: 0 };
+        let samedi = { normal: 0, vege: 0, total: 0 };
 
         this.benevoles.forEach(b => {
-            // T-Shirts
-            const size = b.taille_tshirt || 'Non défini';
-            tshirts[size] = (tshirts[size] || 0) + 1;
+            // T-Shirts: les bénévoles (rôle "benevole") sans aucune inscription n'ont pas de T-shirt
+            const skipTshirt = b.role === 'benevole' && (b.nb_inscriptions || 0) === 0;
+            if (!skipTshirt) {
+                const size = b.taille_tshirt || 'Non défini';
+                tshirts[size] = (tshirts[size] || 0) + 1;
+                // Le total exclut SANS et Non défini (pas de T-shirt réel à commander)
+                if (size !== 'SANS' && size !== 'Non défini') {
+                    total_tshirts++;
+                }
+            }
 
             // Repas
-            if (b.repas_vendredi) vendredi++;
-            if (b.repas_samedi) samedi++;
+            if (b.repas_vendredi) {
+                vendredi.total++;
+                if (b.vegetarien) vendredi.vege++; else vendredi.normal++;
+            }
+            if (b.repas_samedi) {
+                samedi.total++;
+                if (b.vegetarien) samedi.vege++; else samedi.normal++;
+            }
         });
 
         // CAGNOTTE STATS
@@ -807,6 +886,7 @@ export const AdminModule = {
 
         this.stats = {
             tshirts: sortedTshirts,
+            total_tshirts,
             repas: {
                 vendredi,
                 samedi

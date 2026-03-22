@@ -76,6 +76,7 @@
                 <label class="block font-bold mb-2">Taille T-shirt *</label>
                 <select x-model="profileForm.taille_tshirt" required class="brutal-input w-full px-4 py-2 font-bold">
                     <option value="">-- Sélectionnez --</option>
+                    <option value="SANS">Sans T-shirt (Non merci)</option>
                     <option value="XS">XS</option>
                     <option value="S">S</option>
                     <option value="M">M</option>
@@ -98,6 +99,11 @@
                 <div class="flex items-center gap-3">
                     <input type="checkbox" id="repas_samedi" x-model="profileForm.repas_samedi" class="w-6 h-6 accent-brutal-black">
                     <label for="repas_samedi" class="font-bold cursor-pointer">Présent pour le repas du samedi soir (16 mai 2026)</label>
+                </div>
+
+                <div class="flex items-center gap-3 mt-4">
+                    <input type="checkbox" id="profile_vegetarien" x-model="profileForm.vegetarien" class="w-6 h-6 accent-green-600">
+                    <label for="profile_vegetarien" class="font-bold cursor-pointer text-green-700">Option Végétarien</label>
                 </div>
             </div>
 
