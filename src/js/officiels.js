@@ -177,6 +177,14 @@ function initOfficielsApp() {
         this.showToast("✅ Profil Officiel enregistré !", "success");
         await this.loadOfficielProfile(); 
 
+        // Refresh the tshirt widget manually if present
+        if (document.getElementById("tshirt-widget-container")) {
+          this.renderTshirtWidget(
+            document.getElementById("tshirt-widget-container"),
+            currentUser.id
+          );
+        }
+
       } catch (error) {
         this.showToast("❌ Erreur : " + error.message, "error");
       } finally {
