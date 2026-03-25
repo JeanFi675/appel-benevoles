@@ -114,24 +114,24 @@ function initOfficielsApp() {
             vegetarien: profile.vegetarien || false,
           };
         } else {
-             // AUTO-CREATION: Le compte est nouveau, on verrouille immédiatement le rôle "officiel" en base
-             const { error: insertError } = await ApiService.insert("benevoles", {
+             // AUTO-CREATION: Le compte est nouveau, on crée immédiatement le rôle "officiel" en base
+             const { data: newProfile, error: insertError } = await ApiService.insert("benevoles", {
                 user_id: currentUser.id,
                 email: currentUser.email,
                 role: 'officiel',
                 prenom: '',
                 nom: ''
              });
-             
+
              if (insertError) {
                  console.error("Erreur auto-création officiel:", insertError);
                  this.showToast("❌ Erreur création profil: " + insertError.message, "error");
                  this.isLoaded = true;
                  return;
              }
-             
-             // On rappelle immédiatement le chargement une fois le profil créé en base
-             return this.loadOfficielProfile();
+
+             // On récupère directement l'id de la ligne créée pour que le prochain save fasse un UPDATE
+             this.profileForm.id = newProfile.id;
         }
       } catch (error) {
         console.error("Erreur chargement profil officiel:", error);
@@ -176,6 +176,14 @@ function initOfficielsApp() {
 
         this.showToast("✅ Profil Officiel enregistré !", "success");
         await this.loadOfficielProfile(); 
+
+        // Refresh the tshirt widget manually if present
+        if (document.getElementById("tshirt-widget-container")) {
+          this.renderTshirtWidget(
+            document.getElementById("tshirt-widget-container"),
+            currentUser.id
+          );
+        }
 
       } catch (error) {
         this.showToast("❌ Erreur : " + error.message, "error");

@@ -138,24 +138,24 @@ function initJugesApp() {
             vegetarien: profile.vegetarien || false,
           };
         } else {
-            // AUTO-CREATION: Le compte est nouveau, on verrouille immédiatement le rôle "juge" en base
-             const { error: insertError } = await ApiService.insert("benevoles", {
+            // AUTO-CREATION: Le compte est nouveau, on crée immédiatement le rôle "juge" en base
+             const { data: newProfile, error: insertError } = await ApiService.insert("benevoles", {
                 user_id: currentUser.id,
                 email: currentUser.email,
                 role: 'juge',
                 prenom: '',
                 nom: ''
              });
-             
+
              if (insertError) {
                  console.error("Erreur auto-création juge:", insertError);
                  this.showToast("❌ Erreur création profil: " + insertError.message, "error");
                  this.isLoaded = true;
                  return;
              }
-             
-             // On rappelle immédiatement le chargement une fois le profil créé en base
-             return this.loadJugeProfile();
+
+             // On récupère directement l'id de la ligne créée pour que le prochain save fasse un UPDATE
+             this.profileForm.id = newProfile.id;
         }
       } catch (error) {
         console.error("Erreur chargement profil juge:", error);
