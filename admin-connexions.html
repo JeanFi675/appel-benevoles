@@ -245,11 +245,11 @@
                 Email <span x-text="sortIconBenevoles('email')"></span>
               </button>
               <button
-                @click="sortByBenevoles('created_at')"
+                @click="sortByBenevoles('updated_at')"
                 class="brutal-btn text-sm py-1 px-3 border-2 border-brutal-black font-black"
-                :class="sortFieldBenevoles === 'created_at' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-white'"
+                :class="sortFieldBenevoles === 'updated_at' ? 'bg-brutal-black text-brutal-white' : 'bg-brutal-white'"
               >
-                Date <span x-text="sortIconBenevoles('created_at')"></span>
+                Mis à jour <span x-text="sortIconBenevoles('updated_at')"></span>
               </button>
             </div>
             <template x-for="user in sortedBenevoles" :key="user.id">
@@ -268,6 +268,9 @@
                     <div class="font-black text-lg break-all" x-text="user.email || 'Sans email'"></div>
                     <div class="font-bold text-sm text-gray-500 mt-2">
                       Nom: <span x-text="user.prenom + ' ' + user.nom"></span>
+                    </div>
+                    <div class="font-bold text-sm text-gray-400 mt-1">
+                      Mis à jour: <span x-text="formatDate(user.updated_at)"></span>
                     </div>
                   </div>
                 </label>
@@ -303,10 +306,16 @@
                     Email (Compte bénévole) <span x-text="sortIconBenevoles('email')"></span>
                   </th>
                   <th
-                    class="p-3 border-white cursor-pointer select-none hover:bg-gray-700"
-                    @click="sortByBenevoles('created_at')"
+                    class="p-3 border-r-2 border-white cursor-pointer select-none hover:bg-gray-700"
+                    @click="sortByBenevoles('nom')"
                   >
-                    Identité <span x-text="sortIconBenevoles('created_at')"></span>
+                    Identité
+                  </th>
+                  <th
+                    class="p-3 border-white cursor-pointer select-none hover:bg-gray-700"
+                    @click="sortByBenevoles('updated_at')"
+                  >
+                    Mis à jour <span x-text="sortIconBenevoles('updated_at')"></span>
                   </th>
                 </tr>
               </thead>
@@ -330,14 +339,18 @@
                       x-text="user.email || '-'"
                     ></td>
                     <td
-                      class="p-3 font-bold text-gray-700"
+                      class="p-3 font-bold text-gray-700 border-r-4 border-brutal-black"
                       x-text="user.prenom + ' ' + user.nom"
+                    ></td>
+                    <td
+                      class="p-3 font-bold text-gray-500 text-sm"
+                      x-text="formatDate(user.updated_at)"
                     ></td>
                   </tr>
                 </template>
                 <tr x-show="benevolesSansInscr.length === 0">
                   <td
-                    colspan="3"
+                    colspan="4"
                     class="p-6 text-center font-bold text-gray-500 italic"
                   >
                     Aucun bénévole sans inscription détecté. Tout fonctionne bien ! 🎉

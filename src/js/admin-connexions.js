@@ -9,13 +9,13 @@ function initAdminConnexionsApp() {
     isAdmin: false,
     users: [],
     selectedIds: [],
-    sortField: 'email',
-    sortDir: 'asc',
-    
+    sortField: 'created_at',
+    sortDir: 'desc',
+
     benevolesSansInscr: [],
     selectedBenevolesIds: [],
-    sortFieldBenevoles: 'email',
-    sortDirBenevoles: 'asc',
+    sortFieldBenevoles: 'updated_at',
+    sortDirBenevoles: 'desc',
     
     toasts: [],
 
@@ -57,8 +57,10 @@ function initAdminConnexionsApp() {
 
     get sortedBenevoles() {
       return [...this.benevolesSansInscr].sort((a, b) => {
-        const va = this.sortFieldBenevoles === 'email' ? (a.email || '').toLowerCase() : (a.created_at || a.nom || '');
-        const vb = this.sortFieldBenevoles === 'email' ? (b.email || '').toLowerCase() : (b.created_at || b.nom || '');
+        let va, vb;
+        if (this.sortFieldBenevoles === 'email') { va = (a.email || '').toLowerCase(); vb = (b.email || '').toLowerCase(); }
+        else if (this.sortFieldBenevoles === 'updated_at') { va = a.updated_at || ''; vb = b.updated_at || ''; }
+        else { va = a.created_at || a.nom || ''; vb = b.created_at || b.nom || ''; }
         if (va < vb) return this.sortDirBenevoles === 'asc' ? -1 : 1;
         if (va > vb) return this.sortDirBenevoles === 'asc' ? 1 : -1;
         return 0;
