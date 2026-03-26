@@ -264,13 +264,33 @@
                     :value="user.id"
                     x-model="selectedBenevolesIds"
                   />
-                  <div>
+                  <div class="flex-1">
                     <div class="font-black text-lg break-all" x-text="user.email || 'Sans email'"></div>
                     <div class="font-bold text-sm text-gray-500 mt-2">
                       Nom: <span x-text="user.prenom + ' ' + user.nom"></span>
                     </div>
                     <div class="font-bold text-sm text-gray-400 mt-1">
                       Mis à jour: <span x-text="formatDate(user.updated_at)"></span>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2 flex-wrap">
+                      <button
+                        @click.stop="sendRelance(user)"
+                        :disabled="sendingRelanceIds.includes(user.id)"
+                        class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black"
+                        :class="sendingRelanceIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300'"
+                      >
+                        <span x-show="!sendingRelanceIds.includes(user.id)">📧 Envoyer relance</span>
+                        <span x-show="sendingRelanceIds.includes(user.id)">⏳ Envoi...</span>
+                      </button>
+                      <span
+                        x-show="user.relance_sent_at"
+                        class="text-xs font-bold text-green-700"
+                        x-text="'✅ Relancé le ' + formatDate(user.relance_sent_at)"
+                      ></span>
+                      <span
+                        x-show="!user.relance_sent_at"
+                        class="text-xs text-gray-400 italic"
+                      >Jamais envoyé</span>
                     </div>
                   </div>
                 </label>
@@ -312,10 +332,13 @@
                     Identité
                   </th>
                   <th
-                    class="p-3 border-white cursor-pointer select-none hover:bg-gray-700"
+                    class="p-3 border-r-2 border-white cursor-pointer select-none hover:bg-gray-700"
                     @click="sortByBenevoles('updated_at')"
                   >
                     Mis à jour <span x-text="sortIconBenevoles('updated_at')"></span>
+                  </th>
+                  <th class="p-3 border-white select-none">
+                    Relance
                   </th>
                 </tr>
               </thead>
@@ -343,14 +366,36 @@
                       x-text="user.prenom + ' ' + user.nom"
                     ></td>
                     <td
-                      class="p-3 font-bold text-gray-500 text-sm"
+                      class="p-3 font-bold text-gray-500 text-sm border-r-4 border-brutal-black"
                       x-text="formatDate(user.updated_at)"
                     ></td>
+                    <td class="p-3" @click.stop>
+                      <div class="flex flex-col gap-1">
+                        <button
+                          @click="sendRelance(user)"
+                          :disabled="sendingRelanceIds.includes(user.id)"
+                          class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black whitespace-nowrap"
+                          :class="sendingRelanceIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300'"
+                        >
+                          <span x-show="!sendingRelanceIds.includes(user.id)">📧 Envoyer relance</span>
+                          <span x-show="sendingRelanceIds.includes(user.id)">⏳ Envoi...</span>
+                        </button>
+                        <span
+                          x-show="user.relance_sent_at"
+                          class="text-xs font-bold text-green-700 whitespace-nowrap"
+                          x-text="'✅ ' + formatDate(user.relance_sent_at)"
+                        ></span>
+                        <span
+                          x-show="!user.relance_sent_at"
+                          class="text-xs text-gray-400 italic"
+                        >Jamais envoyé</span>
+                      </div>
+                    </td>
                   </tr>
                 </template>
                 <tr x-show="benevolesSansInscr.length === 0">
                   <td
-                    colspan="4"
+                    colspan="5"
                     class="p-6 text-center font-bold text-gray-500 italic"
                   >
                     Aucun bénévole sans inscription détecté. Tout fonctionne bien ! 🎉
