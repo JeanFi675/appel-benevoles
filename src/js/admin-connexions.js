@@ -17,6 +17,7 @@ function initAdminConnexionsApp() {
     sortFieldBenevoles: 'updated_at',
     sortDirBenevoles: 'desc',
     sendingRelanceIds: [],
+    sendingRelanceOrphelinIds: [],
 
     toasts: [],
 
@@ -201,6 +202,40 @@ function initAdminConnexionsApp() {
             this.showToast(`❌ ${err.message}`, "error");
         } finally {
             this.sendingRelanceIds = this.sendingRelanceIds.filter(id => id !== benevole.id);
+        }
+    },
+
+    async sendRelanceOrphelin(user) {
+        if (this.sendingRelanceOrphelinIds.includes(user.id)) return;
+        this.sendingRelanceOrphelinIds = [...this.sendingRelanceOrphelinIds, user.id];
+
+        try {
+            const { data, error } = await ApiService.invoke('send-relance-orphelin', {
+                body: { auth_user_id: user.id }
+            });
+
+            if (error) {
+                let msg = error.message || 'Erreur inconnue';
+                try {
+                    const body = await error.context?.json?.();
+                    if (body?.error) msg = body.error;
+                } catch {}
+                throw new Error(msg);
+            }
+            if (data?.error) throw new Error(data.error);
+
+            const idx = this.users.findIndex(u => /** @type {any} */ (u).id === user.id);
+            if (idx !== -1) {
+                this.users[idx] = { ...this.users[idx], relance_sent_at: data.relance_sent_at };
+                this.users = [...this.users];
+            }
+
+            this.showToast(`✅ Relance envoyée à ${user.email}`);
+        } catch (err) {
+            console.error('[sendRelanceOrphelin] Erreur:', err);
+            this.showToast(`❌ ${err.message}`, "error");
+        } finally {
+            this.sendingRelanceOrphelinIds = this.sendingRelanceOrphelinIds.filter(id => id !== user.id);
         }
     },
 
