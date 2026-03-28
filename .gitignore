@@ -36,7 +36,7 @@ vite.config.js.timestamp-*.mjs
 skills-lock.json
 
 # Artefacts de pentest / sécurité
-.sb-pentest-*/
+.sb-pentest-*
 
 # OS
 .DS_Store
