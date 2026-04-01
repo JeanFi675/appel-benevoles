@@ -1,6 +1,7 @@
 import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
+import { CagnotteModule } from "./modules/user/cagnotte.js";
 import { TshirtModule } from "./modules/user/tshirt.js";
 
 function initOfficielsApp() {
@@ -30,6 +31,7 @@ function initOfficielsApp() {
     },
 
     // Include modules we need
+    ...CagnotteModule,
     ...TshirtModule,
 
     async init() {
@@ -181,6 +183,14 @@ function initOfficielsApp() {
         if (document.getElementById("tshirt-widget-container")) {
           this.renderTshirtWidget(
             document.getElementById("tshirt-widget-container"),
+            currentUser.id
+          );
+        }
+
+        // Refresh the cagnotte widget manually if present
+        if (document.getElementById("cagnotte-widget-container")) {
+          this.renderWidget(
+            document.getElementById("cagnotte-widget-container"),
             currentUser.id
           );
         }

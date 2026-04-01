@@ -42,22 +42,6 @@
 
         <!-- Admin Interface -->
         <div x-show="isAdmin && !loading" x-cloak>
-            <!-- Configuration Cagnotte -->
-            <section class="brutal-card bg-brutal-white p-6 mb-8 border-4 border-brutal-black shadow-brutal">
-              <h2 class="text-2xl font-black uppercase mb-4 flex items-center gap-2">
-                💰 Config. Cagnotte à la journée
-              </h2>
-              <form @submit.prevent="updateConfig()" class="flex flex-col md:flex-row gap-4 items-end">
-                <div class="w-full md:w-1/2">
-                    <label class="block font-bold mb-2 uppercase text-sm">Montant Dégaines / Jour (€)</label>
-                    <input type="number" step="0.5" x-model="configMontant" class="brutal-input w-full px-4 py-3" required />
-                </div>
-                <button type="submit" class="brutal-btn bg-yellow-400 py-3 px-6 shadow-brutal border-2 border-brutal-black font-black uppercase whitespace-nowrap" :disabled="savingConfig">
-                     <span x-show="!savingConfig">💾 Enregistrer le montant</span>
-                     <span x-show="savingConfig">⏳...</span>
-                </button>
-              </form>
-            </section>
 
             <!-- Liste des Juges -->
             <section class="brutal-card bg-brutal-white p-6 border-4 border-brutal-black shadow-brutal">

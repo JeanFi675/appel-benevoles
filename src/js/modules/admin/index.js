@@ -32,8 +32,11 @@ export const AdminModule = {
 
     // Configuration
     config: {
-        cagnotte_active: false
+        cagnotte_active: false,
+        tarif_degaines_juge: 10,
+        tarif_degaines_officiel: 15
     },
+    savingConfig: false,
 
     // Adhésions club (NocoDB → Supabase)
     adhesionsData: {},   // map mail normalisé → row
@@ -616,19 +619,57 @@ export const AdminModule = {
     async loadConfig() {
         try {
             const { data, error } = await ApiService.fetch('config', {
-                eq: { key: 'cagnotte_active' }
+                in: { key: ['cagnotte_active', 'tarif_degaines_juge', 'tarif_degaines_officiel'] }
             });
             if (error) throw error;
             
             if (data && data.length > 0) {
-                this.config.cagnotte_active = data[0].value;
-            } else {
-                // Should exist from migration, but fallback
-                this.config.cagnotte_active = false;
+                const cagnotteActive = data.find(c => c.key === 'cagnotte_active');
+                if (cagnotteActive) this.config.cagnotte_active = cagnotteActive.value;
+
+                const tarifJuge = data.find(c => c.key === 'tarif_degaines_juge');
+                if (tarifJuge) this.config.tarif_degaines_juge = parseFloat(tarifJuge.value) || 10;
+
+                const tarifOfficiel = data.find(c => c.key === 'tarif_degaines_officiel');
+                if (tarifOfficiel) this.config.tarif_degaines_officiel = parseFloat(tarifOfficiel.value) || 15;
             }
         } catch (error) {
             console.error('Error loading config:', error);
             this.showToast('⚠️ Erreur chargement configuration', 'warning');
+        }
+    },
+    
+    async updateConfigJuges() {
+        this.savingConfig = true;
+        try {
+            const { error } = await ApiService.upsert('config', {
+                key: 'tarif_degaines_juge',
+                value: this.config.tarif_degaines_juge
+            });
+            if (error) throw error;
+            this.showToast("✅ Montant de la cagnotte Juges sauvegardé !", "success");
+        } catch(err) {
+            console.error("Erreur mise à jour config juges:", err);
+            this.showToast("❌ Impossible de sauvegarder", "error");
+        } finally {
+             this.savingConfig = false;
+        }
+    },
+
+    async updateConfigOfficiels() {
+        this.savingConfig = true;
+        try {
+            const { error } = await ApiService.upsert('config', {
+                key: 'tarif_degaines_officiel',
+                value: this.config.tarif_degaines_officiel
+            });
+            if (error) throw error;
+            this.showToast("✅ Montant de la cagnotte Officiels sauvegardé !", "success");
+        } catch(err) {
+            console.error("Erreur mise à jour config officiels:", err);
+            this.showToast("❌ Impossible de sauvegarder", "error");
+        } finally {
+             this.savingConfig = false;
         }
     },
     
@@ -638,11 +679,11 @@ export const AdminModule = {
         this.config.cagnotte_active = newValue;
         
         try {
-            // Check if exists first (or upsert if API supports it, here assuming update works if row exists)
-            // Ideally ApiService supports upsert, but let's try update or insert
-            
-            // We know row exists from migration
-            const { error } = await ApiService.update('config', { value: newValue }, { key: 'cagnotte_active' });
+            // Upsert configuration to guarantee key existence
+            const { error } = await ApiService.upsert('config', { 
+                key: 'cagnotte_active', 
+                value: newValue 
+            });
             
             if (error) throw error;
             

@@ -10,8 +10,6 @@ function initAdminJugesApp() {
     isGlobalAdmin: false,
     juges: [],
     toasts: [],
-    configMontant: 10,
-    savingConfig: false,
 
     async init() {
       let { user } = await AuthService.getSession();
@@ -38,7 +36,6 @@ function initAdminJugesApp() {
         if (data && data.some(p => p.role === 'admin' || p.role === 'admin-juge')) {
           this.isAdmin = true;
           this.isGlobalAdmin = data.some(p => p.role === 'admin');
-          await this.loadConfig();
           await this.loadJuges();
         } else {
           this.isAdmin = false;
@@ -52,36 +49,7 @@ function initAdminJugesApp() {
       }
     },
 
-    async loadConfig() {
-        try {
-            const { data, error } = await ApiService.fetch('config', {
-                eq: { key: 'tarif_degaines_juge' }
-            });
-            if (error) throw error;
-            if (data && data.length > 0) {
-                this.configMontant = parseFloat(data[0].value) || 10;
-            }
-        } catch(err) {
-            console.error("Erreur chargement config:", err);
-            this.showToast("❌ Erreur de chargement de la configuration", "error");
-        }
-    },
 
-    async updateConfig() {
-        this.savingConfig = true;
-        try {
-            const { error } = await ApiService.update('config', {
-                value: this.configMontant
-            }, { key: 'tarif_degaines_juge' });
-            if (error) throw error;
-            this.showToast("✅ Montant de la cagnotte sauvegardé !", "success");
-        } catch(err) {
-            console.error("Erreur mise à jour config:", err);
-            this.showToast("❌ Impossible de sauvegarder le montant", "error");
-        } finally {
-             this.savingConfig = false;
-        }
-    },
 
     async loadJuges() {
         try {

@@ -24,8 +24,10 @@
             </div>
             
             <!-- Widgets Group (Milieu sur desktop) -->
-            <div class="w-full xl:w-auto flex-1 flex xl:flex-row gap-2">
-              <!-- Tshirt Widget UNIQUEMENT -->
+            <div class="w-full xl:w-auto flex-1 grid grid-cols-2 xl:flex xl:flex-row gap-2">
+              <div id="cagnotte-widget-container" class="w-full xl:w-64 shrink-0" x-effect="if(user) renderWidget($el, user.id)"></div>
+
+              <!-- Tshirt Widget -->
               <div
                 id="tshirt-widget-container"
                 class="w-full xl:w-64 shrink-0"
