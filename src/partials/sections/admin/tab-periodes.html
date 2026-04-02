@@ -47,6 +47,7 @@
                         <th class="text-left py-3 px-2 font-black">Nom</th>
                         <th class="text-left py-3 px-2 font-black">Crédit/pers.</th>
                         <th class="text-left py-3 px-2 font-black">Nb postes</th>
+                        <th class="text-center py-3 px-2 font-black">Inscrits/Min/Max</th>
                         <th class="text-left py-3 px-2 font-black">Actions</th>
                     </tr>
                 </thead>
@@ -69,6 +70,11 @@
                             </td>
                             <td class="py-3 px-2 font-bold text-center">
                                 <span x-text="getPostesCountForPeriode(periode.id)"></span>
+                            </td>
+                            <td class="py-3 px-2 font-bold text-center">
+                                <span x-text="getBenevolesInscritsForPeriode(periode.id)" :class="getPeriodeInscritsColor(periode.id)"></span> /
+                                <span x-text="getBenevolesMinForPeriode(periode.id)"></span> /
+                                <span x-text="getBenevolesMaxForPeriode(periode.id)"></span>
                             </td>
                             <td class="py-3 px-2 flex gap-2">
                                 <button @click="renamePeriode(periode)"
@@ -113,10 +119,20 @@
                     </div>
 
                     <div class="flex justify-between items-center pt-3 border-t-2 border-dashed border-gray-300">
-                        <div>
-                            <span class="text-xs font-bold text-gray-500 uppercase mr-2">Postes :</span>
-                            <span class="font-black bg-yellow-300 px-2 py-0.5 border-2 border-black rounded text-sm"
-                                x-text="getPostesCountForPeriode(periode.id)"></span>
+                        <div class="space-y-2">
+                            <div>
+                                <span class="text-xs font-bold text-gray-500 uppercase mr-2">Postes :</span>
+                                <span class="font-black bg-yellow-300 px-2 py-0.5 border-2 border-black rounded text-sm"
+                                    x-text="getPostesCountForPeriode(periode.id)"></span>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-gray-500 uppercase mr-2" title="Inscrits / Min / Max">Bénévoles :</span>
+                                <span class="font-black px-2 py-0.5 border-2 border-black rounded text-sm">
+                                    <span :class="getPeriodeInscritsColor(periode.id)" x-text="getBenevolesInscritsForPeriode(periode.id)"></span> /
+                                    <span x-text="getBenevolesMinForPeriode(periode.id)"></span> /
+                                    <span x-text="getBenevolesMaxForPeriode(periode.id)"></span>
+                                </span>
+                            </div>
                         </div>
 
                         <div class="flex gap-2">

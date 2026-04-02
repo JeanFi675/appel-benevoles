@@ -855,6 +855,29 @@ export const AdminModule = {
         return this.postes.filter(p => p.periode_id === periodeId).length;
     },
 
+    getBenevolesMinForPeriode(periodeId) {
+        return this.postes.filter(p => p.periode_id === periodeId).reduce((sum, p) => sum + parseInt(p.nb_min || 0), 0);
+    },
+
+    getBenevolesMaxForPeriode(periodeId) {
+        return this.postes.filter(p => p.periode_id === periodeId).reduce((sum, p) => sum + parseInt(p.nb_max || 0), 0);
+    },
+
+    getBenevolesInscritsForPeriode(periodeId) {
+        return this.postes.filter(p => p.periode_id === periodeId).reduce((sum, p) => sum + parseInt(p.inscrits_actuels || 0), 0);
+    },
+
+    getPeriodeInscritsColor(periodeId) {
+        const inscrits = this.getBenevolesInscritsForPeriode(periodeId);
+        const min = this.getBenevolesMinForPeriode(periodeId);
+        const max = this.getBenevolesMaxForPeriode(periodeId);
+        
+        if (max === 0 && min === 0) return 'text-gray-600'; // Cas spécial : pas de besoins définis
+        if (inscrits < min) return 'text-red-600 font-black';
+        if (inscrits >= max) return 'text-green-600 font-black';
+        return 'text-yellow-600 font-black'; // Mini atteint
+    },
+
     // --- Add Benevole ---
 
     openAddBenevoleModal() {
