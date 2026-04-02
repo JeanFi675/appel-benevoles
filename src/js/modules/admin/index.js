@@ -38,6 +38,12 @@ export const AdminModule = {
     },
     savingConfig: false,
 
+    // Rapport IA
+    rapportIA: '',
+    rapportIALoading: false,
+    rapportIAError: '',
+    rapportIADate: '',
+
     // Adhésions club (NocoDB → Supabase)
     adhesionsData: {},   // map mail normalisé → row
     adhesionsNom: {},    // map "NOM_prenom_normalisé" → row (fallback)
@@ -1020,6 +1026,102 @@ export const AdminModule = {
                 total_restant
             }
         };
+    },
+
+    // --- Rapport IA ---
+
+    async generateRapportIA() {
+        const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+        if (!apiKey) {
+            this.rapportIAError = '❌ Clé API OpenRouter manquante. Ajoutez VITE_OPENROUTER_API_KEY dans votre fichier .env.';
+            return;
+        }
+
+        this.rapportIALoading = true;
+        this.rapportIAError = '';
+        this.rapportIA = '';
+
+        try {
+            // Construire les données structurées par période
+            const periodesData = this.periodes.map(periode => {
+                const postesDesPeriode = this.postes.filter(p => p.periode_id === periode.id);
+                const totalInscrits = postesDesPeriode.reduce((sum, p) => sum + (p.inscrits_actuels || 0), 0);
+                const totalMin = postesDesPeriode.reduce((sum, p) => sum + (p.nb_min || 0), 0);
+                const totalMax = postesDesPeriode.reduce((sum, p) => sum + (p.nb_max || 0), 0);
+
+                return {
+                    nom: periode.nom,
+                    totalInscrits,
+                    totalMin,
+                    totalMax,
+                    postes: postesDesPeriode.map(p => ({
+                        titre: p.titre,
+                        inscrits: p.inscrits_actuels || 0,
+                        min: p.nb_min,
+                        max: p.nb_max,
+                        statut: (p.inscrits_actuels || 0) < p.nb_min ? 'INSUFFISANT' :
+                                (p.inscrits_actuels || 0) >= p.nb_max ? 'COMPLET' : 'EN COURS'
+                    }))
+                };
+            });
+
+            const totalGeneralInscrits = this.postes.reduce((sum, p) => sum + (p.inscrits_actuels || 0), 0);
+            const totalGeneralMin = this.postes.reduce((sum, p) => sum + (p.nb_min || 0), 0);
+            const totalGeneralMax = this.postes.reduce((sum, p) => sum + (p.nb_max || 0), 0);
+
+            const prompt = `Tu es un assistant pour le Championnat de France d'escalade de difficulté jeunes.
+Voici les données d'avancement des inscriptions bénévoles en temps réel.
+
+=== RÉSUMÉ GLOBAL ===
+Total inscrits : ${totalGeneralInscrits}
+Objectif minimum : ${totalGeneralMin}
+Objectif maximum : ${totalGeneralMax}
+Taux de remplissage (vs min) : ${totalGeneralMin > 0 ? Math.round((totalGeneralInscrits / totalGeneralMin) * 100) : 0}%
+
+=== DÉTAIL PAR PÉRIODE ===
+${periodesData.map(p => `
+--- ${p.nom} ---
+Inscrits : ${p.totalInscrits} / Min ${p.totalMin} / Max ${p.totalMax}
+Postes :
+${p.postes.map(poste => `  - ${poste.titre} : ${poste.inscrits} inscrits (min ${poste.min} / max ${poste.max}) [${poste.statut}]`).join('\n')}`).join('\n')}
+
+=== INSTRUCTIONS ===
+Génère un rapport d'avancement concis et pratique en français. Structure-le ainsi :
+1. **Bilan global** : une phrase sur l'état général
+2. **Points positifs** : postes bien remplis ou complets
+3. **Points d'attention** : postes insuffisants ou critiques (inscrits < min), triés par urgence
+4. **Recommandation** : une action concrète à faire en priorité
+
+Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. Maximum 300 mots.`;
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'Appel Bénévoles Admin'
+                },
+                body: JSON.stringify({
+                    model: 'google/gemini-2.0-flash-001',
+                    messages: [{ role: 'user', content: prompt }],
+                    max_tokens: 600
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err?.error?.message || `Erreur HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+            this.rapportIA = result.choices?.[0]?.message?.content || '(Aucune réponse reçue)';
+            this.rapportIADate = new Date().toLocaleString('fr-FR');
+        } catch (error) {
+            this.rapportIAError = '❌ Erreur lors de la génération : ' + error.message;
+        } finally {
+            this.rapportIALoading = false;
+        }
     },
 
     // --- Helpers ---
