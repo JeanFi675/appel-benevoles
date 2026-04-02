@@ -64,3 +64,6 @@ supabase/migrations_backup/
 !README.md
 !ARCHITECTURE.md
 !CLAUDE.md
+
+# Scripts locaux & exports JSON
+adherents_non_benevoles.json
