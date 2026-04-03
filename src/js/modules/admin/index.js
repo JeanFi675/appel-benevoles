@@ -38,12 +38,6 @@ export const AdminModule = {
     },
     savingConfig: false,
 
-    // Rapport IA
-    rapportIA: '',
-    rapportIALoading: false,
-    rapportIAError: '',
-    rapportIADate: '',
-
     // Adhésions club (NocoDB → Supabase)
     adhesionsData: {},   // map mail normalisé → row
     adhesionsNom: {},    // map "NOM_prenom_normalisé" → row (fallback)
@@ -1028,7 +1022,40 @@ export const AdminModule = {
         };
     },
 
-    // --- Rapport IA ---
+    // --- Analyse des inscriptions ---
+
+    getPeriodesCritiques() {
+        return this.periodes.map(periode => {
+            const inscrits = this.getBenevolesInscritsForPeriode(periode.id);
+            const min = this.getBenevolesMinForPeriode(periode.id);
+            const max = this.getBenevolesMaxForPeriode(periode.id);
+            const taux = min > 0 ? Math.round((inscrits / min) * 100) : 100;
+            return { nom: periode.nom, inscrits, min, max, taux, manquantsMin: Math.max(0, min - inscrits), manquantsMax: Math.max(0, max - inscrits) };
+        }).sort((a, b) => a.taux - b.taux);
+    },
+
+    getPostesCritiques() {
+        const groups = {};
+        this.postes.forEach(p => {
+            const key = p.titre.trim().toLowerCase();
+            if (!groups[key]) groups[key] = { titre: p.titre, inscrits: 0, min: 0, max: 0, nbPeriodes: 0 };
+            groups[key].inscrits += p.inscrits_actuels || 0;
+            groups[key].min += p.nb_min || 0;
+            groups[key].max += p.nb_max || 0;
+            groups[key].nbPeriodes++;
+        });
+        return Object.values(groups)
+            .filter(g => g.min > 0 && g.inscrits < g.min)
+            .map(g => ({ ...g, taux: Math.round((g.inscrits / g.min) * 100), manquantsMin: g.min - g.inscrits, manquantsMax: Math.max(0, g.max - g.inscrits) }))
+            .sort((a, b) => a.taux - b.taux);
+    },
+
+    getTauxCouleur(taux) {
+        if (taux < 50) return { bar: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' };
+        if (taux < 80) return { bar: 'bg-orange-400', text: 'text-orange-700', bg: 'bg-orange-50' };
+        if (taux < 100) return { bar: 'bg-yellow-400', text: 'text-yellow-700', bg: 'bg-yellow-50' };
+        return { bar: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' };
+    },
 
     async generateRapportIA() {
         const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
