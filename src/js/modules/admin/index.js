@@ -160,7 +160,7 @@ export const AdminModule = {
             const sortIdentity = nameA.localeCompare(nameB);
 
             if (this.benevolesSort === 'date_desc') {
-                const dateDiff = new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                const dateDiff = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
                 return dateDiff !== 0 ? dateDiff : sortIdentity;
             } else if (this.benevolesSort === 'inscriptions_desc') {
                 const inscriDiff = (b.nb_inscriptions || 0) - (a.nb_inscriptions || 0);
@@ -1062,7 +1062,7 @@ export const AdminModule = {
             const postesAvecHeures = this.postes
                 .filter(p => p.periode_id === periode.id && p.periode_debut && p.periode_fin)
                 .map(p => {
-                    const dureeH = (new Date(p.periode_fin) - new Date(p.periode_debut)) / 3600000;
+                    const dureeH = (new Date(p.periode_fin).getTime() - new Date(p.periode_debut).getTime()) / 3600000;
                     const inscrits = p.inscrits_actuels || 0;
                     return {
                         titre: p.titre,
