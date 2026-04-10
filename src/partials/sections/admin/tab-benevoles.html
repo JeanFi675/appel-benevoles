@@ -26,6 +26,17 @@
           ✕
         </button>
       </div>
+      <div class="w-full md:w-auto">
+        <select
+          x-model="benevolesSort"
+          class="brutal-input w-full md:w-auto py-3 px-4 font-bold text-sm shadow-brutal-sm focus:shadow-brutal transition-all bg-white cursor-pointer"
+        >
+          <option value="name_asc">Tri : A-Z</option>
+          <option value="role_desc">Tri : Par Rôle</option>
+          <option value="date_desc">Tri : Plus récents</option>
+          <option value="inscriptions_desc">Tri : Inscriptions max</option>
+        </select>
+      </div>
       <button
         @click="openAddBenevoleModal()"
         class="brutal-btn bg-brutal-yellow text-brutal-black px-4 py-3 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-black uppercase text-sm whitespace-nowrap"
@@ -96,6 +107,11 @@
                 <div
                   class="font-bold text-sm text-gray-500"
                   x-text="benevole.email"
+                ></div>
+                <div
+                  class="text-xs text-gray-400 mt-1 italic"
+                  x-show="benevole.created_at"
+                  x-text="'Inscrit le ' + new Date(benevole.created_at).toLocaleDateString('fr-FR')"
                 ></div>
               </div>
               <template x-if="benevole.role === 'admin'">
@@ -340,6 +356,11 @@
                   <div
                     class="text-xs font-mono mt-1 text-gray-600"
                     x-text="benevole.telephone || 'Pas de tel'"
+                  ></div>
+                  <div
+                    class="text-xs text-gray-400 mt-1 italic"
+                    x-show="benevole.created_at"
+                    x-text="'Inscrit le ' + new Date(benevole.created_at).toLocaleDateString('fr-FR')"
                   ></div>
                 </td>
                 <td

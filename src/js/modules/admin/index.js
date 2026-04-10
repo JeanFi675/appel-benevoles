@@ -47,6 +47,7 @@ export const AdminModule = {
 
     // Search & Modal
     searchQuery: '',
+    benevolesSort: 'name_asc', // 'name_asc', 'date_desc', 'inscriptions_desc'
     posteFilterPeriode: '',
     selectedBenevoleInscriptions: [],
     showDetailsModal: false, // Read-only modal
@@ -139,35 +140,65 @@ export const AdminModule = {
     },
 
     getFilteredBenevoles() {
-        let filtered = this.benevoles;
+        let filtered = [...this.benevoles];
 
         // 1. Filter
         if (this.searchQuery) {
             const lowerQuery = this.searchQuery.toLowerCase();
-            filtered = this.benevoles.filter(b =>
+            filtered = filtered.filter(b =>
                 (b.nom && b.nom.toLowerCase().includes(lowerQuery)) ||
                 (b.prenom && b.prenom.toLowerCase().includes(lowerQuery)) ||
                 (b.email && b.email.toLowerCase().includes(lowerQuery))
             );
         }
 
-        // 2. Assign alternating colors (Quinconce logic based on family/email)
+        // 2. Sort
+        filtered.sort((a, b) => {
+            // Prépare le tri secondaire par identité
+            const nameA = ((a.nom || '') + ' ' + (a.prenom || '')).toLowerCase();
+            const nameB = ((b.nom || '') + ' ' + (b.prenom || '')).toLowerCase();
+            const sortIdentity = nameA.localeCompare(nameB);
+
+            if (this.benevolesSort === 'date_desc') {
+                const dateDiff = new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                return dateDiff !== 0 ? dateDiff : sortIdentity;
+            } else if (this.benevolesSort === 'inscriptions_desc') {
+                const inscriDiff = (b.nb_inscriptions || 0) - (a.nb_inscriptions || 0);
+                return inscriDiff !== 0 ? inscriDiff : sortIdentity;
+            } else if (this.benevolesSort === 'role_desc') {
+                const roleOrder = { 'admin': 1, 'referent': 2, 'admin-juge': 3, 'juge': 4, 'officiel': 5, 'benevole': 6 };
+                const roleA = roleOrder[a.role] || 7;
+                const roleB = roleOrder[b.role] || 7;
+                const roleDiff = roleA - roleB;
+                return roleDiff !== 0 ? roleDiff : sortIdentity;
+            } else {
+                // default 'name_asc' (A -> Z identity)
+                return sortIdentity;
+            }
+        });
+
+        // 3. Assign alternating colors
         let lastEmail = null;
         let isAlt = false;
 
         const norm = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
 
-        return filtered.map(b => {
-             const currentEmail = (b.email || '').toLowerCase();
-
-             if (currentEmail !== lastEmail) {
-                 if (lastEmail !== null) {
-                     isAlt = !isAlt;
+        return filtered.map((b, index) => {
+             if (this.benevolesSort === 'name_asc') {
+                 // Quinconce based on email family grouping
+                 const currentEmail = (b.email || '').toLowerCase();
+                 if (currentEmail !== lastEmail) {
+                     if (lastEmail !== null) {
+                         isAlt = !isAlt;
+                     }
+                     lastEmail = currentEmail;
                  }
-                 lastEmail = currentEmail;
+             } else {
+                 // Simple alternate for other sorts
+                 isAlt = index % 2 !== 0;
              }
 
-             // 3. Enrichir avec l'adhésion club (par mail, puis par nom/prénom)
+             // 4. Enrichir avec l'adhésion club (par mail, puis par nom/prénom)
              const adhesion = this.adhesionsData[b.email?.toLowerCase().trim()]
                  || this.adhesionsNom[norm(b.nom) + '_' + norm(b.prenom)]
                  || null;
