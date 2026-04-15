@@ -270,7 +270,7 @@ function initAdminConnexionsApp() {
         } else if (cleaned.startsWith('+')) {
             cleaned = cleaned.slice(1);
         }
-        return `https://web.whatsapp.com/send?phone=${cleaned}`;
+        return `https://wa.me/${cleaned}`;
     },
 
     async saveOrphelinPhone(user) {
