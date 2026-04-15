@@ -389,7 +389,7 @@
                         rel="noopener noreferrer"
                         class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300 whitespace-nowrap"
                         @click.stop
-                      >📱 WhatsApp</a>
+                      >📱 <span x-text="user.telephone"></span></a>
                       <span
                         x-show="user.relance_sent_at"
                         class="text-xs font-bold text-green-700"
@@ -494,7 +494,7 @@
                           target="_blank"
                           rel="noopener noreferrer"
                           class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300 whitespace-nowrap text-center"
-                        >📱 WhatsApp</a>
+                        >📱 <span x-text="user.telephone"></span></a>
                         <span
                           x-show="user.relance_sent_at"
                           class="text-xs font-bold text-green-700 whitespace-nowrap"
