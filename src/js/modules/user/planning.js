@@ -31,6 +31,20 @@ export const PlanningModule = {
     formatDate,
     formatTime,
 
+    formatWhatsAppUrl(phone) {
+        if (!phone) return '#';
+        let cleaned = phone.replace(/[\s\-\.\(\)]/g, '');
+        if (cleaned.startsWith('0')) {
+            cleaned = '33' + cleaned.slice(1);
+        } else if (cleaned.startsWith('+')) {
+            cleaned = cleaned.slice(1);
+        }
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        return isMobile
+            ? `https://wa.me/${cleaned}`
+            : `https://web.whatsapp.com/send?phone=${cleaned}`;
+    },
+
     /**
      * Calculates the style for a poste in the calendar view.
      * @param {object} poste - The poste to position.

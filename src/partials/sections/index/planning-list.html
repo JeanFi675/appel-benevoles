@@ -147,6 +147,15 @@
                         <span>📞</span> <span x-text="vol.telephone"></span>
                       </a>
                       <a
+                        x-show="vol.telephone"
+                        :href="formatWhatsAppUrl(vol.telephone)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 hover:underline text-green-700 font-bold"
+                      >
+                        <span>📱</span> <span>WhatsApp</span>
+                      </a>
+                      <a
                         :href="'mailto:' + vol.email"
                         class="flex items-center gap-2 hover:underline text-gray-700"
                       >
