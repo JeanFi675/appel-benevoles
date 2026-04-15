@@ -18,6 +18,8 @@ function initAdminConnexionsApp() {
     sortDirBenevoles: 'desc',
     sendingRelanceIds: [],
     sendingRelanceOrphelinIds: [],
+    editingPhones: {},
+    savingPhoneIds: [],
 
     toasts: [],
 
@@ -143,7 +145,13 @@ function initAdminConnexionsApp() {
             if (benevolesRes.error) throw benevolesRes.error;
             
             this.users = orphelinsRes.data || [];
-            
+
+            // Initialise l'état d'édition du téléphone pour chaque orphelin
+            this.editingPhones = {};
+            this.users.forEach(u => {
+                this.editingPhones[/** @type {any} */ (u).id] = /** @type {any} */ (u).telephone || '';
+            });
+
             const allBenevoles = benevolesRes.data || [];
             this.benevolesSansInscr = allBenevoles.filter(b => 
                 ['admin', 'referent', 'benevole'].includes(b.role || 'benevole') && 
@@ -252,6 +260,42 @@ function initAdminConnexionsApp() {
             console.error('Erreur copie presse-papier:', err);
             this.showToast("❌ Erreur lors de la copie des emails", "error");
         });
+    },
+
+    formatWhatsAppUrl(phone) {
+        if (!phone) return '#';
+        let cleaned = phone.replace(/[\s\-\.\(\)]/g, '');
+        if (cleaned.startsWith('0')) {
+            cleaned = '33' + cleaned.slice(1);
+        } else if (cleaned.startsWith('+')) {
+            cleaned = cleaned.slice(1);
+        }
+        return `https://web.whatsapp.com/send?phone=${cleaned}`;
+    },
+
+    async saveOrphelinPhone(user) {
+        if (this.savingPhoneIds.includes(/** @type {any} */ (user).id)) return;
+        const phone = this.editingPhones[/** @type {any} */ (user).id] || '';
+        this.savingPhoneIds = [...this.savingPhoneIds, /** @type {any} */ (user).id];
+        try {
+            const { error } = await ApiService.rpc('save_orphelin_phone', {
+                p_auth_user_id: /** @type {any} */ (user).id,
+                p_telephone: phone
+            });
+            if (error) throw error;
+
+            const idx = this.users.findIndex(u => /** @type {any} */ (u).id === /** @type {any} */ (user).id);
+            if (idx !== -1) {
+                this.users[idx] = { ...this.users[idx], telephone: phone };
+                this.users = [...this.users];
+            }
+            this.showToast(`✅ Téléphone enregistré`);
+        } catch (err) {
+            console.error('[saveOrphelinPhone] Erreur:', err);
+            this.showToast(`❌ ${/** @type {any} */ (err).message}`, 'error');
+        } finally {
+            this.savingPhoneIds = this.savingPhoneIds.filter(id => id !== /** @type {any} */ (user).id);
+        }
     },
 
     formatDate(dateString) {

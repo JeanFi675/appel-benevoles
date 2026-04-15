@@ -149,6 +149,34 @@
                         class="text-xs text-gray-400 italic"
                       >Jamais envoyé</span>
                     </div>
+                    <div class="mt-2 flex items-center gap-1 flex-wrap">
+                      <input
+                        type="tel"
+                        placeholder="06 12 34 56 78"
+                        x-model="editingPhones[user.id]"
+                        @keydown.enter.stop="saveOrphelinPhone(user)"
+                        class="border-2 border-brutal-black px-2 py-1 text-xs font-mono w-36"
+                      />
+                      <button
+                        @click.stop="saveOrphelinPhone(user)"
+                        :disabled="savingPhoneIds.includes(user.id)"
+                        class="brutal-btn text-xs py-1 px-2 border-2 border-brutal-black font-black"
+                        :class="savingPhoneIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-300 hover:bg-blue-200'"
+                        title="Enregistrer le téléphone"
+                      >
+                        <span x-show="!savingPhoneIds.includes(user.id)">💾</span>
+                        <span x-show="savingPhoneIds.includes(user.id)">⏳</span>
+                      </button>
+                      <a
+                        x-show="user.telephone"
+                        :href="formatWhatsAppUrl(user.telephone)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="brutal-btn text-xs py-1 px-2 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300"
+                        @click.stop
+                        title="Contacter par WhatsApp"
+                      >📱</a>
+                    </div>
                   </div>
                 </label>
               </div>
@@ -236,6 +264,33 @@
                           x-show="!user.relance_sent_at"
                           class="text-xs text-gray-400 italic"
                         >Jamais envoyé</span>
+                        <div class="flex items-center gap-1 mt-1">
+                          <input
+                            type="tel"
+                            placeholder="06 12 34 56 78"
+                            x-model="editingPhones[user.id]"
+                            @keydown.enter="saveOrphelinPhone(user)"
+                            class="border-2 border-brutal-black px-2 py-1 text-xs font-mono w-32"
+                          />
+                          <button
+                            @click="saveOrphelinPhone(user)"
+                            :disabled="savingPhoneIds.includes(user.id)"
+                            class="brutal-btn text-xs py-1 px-2 border-2 border-brutal-black font-black"
+                            :class="savingPhoneIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-300 hover:bg-blue-200'"
+                            title="Enregistrer le téléphone"
+                          >
+                            <span x-show="!savingPhoneIds.includes(user.id)">💾</span>
+                            <span x-show="savingPhoneIds.includes(user.id)">⏳</span>
+                          </button>
+                          <a
+                            x-show="user.telephone"
+                            :href="formatWhatsAppUrl(user.telephone)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="brutal-btn text-xs py-1 px-2 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300"
+                            title="Contacter par WhatsApp"
+                          >📱</a>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -327,6 +382,14 @@
                         <span x-show="!sendingRelanceIds.includes(user.id)">📧 Envoyer relance</span>
                         <span x-show="sendingRelanceIds.includes(user.id)">⏳ Envoi...</span>
                       </button>
+                      <a
+                        x-show="user.telephone"
+                        :href="formatWhatsAppUrl(user.telephone)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300 whitespace-nowrap"
+                        @click.stop
+                      >📱 WhatsApp</a>
                       <span
                         x-show="user.relance_sent_at"
                         class="text-xs font-bold text-green-700"
@@ -425,6 +488,13 @@
                           <span x-show="!sendingRelanceIds.includes(user.id)">📧 Envoyer relance</span>
                           <span x-show="sendingRelanceIds.includes(user.id)">⏳ Envoi...</span>
                         </button>
+                        <a
+                          x-show="user.telephone"
+                          :href="formatWhatsAppUrl(user.telephone)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300 whitespace-nowrap text-center"
+                        >📱 WhatsApp</a>
                         <span
                           x-show="user.relance_sent_at"
                           class="text-xs font-bold text-green-700 whitespace-nowrap"
