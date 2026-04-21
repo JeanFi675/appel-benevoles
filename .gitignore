@@ -59,11 +59,12 @@ coverage/
 supabase/.temp/
 supabase/migrations_backup/
 
-# Documentation (sauf fichiers racine)
+# Documentation (sauf fichiers racine et données événement)
 *.md
 !README.md
 !ARCHITECTURE.md
 !CLAUDE.md
+!src/data/programme.md
 
 # Scripts locaux & exports JSON
 adherents_non_benevoles.json

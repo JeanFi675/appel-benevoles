@@ -112,6 +112,19 @@ export default defineConfig({
             },
           },
         },
+        {
+          entry: "src/js/admin-timeline.js",
+          filename: "admin-timeline.html",
+          template: "admin-timeline.html",
+          injectOptions: {
+            data: {
+              title: "Vue Chrono des Postes - Bénévoles Escalade",
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            },
+          },
+        },
       ],
     }),
   ],
@@ -127,6 +140,7 @@ export default defineConfig({
         juges: resolve(__dirname, "juges.html"),
         "admin-juges": resolve(__dirname, "admin-juges.html"),
         "admin-connexions": resolve(__dirname, "admin-connexions.html"),
+        "admin-timeline": resolve(__dirname, "admin-timeline.html"),
         officiels: resolve(__dirname, "officiels.html"),
       },
     },
