@@ -13,7 +13,7 @@
     <div class="text-xs font-bold text-gray-500 mt-1">
       <span x-text="tooltip.debutStr"></span> – <span x-text="tooltip.finStr"></span>
     </div>
-    <div class="text-xs mt-1 font-bold">Bénévoles : <span x-text="tooltip.nb_min + '–' + tooltip.nb_max"></span></div>
+    <div class="text-xs mt-1 font-bold">Bénévoles : <span x-text="tooltip.inscrits"></span> / <span x-text="tooltip.nb_min + '–' + tooltip.nb_max"></span></div>
     <div class="text-xs text-gray-600 mt-2 italic leading-snug" x-show="tooltip.description" x-text="tooltip.description"></div>
   </div>
 
@@ -90,9 +90,32 @@
 
       <!-- GANTT groupé par titre -->
       <div class="p-4">
-        <div class="font-black text-sm uppercase mb-3">
-          Postes du jour
-          <span class="font-normal normal-case text-gray-500 text-xs ml-2">— groupés par type, cercles dorés = programme</span>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+          <div class="font-black text-sm uppercase">
+            Postes du jour
+            <span class="font-normal normal-case text-gray-500 text-xs ml-2">— groupés par type</span>
+          </div>
+          <!-- Légende Jauge -->
+          <div class="flex gap-3 text-xs font-bold bg-white px-3 py-2 border-2 border-brutal-black shadow-brutal-sm flex-wrap items-center">
+            <span class="flex items-center gap-1" title="Inscrits < Min"><span class="inline-block w-3 h-3 bg-red-100 border border-red-400"></span>&lt; Min</span>
+            <span class="flex items-center gap-1" title="Min ≤ Inscrits < Max"><span class="inline-block w-3 h-3 bg-yellow-100 border border-yellow-400"></span>≥ Min</span>
+            <span class="flex items-center gap-1" title="Inscrits ≥ Max"><span class="inline-block w-3 h-3 bg-green-100 border border-green-400"></span>Complet</span>
+            <div class="w-px h-4 bg-gray-300 mx-1"></div>
+            
+            <span class="flex items-center gap-1" title="La zone plus sombre représente le nombre d'inscrits">
+              <div class="flex w-4 h-3 border border-brutal-black">
+                <div class="w-1/2 h-full bg-gray-400"></div>
+                <div class="w-1/2 h-full bg-gray-100"></div>
+              </div>
+              Zone sombre = Inscrits
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="inline-block w-[2px] h-3 bg-brutal-black"></span>Ligne Min
+            </span>
+            
+            <div class="w-px h-4 bg-gray-300 mx-1"></div>
+            <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full bg-amber-400 border border-brutal-black"></span>Prog.</span>
+          </div>
         </div>
         <div class="space-y-1">
           <template x-for="group in ganttGroups" :key="'grp-' + group.titre">
@@ -115,14 +138,26 @@
                 <!-- Barres du poste -->
                 <template x-for="bar in group.bars" :key="'bar-' + bar.id">
                   <div
-                    class="absolute top-0 h-full rounded-sm flex items-center overflow-hidden cursor-pointer transition-opacity hover:opacity-75"
+                    class="absolute top-0 h-full rounded-sm flex items-center overflow-hidden cursor-pointer transition-opacity hover:opacity-75 border-2"
                     :style="'left:' + bar.leftPct + '%; width:' + Math.max(bar.widthPct, 0.8) + '%;'"
-                    :class="group.gIdx % 2 === 0 ? 'bg-gray-900' : 'bg-gray-600'"
+                    :class="bar.baseColor + ' ' + bar.borderColor"
                     @mouseenter="showTooltip(bar, $event)"
                     @mousemove="moveTooltip($event)"
                     @mouseleave="hideTooltip()"
                   >
-                    <span class="text-white font-bold px-1 truncate" style="font-size: 10px;"
+                    <!-- Remplissage (Inscrits) sur la largeur -->
+                    <div class="absolute top-0 left-0 h-full" 
+                         :class="bar.fillColor" 
+                         :style="'width: ' + Math.min(100, (bar.inscrits / Math.max(1, bar.nb_max)) * 100) + '%'"
+                         x-show="bar.nb_max > 0"></div>
+                    
+                    <!-- Ligne verticale pour le Minimum -->
+                    <div class="absolute top-0 w-[2px] h-full bg-brutal-black opacity-50 z-10" 
+                         :style="'left: calc(' + Math.min(100, (bar.nb_min / Math.max(1, bar.nb_max)) * 100) + '% - 2px);'" 
+                         x-show="bar.nb_max > 0 && bar.nb_min > 0"></div>
+
+                    <!-- Texte Heures -->
+                    <span class="font-bold px-1 truncate z-20 text-brutal-black relative" style="font-size: 10px;"
                           x-text="bar.debutStr + '–' + bar.finStr"></span>
                   </div>
                 </template>

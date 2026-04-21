@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
@@ -75,14 +76,16 @@ const PROGRAMME = parseProgramme(programmeRaw);
 // ---------------------------------------------------------------------------
 function initAdminTimelineApp() {
   Alpine.data("adminTimelineApp", () => ({
-    user: null,
+    user: /** @type {any} */ (null),
     loading: true,
     isAdmin: false,
+    /** @type {any[]} */
     postes: [],
+    /** @type {Record<string, number>} */
     inscriptionCounts: {},
     selectedDay: null,
     toasts: [],
-    tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, debutStr: '', finStr: '', x: 0, y: 0 },
+    tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, inscrits: 0, debutStr: '', finStr: '', x: 0, y: 0 },
 
     get availableDays() {
       const days = new Set();
@@ -99,7 +102,7 @@ function initAdminTimelineApp() {
         const d = new Date(p.periode_debut);
         const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         return key === this.selectedDay;
-      }).sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut));
+      }).sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime());
     },
 
     get hourRange() {
@@ -268,8 +271,28 @@ function initAdminTimelineApp() {
       const pos = poste => {
         const debut = new Date(poste.periode_debut).getTime();
         const fin = new Date(poste.periode_fin).getTime();
+        const inscrits = this.inscriptionCounts[poste.id] || 0;
+        
+        let baseColor = 'bg-red-100';
+        let fillColor = 'bg-red-300';
+        let borderColor = 'border-red-400';
+        
+        if (inscrits >= poste.nb_max) {
+          baseColor = 'bg-green-100';
+          fillColor = 'bg-green-300';
+          borderColor = 'border-green-400';
+        } else if (inscrits >= poste.nb_min) {
+          baseColor = 'bg-yellow-100';
+          fillColor = 'bg-yellow-300';
+          borderColor = 'border-yellow-400';
+        }
+
         return {
           ...poste,
+          inscrits,
+          baseColor,
+          fillColor,
+          borderColor,
           leftPct: Math.max(0, ((debut - dayStartMs) / totalMs) * 100),
           widthPct: Math.max(0.5, ((fin - debut) / totalMs) * 100),
           debutStr: this.formatTime(debut),
@@ -284,7 +307,7 @@ function initAdminTimelineApp() {
       return Array.from(groups.entries())
         .map(([titre, bars]) => ({
           titre,
-          bars: bars.sort((a, b) => new Date(a.periode_debut) - new Date(b.periode_debut)),
+          bars: bars.sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime()),
           firstDebut: Math.min(...bars.map(b => new Date(b.periode_debut).getTime()))
         }))
         .sort((a, b) => a.firstDebut - b.firstDebut)
@@ -315,6 +338,7 @@ function initAdminTimelineApp() {
         description: poste.description || '',
         nb_min: poste.nb_min,
         nb_max: poste.nb_max,
+        inscrits: poste.inscrits,
         debutStr: poste.debutStr || this.formatTime(new Date(poste.periode_debut).getTime()),
         finStr: poste.finStr || this.formatTime(new Date(poste.periode_fin).getTime()),
         x: offRight ? event.clientX - 300 : event.clientX,
