@@ -74,7 +74,7 @@ const PROGRAMME = parseProgramme(programmeRaw);
 // ---------------------------------------------------------------------------
 // Composant Alpine
 // ---------------------------------------------------------------------------
-function initAdminTimelineApp() {
+export function initAdminTimelineApp() {
   Alpine.data("adminTimelineApp", () => ({
     user: /** @type {any} */ (null),
     loading: true,
@@ -435,5 +435,4 @@ function initAdminTimelineApp() {
   }));
 }
 
-initAdminTimelineApp();
-Alpine.start();
+// initAdminTimelineApp() and Alpine.start() are called by admin.js

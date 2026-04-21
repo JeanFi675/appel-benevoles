@@ -1,95 +1,14 @@
-<!-- Tab: Analyse des inscriptions -->
-<div x-show="activeTab === 'rapport-ia'" class="space-y-8">
-
-    <!-- TAUX GLOBAL -->
-    <div class="brutal-card bg-brutal-white p-6">
-        <h2 class="text-3xl font-black mb-6">📈 Taux de remplissage global</h2>
-        <template x-if="postes.length > 0">
-            <div x-data="{
-                get inscrits() { return postes.reduce((s,p) => s + (p.inscrits_actuels||0), 0) },
-                get min()      { return postes.reduce((s,p) => s + (p.nb_min||0), 0) },
-                get max()      { return postes.reduce((s,p) => s + (p.nb_max||0), 0) },
-                get taux()     { return this.min > 0 ? Math.round((this.inscrits/this.min)*100) : 0 },
-                get couleur()  { return getTauxCouleur(this.taux) }
-            }">
-                <div class="flex items-end gap-4 mb-3">
-                    <span class="text-6xl font-black" :class="couleur.text" x-text="taux + '%'"></span>
-                    <span class="text-xl font-bold text-gray-500 mb-2">vs minimum</span>
-                </div>
-                <div class="w-full bg-gray-200 border-2 border-brutal-black h-8 mb-3">
-                    <div class="h-full transition-all" :class="couleur.bar" :style="`width: ${Math.min(taux, 100)}%`"></div>
-                </div>
-                <div class="flex flex-wrap gap-6 text-sm font-bold">
-                    <span><span class="text-brutal-black font-black text-lg" x-text="inscrits"></span> inscrits</span>
-                    <span class="text-gray-400">/</span>
-                    <span><span class="font-black text-lg" x-text="min"></span> min</span>
-                    <span class="text-gray-400">/</span>
-                    <span><span class="font-black text-lg" x-text="max"></span> max</span>
-                    <span class="ml-auto text-red-600" x-show="inscrits < min">
-                        Manquants : <span class="font-black" x-text="min - inscrits"></span> pour le min —
-                        <span class="font-black" x-text="max - inscrits"></span> pour le max
-                    </span>
-                </div>
-            </div>
-        </template>
+<!-- Tab: Analyse (Vue Chrono) -->
+<div x-show="activeTab === 'rapport-ia'" x-data="adminTimelineApp()" x-init="init()" class="space-y-8" x-cloak>
+    
+    <!-- Sélecteur de jour (si aucun jour sélectionné) -->
+    <div x-show="!selectedDay">
+        <%- include('/src/partials/sections/admin-timeline/day-picker.html') %>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-8">
-
-        <!-- PÉRIODES CRITIQUES -->
-        <div class="brutal-card bg-brutal-white p-6">
-            <h2 class="text-2xl font-black mb-5">⏱️ Périodes — du plus critique au moins critique</h2>
-            <div class="space-y-3">
-                <template x-for="p in getPeriodesCritiques()" :key="p.nom">
-                    <div class="border-2 border-brutal-black p-3" :class="getTauxCouleur(p.taux).bg">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="font-black text-sm uppercase" x-text="p.nom"></span>
-                            <span class="font-black text-lg ml-2 flex-shrink-0" :class="getTauxCouleur(p.taux).text" x-text="p.taux + '%'"></span>
-                        </div>
-                        <div class="w-full bg-white border border-gray-300 h-3 mb-2">
-                            <div class="h-full" :class="getTauxCouleur(p.taux).bar" :style="`width: ${Math.min(p.taux, 100)}%`"></div>
-                        </div>
-                        <div class="flex justify-between text-xs font-bold text-gray-600">
-                            <span x-text="p.inscrits + ' / ' + p.min + ' min / ' + p.max + ' max'"></span>
-                            <span class="text-red-600" x-show="p.manquantsMin > 0">
-                                −<span x-text="p.manquantsMin"></span> min &nbsp;·&nbsp; −<span x-text="p.manquantsMax"></span> max
-                            </span>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </div>
-
-        <!-- POSTES CRITIQUES -->
-        <div class="brutal-card bg-brutal-white p-6">
-            <h2 class="text-2xl font-black mb-1">🚨 Postes en manque — du plus critique au moins critique</h2>
-            <p class="text-xs text-gray-500 font-bold mb-5">Postes de même nom regroupés toutes périodes confondues</p>
-            <div class="space-y-3">
-                <template x-for="p in getPostesCritiques()" :key="p.titre">
-                    <div class="border-2 border-brutal-black p-3" :class="getTauxCouleur(p.taux).bg">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <span class="font-black text-sm" x-text="p.titre"></span>
-                                <span x-show="p.nbPeriodes > 1" class="ml-2 text-xs font-bold text-gray-500 bg-white border border-gray-300 px-1.5 py-0.5" x-text="'×' + p.nbPeriodes + ' périodes'"></span>
-                            </div>
-                            <span class="font-black text-lg ml-2 flex-shrink-0" :class="getTauxCouleur(p.taux).text" x-text="p.taux + '%'"></span>
-                        </div>
-                        <div class="w-full bg-white border border-gray-300 h-3 mb-2">
-                            <div class="h-full" :class="getTauxCouleur(p.taux).bar" :style="`width: ${Math.min(p.taux, 100)}%`"></div>
-                        </div>
-                        <div class="flex justify-between text-xs font-bold text-gray-600">
-                            <span x-text="p.inscrits + ' / ' + p.min + ' min / ' + p.max + ' max'"></span>
-                            <span class="text-red-600">
-                                −<span x-text="p.manquantsMin"></span> min &nbsp;·&nbsp; −<span x-text="p.manquantsMax"></span> max
-                            </span>
-                        </div>
-                    </div>
-                </template>
-                <div x-show="getPostesCritiques().length === 0" class="text-center py-8 text-green-600 font-bold">
-                    ✅ Tous les postes ont atteint leur minimum !
-                </div>
-            </div>
-        </div>
-
+    <!-- Vue chrono (si un jour est sélectionné) -->
+    <div x-show="selectedDay">
+        <%- include('/src/partials/sections/admin-timeline/chart.html') %>
     </div>
+
 </div>

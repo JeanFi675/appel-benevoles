@@ -2,8 +2,10 @@ import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
 import { AdminModule } from "./modules/admin/index.js";
+import { initAdminTimelineApp } from "./admin-timeline.js";
 
 document.addEventListener("alpine:init", () => {
+  initAdminTimelineApp();
   Alpine.data("adminApp", () => ({
     ...AdminModule,
 
