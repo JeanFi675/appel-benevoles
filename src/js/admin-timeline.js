@@ -79,6 +79,7 @@ function initAdminTimelineApp() {
     loading: true,
     isAdmin: false,
     postes: [],
+    inscriptionCounts: {},
     selectedDay: null,
     toasts: [],
     tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, debutStr: '', finStr: '', x: 0, y: 0 },
@@ -139,13 +140,14 @@ function initAdminTimelineApp() {
           if (!byTitre.has(p.titre)) byTitre.set(p.titre, []);
           byTitre.get(p.titre).push(p);
         });
-        let sum_min = 0, sum_max = 0;
+        let sum_min = 0, sum_max = 0, sum_inscrits = 0;
         byTitre.forEach(group => {
           sum_min += Math.max(...group.map(p => p.nb_min || 0));
           sum_max += Math.max(...group.map(p => p.nb_max || 0));
+          sum_inscrits += group.reduce((acc, p) => acc + (this.inscriptionCounts[p.id] ?? 0), 0);
         });
         segs.push({
-          start: t, end: tNext, sum_min, sum_max,
+          start: t, end: tNext, sum_min, sum_max, sum_inscrits,
           posteTitres: Array.from(byTitre.keys()),
           distinctCount: byTitre.size, count: active.length
         });
@@ -161,7 +163,7 @@ function initAdminTimelineApp() {
 
     get maxLoad() {
       if (!this.segments.length) return 1;
-      return Math.max(...this.segments.map(s => s.sum_max), 1);
+      return Math.max(...this.segments.map(s => Math.max(s.sum_max, s.sum_inscrits ?? 0)), 1);
     },
 
     // Ticks Y pour l'axe vertical HTML (en dehors du SVG)
@@ -195,13 +197,14 @@ function initAdminTimelineApp() {
 
       const maxFill = [`${xOf(segs[0].start).toFixed(1)},${chartH}`];
       const minFill = [`${xOf(segs[0].start).toFixed(1)},${chartH}`];
-      const minLinePts = [], maxLinePts = [];
+      const minLinePts = [], maxLinePts = [], inscritLinePts = [];
       segs.forEach(seg => {
         const x1 = xOf(seg.start).toFixed(1), x2 = xOf(seg.end).toFixed(1);
         maxFill.push(`${x1},${yOf(seg.sum_max)}`, `${x2},${yOf(seg.sum_max)}`);
         minFill.push(`${x1},${yOf(seg.sum_min)}`, `${x2},${yOf(seg.sum_min)}`);
         minLinePts.push(`${x1},${yOf(seg.sum_min)}`, `${x2},${yOf(seg.sum_min)}`);
         maxLinePts.push(`${x1},${yOf(seg.sum_max)}`, `${x2},${yOf(seg.sum_max)}`);
+        inscritLinePts.push(`${x1},${yOf(seg.sum_inscrits)}`, `${x2},${yOf(seg.sum_inscrits)}`);
       });
       maxFill.push(`${xOf(segs[segs.length-1].end).toFixed(1)},${chartH}`);
       minFill.push(`${xOf(segs[segs.length-1].end).toFixed(1)},${chartH}`);
@@ -237,6 +240,7 @@ function initAdminTimelineApp() {
   ${ticks}
   <polyline points="${maxLinePts.join(' ')}" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linejoin="miter"/>
   <polyline points="${minLinePts.join(' ')}" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-linejoin="miter"/>
+  <polyline points="${inscritLinePts.join(' ')}" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linejoin="miter" stroke-dasharray="6,3"/>
   ${labels}
   ${progMarkers}
   <line x1="0" y1="${chartH}" x2="${W}" y2="${chartH}" stroke="#374151" stroke-width="1.5"/>
@@ -387,6 +391,21 @@ function initAdminTimelineApp() {
       } catch (err) {
         console.error('Erreur chargement postes:', err);
         this.addToast('Erreur lors du chargement des postes', 'error');
+      }
+      await this.loadInscriptionCounts();
+    },
+
+    async loadInscriptionCounts() {
+      try {
+        const { data, error } = await ApiService.fetch('inscriptions', {
+          select: 'poste_id'
+        });
+        if (error) throw error;
+        const counts = {};
+        (data || []).forEach(i => { counts[i.poste_id] = (counts[i.poste_id] || 0) + 1; });
+        this.inscriptionCounts = counts;
+      } catch (err) {
+        console.error('Erreur chargement inscriptions:', err);
       }
     }
   }));
