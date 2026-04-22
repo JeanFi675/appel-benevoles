@@ -8,6 +8,10 @@
         :class="{ 'active': activeTab === 'periodes' }">
         📅 Périodes
     </button>
+    <button @click="activeTab = 'referents'" class="tab-button px-8 py-4 font-black text-lg"
+        :class="{ 'active': activeTab === 'referents' }">
+        👑 Référents
+    </button>
     <button @click="activeTab = 'benevoles'" class="tab-button px-8 py-4 font-black text-lg"
         :class="{ 'active': activeTab === 'benevoles' }">
         👥 Bénévoles

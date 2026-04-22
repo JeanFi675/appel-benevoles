@@ -43,6 +43,10 @@ export const AdminModule = {
     adhesionsNom: {},    // map "NOM_prenom_normalisé" → row (fallback)
     adhesionsLoading: false,
 
+    // Referents Assignments
+    referentAssignments: {},
+    uniquePosteTitres: [],
+
     // Search & Modal
 
     // Search & Modal
@@ -99,7 +103,7 @@ export const AdminModule = {
     formatTime,
 
     getReferents() {
-        return this.benevoles.filter(b => b.role === 'referent' || b.role === 'admin');
+        return this.benevoles.filter(b => ['referent', 'admin', 'admin-juge'].includes(b.role));
     },
 
     getBenevolesStandardAvecInscriptions() {
@@ -382,6 +386,133 @@ export const AdminModule = {
         const p5 = this.loadAdhesionsClub();
 
         await Promise.all([p1, p2, p3, p4, p5]);
+        this.initReferentAssignments();
+    },
+
+    initReferentAssignments() {
+        const uniqueTitres = new Set();
+        this.postes.forEach(p => {
+            if (p.titre) uniqueTitres.add(p.titre);
+        });
+        this.uniquePosteTitres = Array.from(uniqueTitres).sort();
+
+        const assignments = {};
+        this.getReferents().forEach(ref => {
+            // Find all postes where this referent is assigned
+            const refPostes = this.postes.filter(p => p.referent_id === ref.id);
+            
+            // Group them by titre
+            const groupedByTitre = {};
+            refPostes.forEach(p => {
+                if (!groupedByTitre[p.titre]) {
+                    groupedByTitre[p.titre] = [];
+                }
+                groupedByTitre[p.titre].push(p.periode_id);
+            });
+
+            const lines = [];
+            for (const [titre, periodes] of Object.entries(groupedByTitre)) {
+                lines.push({ titre, periodes });
+            }
+            assignments[ref.id] = lines;
+        });
+
+        this.referentAssignments = assignments;
+    },
+
+    addReferentAssignmentLine(refId) {
+        if (!this.referentAssignments[refId]) {
+            this.referentAssignments[refId] = [];
+        }
+        this.referentAssignments[refId].push({ titre: '', periodes: [] });
+    },
+
+    removeReferentAssignmentLine(refId, index) {
+        if (this.referentAssignments[refId]) {
+            this.referentAssignments[refId].splice(index, 1);
+            this.saveReferentAssignments(refId);
+        }
+    },
+
+    getPeriodesForTitre(titre) {
+        if (!titre) return [];
+        const postesAvecCeTitre = this.postes.filter(p => p.titre === titre);
+        const periodesIds = new Set(postesAvecCeTitre.map(p => p.periode_id));
+        return this.periodes.filter(p => periodesIds.has(p.id));
+    },
+
+    getOrphanPostes() {
+        const orphans = {};
+        this.postes.forEach(p => {
+            if (!p.referent_id) {
+                if (!orphans[p.titre]) orphans[p.titre] = [];
+                const periode = this.periodes.find(per => per.id === p.periode_id);
+                if (periode) {
+                    orphans[p.titre].push(periode);
+                }
+            }
+        });
+
+        return Object.entries(orphans).map(([titre, periodes]) => {
+            // Trier les périodes par ordre
+            periodes.sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+            return { titre, periodes };
+        }).sort((a, b) => a.titre.localeCompare(b.titre));
+    },
+
+    async saveReferentAssignments(refId) {
+        this.loading = true;
+        try {
+            const assignments = this.referentAssignments[refId] || [];
+            
+            // On ignore les lignes incomplètes silencieusement au lieu de bloquer
+            // car l'utilisateur peut juste être en train de décocher la dernière case
+            // ou d'ajouter une nouvelle ligne.
+
+            // We need to update referent_id on the corresponding postes.
+            // 1. Get all current postes for this referent to clear them if they were removed
+            const oldRefPostes = this.postes.filter(p => p.referent_id === refId);
+            
+            // 2. Identify which postes should NOW be assigned to this referent
+            const newRefPosteIds = new Set();
+            for (const a of assignments) {
+                // Find matching postes by title and periode
+                for (const pid of a.periodes) {
+                    const matchingPoste = this.postes.find(p => p.titre === a.titre && p.periode_id === pid);
+                    if (matchingPoste) {
+                        newRefPosteIds.add(matchingPoste.id);
+                    }
+                }
+            }
+
+            // 3. Compare and execute updates
+            const updates = [];
+            
+            // Remove from old postes that are not in new list
+            for (const oldP of oldRefPostes) {
+                if (!newRefPosteIds.has(oldP.id)) {
+                    updates.push(ApiService.update('postes', { referent_id: null }, { id: oldP.id }));
+                }
+            }
+
+            // Add to new postes
+            for (const newPid of newRefPosteIds) {
+                updates.push(ApiService.update('postes', { referent_id: refId }, { id: newPid }));
+            }
+
+            if (updates.length > 0) {
+                await Promise.all(updates);
+            }
+
+            this.showToast('✅ Attributions sauvegardées avec succès !', 'success');
+            await this.loadPostes(); // Reload to get fresh data
+            this.initReferentAssignments(); // Rebuild state from fresh data
+        } catch (error) {
+            console.error(error);
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
     },
 
     /**
