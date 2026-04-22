@@ -461,7 +461,6 @@ export const AdminModule = {
     },
 
     async saveReferentAssignments(refId) {
-        this.loading = true;
         try {
             const assignments = this.referentAssignments[refId] || [];
             
@@ -492,26 +491,31 @@ export const AdminModule = {
             for (const oldP of oldRefPostes) {
                 if (!newRefPosteIds.has(oldP.id)) {
                     updates.push(ApiService.update('postes', { referent_id: null }, { id: oldP.id }));
+                    
+                    // Mise à jour de l'état local pour éviter le rechargement complet
+                    const localP = this.postes.find(p => p.id === oldP.id);
+                    if (localP) localP.referent_id = null;
                 }
             }
 
             // Add to new postes
             for (const newPid of newRefPosteIds) {
                 updates.push(ApiService.update('postes', { referent_id: refId }, { id: newPid }));
+                
+                // Mise à jour de l'état local pour éviter le rechargement complet
+                const localP = this.postes.find(p => p.id === newPid);
+                if (localP) localP.referent_id = refId;
             }
 
             if (updates.length > 0) {
                 await Promise.all(updates);
             }
 
-            this.showToast('✅ Attributions sauvegardées avec succès !', 'success');
-            await this.loadPostes(); // Reload to get fresh data
-            this.initReferentAssignments(); // Rebuild state from fresh data
+            // La sauvegarde se fait "en sourdine", 
+            // la vue n'est pas reconstruite pour ne pas interrompre l'utilisateur.
         } catch (error) {
             console.error(error);
             this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
         }
     },
 

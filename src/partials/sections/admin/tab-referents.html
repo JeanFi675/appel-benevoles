@@ -33,7 +33,7 @@
                                 <!-- Sélection du poste -->
                                 <div class="w-full md:w-1/3">
                                     <label class="block text-xs font-bold uppercase mb-1">Type de poste</label>
-                                    <select x-model="assign.titre" @change="assign.periodes = []; saveReferentAssignments(ref.id)" class="brutal-input w-full px-3 py-2 text-sm font-bold bg-white">
+                                    <select x-model="assign.titre" @change="assign.periodes = []" class="brutal-input w-full px-3 py-2 text-sm font-bold bg-white">
                                         <option value="">— Sélectionner —</option>
                                         <template x-for="titre in uniquePosteTitres" :key="titre">
                                             <option :value="titre" x-text="titre"></option>
