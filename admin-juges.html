@@ -62,14 +62,14 @@
                             </div>
                             
                             <div class="flex flex-col gap-3 mt-4 border-t-2 border-dashed border-gray-200 pt-3 text-sm">
-                                <label class="flex items-center gap-3">
-                                    <input type="checkbox" x-model="juge.presence_samedi" @change="updatePresence(juge)" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl" x-text="juge.presence_samedi ? '✅' : '❌'"></span>
                                     <span class="font-bold uppercase">Présent Samedi</span>
-                                </label>
-                                <label class="flex items-center gap-3">
-                                    <input type="checkbox" x-model="juge.presence_dimanche" @change="updatePresence(juge)" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer" />
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl" x-text="juge.presence_dimanche ? '✅' : '❌'"></span>
                                     <span class="font-bold uppercase">Présent Dimanche</span>
-                                </label>
+                                </div>
                             </div>
                         </div>
                     </template>
@@ -98,17 +98,73 @@
                                     <td class="p-3 font-bold border-r-4 border-brutal-black" x-text="juge.prenom"></td>
                                     <td class="p-3 border-r-4 border-brutal-black font-mono text-sm" x-text="juge.telephone"></td>
                                     <td class="p-3 border-r-4 border-brutal-black text-center font-black" x-text="juge.taille_tshirt"></td>
-                                    <td class="p-3 border-r-4 border-brutal-black text-center">
-                                        <input type="checkbox" x-model="juge.presence_samedi" @change="updatePresence(juge)" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer inline-block" />
+                                    <td class="p-3 border-r-4 border-brutal-black text-center text-xl">
+                                        <span x-text="juge.presence_samedi ? '✅' : '❌'"></span>
                                     </td>
-                                    <td class="p-3 text-center">
-                                        <input type="checkbox" x-model="juge.presence_dimanche" @change="updatePresence(juge)" class="brutal-checkbox w-6 h-6 border-brutal-black cursor-pointer inline-block" />
+                                    <td class="p-3 text-center text-xl">
+                                        <span x-text="juge.presence_dimanche ? '✅' : '❌'"></span>
                                     </td>
                                 </tr>
                             </template>
                             <tr x-show="juges.length === 0">
                                 <td colspan="6" class="p-6 text-center font-bold text-gray-500 italic">Aucun juge inscrit pour le moment.</td>
                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Liste des Juges Non Trouvés -->
+            <section x-show="jugesNonTrouves && jugesNonTrouves.length > 0" class="brutal-card bg-brutal-white p-6 border-4 border-brutal-black shadow-brutal mt-8">
+                <h2 class="text-2xl font-black uppercase mb-4 flex items-center gap-2 text-red-600">
+                    ⚠️ Juges (Google Sheet) non trouvés
+                </h2>
+                <p class="mb-4 font-bold text-gray-700">Ces personnes sont présentes dans le fichier du responsable des juges mais ne sont pas (ou mal) inscrites dans notre base de données.</p>
+                
+                <!-- Mobile List -->
+                <div class="md:hidden space-y-4">
+                    <template x-for="juge in jugesNonTrouves" :key="juge.nom + juge.prenom">
+                        <div class="border-2 border-brutal-black p-4 shadow-brutal-sm bg-brutal-white">
+                            <div class="font-black text-lg leading-tight mb-3" x-text="juge.prenom + ' ' + juge.nom"></div>
+                            
+                            <div class="flex flex-col gap-3 mt-4 border-t-2 border-dashed border-gray-200 pt-3 text-sm">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl" x-text="juge.presence_samedi ? '✅' : '❌'"></span>
+                                    <span class="font-bold uppercase">Présent Samedi</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl" x-text="juge.presence_dimanche ? '✅' : '❌'"></span>
+                                    <span class="font-bold uppercase">Présent Dimanche</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Desktop Table -->
+                <div class="hidden md:block overflow-x-auto border-4 border-brutal-black shadow-brutal">
+                    <table class="w-full text-left bg-white border-collapse">
+                        <thead>
+                            <tr class="bg-brutal-black text-brutal-white uppercase text-sm">
+                                <th class="p-3 border-r-2 border-white">Nom</th>
+                                <th class="p-3 border-r-2 border-white">Prénom</th>
+                                <th class="p-3 border-r-2 border-white text-center whitespace-nowrap">Présent Sam.</th>
+                                <th class="p-3 text-center whitespace-nowrap">Présent Dim.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="juge in jugesNonTrouves" :key="juge.nom + juge.prenom">
+                                <tr class="border-b-4 border-brutal-black hover:bg-gray-100 transition-colors text-red-700">
+                                    <td class="p-3 font-bold border-r-4 border-brutal-black" x-text="juge.nom"></td>
+                                    <td class="p-3 font-bold border-r-4 border-brutal-black" x-text="juge.prenom"></td>
+                                    <td class="p-3 border-r-4 border-brutal-black text-center text-xl">
+                                        <span x-text="juge.presence_samedi ? '✅' : '❌'"></span>
+                                    </td>
+                                    <td class="p-3 text-center text-xl">
+                                        <span x-text="juge.presence_dimanche ? '✅' : '❌'"></span>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>

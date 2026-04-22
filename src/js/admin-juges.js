@@ -9,6 +9,7 @@ function initAdminJugesApp() {
     isAdmin: false,
     isGlobalAdmin: false,
     juges: [],
+    jugesNonTrouves: [],
     toasts: [],
 
     async init() {
@@ -57,29 +58,87 @@ function initAdminJugesApp() {
                 in: { role: ['juge', 'admin-juge'] }
             });
             if (error) throw error;
+            
+            const supabaseJuges = data || [];
+            
+            // Récupération des données du webhook
+            const webhookResponse = await fetch('https://n8n.jpcloudkit.fr/webhook/sync-juge');
+            const webhookJuges = await webhookResponse.json();
+            
+            const normalize = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
+            
+            const matchedJuges = [];
+            const unmatchedJuges = [];
+            const updates = [];
+            
+            // Croisement des données Webhook -> Supabase
+            webhookJuges.forEach(wj => {
+                const wjNom = normalize(wj.nom);
+                const wjPrenom = normalize(wj.prenom);
+                
+                const match = supabaseJuges.find(sj => 
+                    normalize(sj.nom) === wjNom && normalize(sj.prenom) === wjPrenom
+                );
+
+                if (match) {
+                    const newSamedi = wj["present-samedi"] === true;
+                    const newDimanche = wj["present-dimanche"] === true;
+                    
+                    if (match.presence_samedi !== newSamedi || match.presence_dimanche !== newDimanche) {
+                        updates.push(ApiService.update('benevoles', {
+                            presence_samedi: newSamedi,
+                            presence_dimanche: newDimanche
+                        }, { id: match.id }).catch(err => console.error("Erreur sync juge", err)));
+                    }
+
+                    matchedJuges.push({
+                        ...match,
+                        presence_samedi: newSamedi,
+                        presence_dimanche: newDimanche
+                    });
+                } else {
+                    unmatchedJuges.push({
+                        nom: wj.nom,
+                        prenom: wj.prenom,
+                        presence_samedi: wj["present-samedi"],
+                        presence_dimanche: wj["present-dimanche"]
+                    });
+                }
+            });
+            
+            // Ajout des juges Supabase qui ne sont pas dans le webhook
+            supabaseJuges.forEach(sj => {
+                const sjNom = normalize(sj.nom);
+                const sjPrenom = normalize(sj.prenom);
+                const isInWebhook = webhookJuges.some(wj => normalize(wj.nom) === sjNom && normalize(wj.prenom) === sjPrenom);
+                
+                if (!isInWebhook) {
+                    if (sj.presence_samedi !== false || sj.presence_dimanche !== false) {
+                        updates.push(ApiService.update('benevoles', {
+                            presence_samedi: false,
+                            presence_dimanche: false
+                        }, { id: sj.id }).catch(err => console.error("Erreur sync juge absent", err)));
+                    }
+
+                    matchedJuges.push({
+                        ...sj,
+                        presence_samedi: false,
+                        presence_dimanche: false
+                    });
+                }
+            });
+
+            if (updates.length > 0) {
+                await Promise.all(updates);
+                this.showToast(`✅ ${updates.length} profil(s) synchronisé(s) depuis le fichier.`, "success");
+            }
+
             // Trier par nom alphabétique
-            this.juges = (data || []).sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
+            this.juges = matchedJuges.sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
+            this.jugesNonTrouves = unmatchedJuges.sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
         } catch(err) {
             console.error("Erreur chargement juges:", err);
             this.showToast("❌ Impossible de charger les juges", "error");
-        }
-    },
-
-    // @ts-ignore
-    async updatePresence(juge) {
-        try {
-             const currentUser = /** @type {any} */ (juge);
-             // On utilise update pour être sûr de ne pas écraser d'autres champs, et éviter les erreurs RLS sur l'insert.
-             const { error } = await ApiService.update('benevoles', {
-                 presence_samedi: currentUser.presence_samedi,
-                 presence_dimanche: currentUser.presence_dimanche
-             }, { id: currentUser.id });
-             if (error) throw error;
-             this.showToast(`✅ Présence mise à jour pour ${juge.prenom} ${juge.nom}`, "success");
-        } catch (err) {
-             console.error("Erreur mise à jour présence:", err);
-             this.showToast("❌ Erreur lors de la mise à jour de la présence", "error");
-             await this.loadJuges();
         }
     },
 
