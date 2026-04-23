@@ -112,6 +112,19 @@ export default defineConfig({
             },
           },
         },
+        {
+          entry: "src/js/besoins.js",
+          filename: "besoins.html",
+          template: "besoins.html",
+          injectOptions: {
+            data: {
+              title: "Besoins Bénévoles - Escalade",
+            },
+            ejsOptions: {
+              root: resolve(__dirname),
+            },
+          },
+        },
 
       ],
     }),
@@ -129,6 +142,7 @@ export default defineConfig({
         "admin-juges": resolve(__dirname, "admin-juges.html"),
         "admin-connexions": resolve(__dirname, "admin-connexions.html"),
         officiels: resolve(__dirname, "officiels.html"),
+        besoins: resolve(__dirname, "besoins.html"),
       },
     },
   },

@@ -389,16 +389,14 @@ export function initAdminTimelineApp() {
       try {
         const { data, error } = await ApiService.fetch('benevoles', { eq: { user_id: this.user.id } });
         if (error) throw error;
-        if (data && data.some(p => p.role === 'admin')) {
-          this.isAdmin = true;
-          await this.loadPostes();
-        } else {
-          this.isAdmin = false;
-          window.location.href = 'index.html';
-        }
+        this.isAdmin = data && data.some(p => p.role === 'admin');
+        // Toujours charger les postes, même si pas admin, car l'accès est public
+        await this.loadPostes();
       } catch (err) {
         console.error('Erreur vérification droits admin:', err);
         this.isAdmin = false;
+        // On essaie quand même de charger les postes au cas où
+        await this.loadPostes();
       } finally {
         this.loading = false;
       }
