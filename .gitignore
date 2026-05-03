@@ -68,3 +68,8 @@ supabase/migrations_backup/
 
 # Scripts locaux & exports JSON
 adherents_non_benevoles.json
+
+# Outils locaux (non déployés)
+tools/
+benevoles.json
+
