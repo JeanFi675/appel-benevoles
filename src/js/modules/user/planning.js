@@ -754,11 +754,16 @@ export const PlanningModule = {
 
             console.log("Envoi du planning avec token (masked):", token.substring(0, 10) + "...");
 
+            const path = window.location.pathname;
+            const baseDir = path.substring(0, path.lastIndexOf('/') + 1);
+            const baseUrl = window.location.origin + baseDir;
+
             const { data, error } = await ApiService.invoke('send-planning', {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`
-                }
+                },
+                body: { baseUrl }
             });
 
             if (error) throw error;
