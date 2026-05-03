@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
               <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">À votre arrivée</td>
               <td style="padding: 8px; font-size: 14px;">
                 Présentez-vous au QG bénévole <strong>30 min avant votre 1er créneau</strong> pour récupérer votre t-shirt.<br>
-                <span style="color: #c00; font-weight: bold;">Le respect des horaires est essentiel pour la bonne fluidité de l'événement — merci de ne pas être en retard !</span>
+                <span style="color: #c00; font-weight: bold;">Le programme du weekend est dense et ne laisse pas de place aux imprévus — votre ponctualité est précieuse pour toute l'équipe.</span>
               </td>
             </tr>
             <tr style="border-top: 1px solid #ddd;">
@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
             <tr style="border-top: 1px solid #ddd;">
               <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">Sur le site</td>
               <td style="padding: 8px; font-size: 14px;">
-                Le site contient plus d'informations sur la compétition, notamment le <strong>Planning général</strong> qui vous permet de consulter tout le programme du weekend.<br>
+                N'hésitez pas à revenir sur le site : vous y trouverez le planning général du weekend ainsi que les coordonnées de votre référent pour chacun de vos postes — pour savoir exactement qui rejoindre dès votre arrivée.<br>
                 <a href="https://jeanfi675.github.io/appel-benevoles/" style="color: #000; font-size: 12px;">Accéder au site →</a>
               </td>
             </tr>
