@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import nodemailer from "npm:nodemailer@6.9.7";
+import QRCode from "npm:qrcode@1.5.4";
 import { Buffer } from "node:buffer";
 
 const corsHeaders = {
@@ -8,11 +9,9 @@ const corsHeaders = {
 };
 
 async function generateQRBuffer(url: string): Promise<Buffer> {
-  const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(url)}`;
-  const response = await fetch(apiUrl);
-  if (!response.ok) throw new Error(`QR API error: ${response.status}`);
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  const dataUrl: string = await QRCode.toDataURL(url, { width: 200, margin: 2 });
+  const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+  return Buffer.from(base64, 'base64');
 }
 
 Deno.serve(async (req) => {
@@ -204,9 +203,8 @@ Deno.serve(async (req) => {
             contentType: 'image/png',
         });
 
-        // QR Cagnotte — un par compte (premier profil du compte)
-        const primaryProfile = profiles[0];
-        const cagnotteUrl = `${baseUrl}debit.html?id=${primaryProfile.id}`;
+        // QR Cagnotte — un par compte, même ID que le frontend (user.id)
+        const cagnotteUrl = `${baseUrl}debit.html?id=${user.id}`;
         const cagnotteBuffer = await generateQRBuffer(cagnotteUrl);
         attachments.push({
             filename: 'qr-cagnotte.png',
