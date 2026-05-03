@@ -155,7 +155,17 @@ Deno.serve(async (req) => {
       <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
         <h1 style="text-align: center; border-bottom: 4px solid #000; padding-bottom: 10px;">Votre Planning Bénévole</h1>
         <p>Bonjour,</p>
-        <p>Voici le récapitulatif de vos missions bénévoles :</p>
+        <p>
+          Merci de faire partie de l'équipe bénévole du <strong>Championnat de France
+          d'escalade de difficulté jeunes</strong> — votre engagement compte vraiment !
+        </p>
+        <p>
+          La compétition approche et nous avons hâte de vous retrouver sur place.
+          Vous trouverez dans ce mail votre planning de missions, vos QR codes,
+          les informations pratiques pour le jour J, ainsi qu'un lien vers
+          la plateforme de covoiturage dédiée à l'événement.
+        </p>
+        <p>Voici le récapitulatif de vos missions :</p>
     `;
 
     for (const [periode, missions] of sortedGroups) {
@@ -241,11 +251,51 @@ Deno.serve(async (req) => {
         `;
     }
 
-    // 8. Footer
+    // 8. Infos pratiques
     htmlContent += `
+        <div style="margin-top: 30px; border: 2px solid #000; padding: 15px; background-color: #f9f9f9;">
+          <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">📍 Infos pratiques</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 8px 8px 0; vertical-align: top; width: 30%; font-weight: bold; font-size: 14px;">Lieu</td>
+              <td style="padding: 8px; font-size: 14px;">
+                110 rue des Alpes — 74800 Saint-Pierre-en-Faucigny<br>
+                <a href="https://maps.google.com/?q=110+rue+des+Alpes+74800+Saint-Pierre-en-Faucigny" style="color: #000; font-size: 12px;">Voir sur Google Maps →</a>
+              </td>
+            </tr>
+            <tr style="border-top: 1px solid #ddd;">
+              <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">À votre arrivée</td>
+              <td style="padding: 8px; font-size: 14px;">
+                Présentez-vous au QG bénévole <strong>30 min avant votre 1er créneau</strong> pour récupérer votre t-shirt.
+              </td>
+            </tr>
+            <tr style="border-top: 1px solid #ddd;">
+              <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">Empêchement ?</td>
+              <td style="padding: 8px; font-size: 14px;">
+                Si vous ne pouvez finalement pas être présent(e), merci de modifier vos inscriptions directement sur le site et de répondre à ce mail pour nous prévenir.<br>
+                <a href="https://jeanfi675.github.io/appel-benevoles/" style="color: #000; font-size: 12px;">Accéder au site →</a>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-top: 20px; border: 2px solid #000; padding: 15px; background-color: #f9f9f9;">
+          <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">🚗 Covoiturage</h2>
+          <p style="font-size: 14px; margin: 10px 0;">
+            Une plateforme de covoiturage a été mise en place spécialement pour la compétition.
+            Que vous ayez une place à proposer ou un trajet à trouver, n'hésitez pas à l'utiliser !
+          </p>
+          <p style="text-align: center; margin: 15px 0;">
+            <a href="https://togetzer.com/france-esc-diff-jeunes-2026"
+               style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
+              Accéder à la plateforme de covoiturage →
+            </a>
+          </p>
+        </div>
+
         <div style="margin-top: 30px; text-align: center; color: #333;">
-            <p style="font-size: 16px; font-weight: bold;">Merci pour votre engagement ! N'oubliez pas de venir 30 min avant le début de votre 1er créneau pour récupérer votre t-shirt au QG bénévole.</p>
-            <p style="font-size: 12px; color: #888; margin-top: 16px;">Ceci est un email automatique, merci de ne pas y répondre.</p>
+            <p style="font-size: 16px; font-weight: bold;">Merci pour votre engagement !</p>
+            <p style="font-size: 12px; color: #888; margin-top: 16px;">En cas d'empêchement ou de problème important, répondez directement à ce mail.</p>
         </div>
       </div>
     `;
