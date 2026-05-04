@@ -38,6 +38,10 @@ export const AdminModule = {
     },
     savingConfig: false,
 
+    // Mail de rappel
+    sendingRappel: false,
+    rappelResult: null,
+
     // Adhésions club (NocoDB → Supabase)
     adhesionsData: {},   // map mail normalisé → row
     adhesionsNom: {},    // map "NOM_prenom_normalisé" → row (fallback)
@@ -1356,6 +1360,26 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             this.rapportIAError = '❌ Erreur lors de la génération : ' + error.message;
         } finally {
             this.rapportIALoading = false;
+        }
+    },
+
+    async sendRappelAll(dryRun = false) {
+        this.sendingRappel = true;
+        this.rappelResult = null;
+        try {
+            const { data, error } = await ApiService.invoke('send-rappel-all', {
+                body: { dry_run: dryRun }
+            });
+            if (error) throw error;
+            this.rappelResult = { ...data, dry_run: dryRun };
+            const msg = dryRun
+                ? `🔍 Dry run : ${data.preview?.length ?? 0} emails prévus, ${data.skipped} ignorés`
+                : `✅ ${data.sent} emails envoyés, ${data.skipped} ignorés`;
+            this.showToast(msg, dryRun ? 'info' : 'success');
+        } catch (err) {
+            this.showToast(`❌ ${err.message}`, 'error');
+        } finally {
+            this.sendingRappel = false;
         }
     },
 
