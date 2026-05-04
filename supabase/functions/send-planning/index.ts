@@ -301,6 +301,20 @@ Deno.serve(async (req) => {
           </p>
         </div>
 
+        <div style="margin-top: 20px; border: 2px solid #000; padding: 15px; background-color: #f9f9f9;">
+          <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">📸 Partagez vos photos !</h2>
+          <p style="font-size: 14px; margin: 10px 0;">
+            Une plateforme de partage de photos a été mise en place pour la compétition.
+            Partagez vos meilleurs clichés du weekend et retrouvez les photos prises par toute l'équipe !
+          </p>
+          <p style="text-align: center; margin: 15px 0;">
+            <a href="https://app.eventpics.net/IjdXsodJUiLc"
+               style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
+              Voir et partager les photos →
+            </a>
+          </p>
+        </div>
+
         <div style="margin-top: 30px; text-align: center; color: #333;">
             <p style="font-size: 16px; font-weight: bold;">Merci pour votre engagement !</p>
             <p style="font-size: 12px; color: #888; margin-top: 16px;">En cas d'empêchement ou de problème important, répondez directement à ce mail.</p>
