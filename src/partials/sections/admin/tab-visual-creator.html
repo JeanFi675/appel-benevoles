@@ -1,0 +1,315 @@
+<!-- Tab: Créateur de Planning Interactif (Gantt) -->
+<div x-show="activeTab === 'visual-creator'" class="space-y-8">
+
+    <!-- En-tête de l'onglet -->
+    <div class="brutal-card bg-white p-8">
+        <h2 class="text-3xl font-black mb-2">🛠️ PLANNING INTERACTIF & VISUEL</h2>
+        <p class="text-lg font-bold text-gray-600">
+            Gérez visuellement vos jours, repères programme, postes et tranches horaires de périodes en direct.
+        </p>
+    </div>
+
+    <!-- BARRE DE STATUT DE SAUVEGARDE AUTOMATIQUE -->
+    <div class="brutal-card p-4 flex items-center justify-between transition-colors duration-300"
+         :class="{
+             'bg-green-100 border-green-600 text-green-800': autoSaveStatus === 'synced',
+             'bg-blue-100 border-blue-600 text-blue-800 animate-pulse': autoSaveStatus === 'saving',
+             'bg-red-100 border-red-600 text-red-800': autoSaveStatus === 'error'
+         }">
+        <div class="flex items-center gap-2 font-black">
+            <template x-if="autoSaveStatus === 'synced'">
+                <span>🟢 Modifications enregistrées à la volée</span>
+            </template>
+            <template x-if="autoSaveStatus === 'saving'">
+                <span>⏳ Enregistrement automatique en cours...</span>
+            </template>
+            <template x-if="autoSaveStatus === 'error'">
+                <span>🔴 Erreur lors de la sauvegarde automatique - Vos modifications ne sont pas synchronisées</span>
+            </template>
+        </div>
+        <div class="text-xs font-bold uppercase" x-text="autoSaveStatus === 'synced' ? 'Synchronisé' : (autoSaveStatus === 'saving' ? 'Sauvegarde...' : 'Erreur')"></div>
+    </div>
+
+    <!-- 1. SÉLECTEUR DE JOUR -->
+    <div class="brutal-card bg-white p-8">
+        <h3 class="text-2xl font-black mb-4">📅 1. Choisissez un Jour</h3>
+        <div class="flex flex-wrap gap-3 items-center">
+            <template x-for="day in visualDays" :key="day">
+                <button @click="selectVisualDay(day)"
+                    class="brutal-btn px-6 py-3 text-lg font-black"
+                    :class="visualDaySelected === day ? 'bg-yellow-300' : 'bg-white hover:bg-gray-100'">
+                    <span x-text="formatDay(day)"></span>
+                </button>
+            </template>
+            <button @click="addVisualDay()" class="brutal-btn bg-brutal-ice px-6 py-3 text-lg font-black flex items-center gap-2">
+                ➕ Ajouter un jour
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. PROGRAMME DU JOUR -->
+    <div class="brutal-card bg-white p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-black">⏰ 2. Repères de Programme du Jour</h3>
+            <button @click="addVisualProgramEvent()" class="brutal-btn bg-amber-400 px-4 py-2 font-black shadow-brutal-sm text-sm">
+                ➕ Ajouter un événement
+            </button>
+        </div>
+        <p class="text-sm font-bold text-gray-500 mb-4">
+            Ces événements génèrent des repères verticaux orange pour vous guider lors du tracé des créneaux.
+        </p>
+        
+        <template x-if="visualProgramEvents.length === 0">
+            <p class="text-gray-500 font-bold italic py-4 border-2 border-dashed border-gray-300 text-center rounded">
+                Aucun événement de programme défini pour ce jour.
+            </p>
+        </template>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" x-show="visualProgramEvents.length > 0">
+            <template x-for="(ev, index) in visualProgramEvents" :key="ev.id || index">
+                <div class="border-3 border-brutal-black p-3 bg-gray-50 flex justify-between items-center shadow-brutal-sm">
+                    <div class="min-w-0">
+                        <span class="inline-block bg-amber-400 border-2 border-brutal-black px-2 py-0.5 text-xs font-black" 
+                              x-text="formatDecimalHour(ev.hStart)"></span>
+                        <p class="font-bold text-sm truncate mt-1" :title="ev.description" x-text="ev.description"></p>
+                    </div>
+                    <button @click="deleteVisualProgramEvent(index)" class="text-red-600 hover:text-red-800 font-bold p-1 ml-2 text-sm">
+                        🗑️
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- 3. ZONE INTERACTIVE (GANTT DE CRÉATION) -->
+    <div class="brutal-card bg-white p-8 overflow-x-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-black">📊 3. Tracer vos Créneaux de Postes</h3>
+            <button @click="addVisualLine()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
+                ➕ Ajouter un Type de Poste (Ligne)
+            </button>
+        </div>
+
+        <div class="min-w-[900px] space-y-4">
+            <!-- Règle de l'axe des Heures -->
+            <div class="flex items-center gap-4">
+                <div style="width: 220px;" class="flex-shrink-0 text-right pr-4 text-xs font-black uppercase text-gray-500">Heures</div>
+                <div class="relative flex-1" style="height: 20px;">
+                    <template x-for="h in Array.from({length: hoursRange.end - hoursRange.start + 1}, (_, i) => hoursRange.start + i)">
+                        <div class="absolute text-xs font-black text-gray-500"
+                             :style="'left: ' + (((h - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; transform: translateX(-50%);'">
+                            <span x-text="String(h).padStart(2,'0') + 'h'"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Grille des Périodes (Visualisation) -->
+            <div class="flex items-center gap-4">
+                <div style="width: 220px;" class="flex-shrink-0 text-right pr-4 text-xs font-black uppercase text-gray-500">Périodes associées</div>
+                <div class="relative flex-1 bg-gray-100 border-2 border-brutal-black shadow-brutal-sm" style="height: 32px;">
+                    <template x-for="per in visualPeriods" :key="per.id">
+                        <div class="absolute h-full border-r-2 border-brutal-black bg-blue-100 flex items-center justify-center text-xs font-black overflow-hidden truncate px-1"
+                             :style="'left: ' + (((per.debut - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; width: ' + (((per.fin - per.debut) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
+                             :title="per.nom + ' (' + formatDecimalHour(per.debut) + ' - ' + formatDecimalHour(per.fin) + ')'">
+                            <span x-text="per.nom"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Lignes de Postes -->
+            <template x-for="(line, lineIdx) in visualLines" :key="lineIdx">
+                <div class="flex items-center gap-4 border-b-2 border-gray-100 pb-2">
+                    
+                    <!-- Colonne infos du poste -->
+                    <div style="width: 220px;" class="flex-shrink-0 space-y-1">
+                        <input type="text" x-model="line.titre" placeholder="Titre (ex: Juge)" 
+                               @change="triggerAutoSave()"
+                               class="brutal-input w-full px-2 py-1 font-black text-sm" />
+                        <input type="text" x-model="line.description" placeholder="Description courte" 
+                               @change="triggerAutoSave()"
+                               class="brutal-input w-full px-2 py-1 text-xs font-bold text-gray-600" />
+                        <div class="flex justify-between items-center text-xs">
+                            <button @click="addVisualShift(lineIdx)" class="text-blue-600 hover:text-blue-800 font-bold">
+                                ➕ Ajouter créneau
+                            </button>
+                            <button @click="deleteVisualLine(lineIdx)" class="text-red-500 hover:text-red-700 font-bold">
+                                Supprimer ligne
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Colonne Timeline interactive -->
+                    <div class="relative flex-1 bg-gray-50 border-3 border-brutal-black timeline-track shadow-brutal-sm rounded" style="height: 48px;">
+                        
+                        <!-- Lignes verticales de la grille horaire -->
+                        <template x-for="h in Array.from({length: hoursRange.end - hoursRange.start + 1}, (_, i) => hoursRange.start + i)">
+                            <div class="absolute h-full border-r border-gray-200 border-dashed pointer-events-none"
+                                 :style="'left: ' + (((h - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"></div>
+                        </template>
+
+                        <!-- Repères du programme (vertical orange dashed lines) -->
+                        <template x-for="ev in visualProgramEvents">
+                            <div class="absolute h-full border-r-2 border-amber-400 border-dashed pointer-events-none z-10"
+                                 :style="'left: ' + (((ev.hStart - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
+                                 :title="ev.description"></div>
+                        </template>
+
+                        <!-- Barres de créneaux (Shifts) -->
+                        <template x-for="(shift, shiftIdx) in line.shifts" :key="shift.id || shiftIdx">
+                            <div class="absolute top-1 bottom-1 border-3 border-brutal-black flex items-center justify-between cursor-move rounded-sm px-1 overflow-hidden"
+                                 :class="shift.error ? 'bg-red-200 border-red-600 text-red-800 shadow-none' : 'bg-brutal-ice hover:bg-cyan-200'"
+                                 :style="'left: ' + (((shift.debut - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; width: ' + (((shift.fin - shift.debut) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
+                                 @mousedown="startDrag($event, lineIdx, shiftIdx, 'move')"
+                                 @touchstart="startDrag($event, lineIdx, shiftIdx, 'move')">
+
+                                <!-- Poignée gauche (Resize Start) -->
+                                <div class="absolute left-0 top-0 bottom-0 w-2 bg-brutal-black cursor-ew-resize opacity-50 hover:opacity-100"
+                                     @mousedown.stop="startDrag($event, lineIdx, shiftIdx, 'resize-start')"
+                                     @touchstart.stop="startDrag($event, lineIdx, shiftIdx, 'resize-start')"></div>
+
+                                <!-- Contenu / Texte -->
+                                <div class="flex-1 text-center font-black select-none pointer-events-none px-2 text-xs truncate">
+                                    <span x-text="formatDecimalHour(shift.debut) + '–' + formatDecimalHour(shift.fin)"></span>
+                                    <span class="ml-1 bg-white px-1 py-0.5 border border-black rounded text-[9px]" 
+                                          x-text="'Min:' + shift.nb_min + ' Max:' + shift.nb_max"></span>
+                                    <template x-if="shift.error">
+                                        <span class="ml-1 bg-red-600 text-white font-bold px-1 rounded text-[8px]" x-text="shift.error"></span>
+                                    </template>
+                                </div>
+
+                                <!-- Poignée droite (Resize End) -->
+                                <div class="absolute right-0 top-0 bottom-0 w-2 bg-brutal-black cursor-ew-resize opacity-50 hover:opacity-100"
+                                     @mousedown.stop="startDrag($event, lineIdx, shiftIdx, 'resize-end')"
+                                     @touchstart.stop="startDrag($event, lineIdx, shiftIdx, 'resize-end')"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Paramètres avancés par ligne (S'affiche sous la timeline) -->
+                <div x-show="line.shifts.length > 0" class="flex gap-4 items-center bg-gray-50 border border-gray-300 p-3 ml-[236px] shadow-brutal-sm">
+                    <span class="font-bold text-xs uppercase text-gray-500">Créneaux :</span>
+                    <div class="flex flex-wrap gap-4 text-xs">
+                        <template x-for="(shift, shiftIdx) in line.shifts" :key="shift.id || shiftIdx">
+                            <div class="flex items-center gap-2 border-r border-gray-300 pr-4">
+                                <span class="font-black" x-text="formatDecimalHour(shift.debut) + '–' + formatDecimalHour(shift.fin)"></span>
+                                
+                                <label class="font-bold">Min :</label>
+                                <input type="number" x-model.number="shift.nb_min" min="1" 
+                                       @change="triggerAutoSave()"
+                                       class="brutal-input w-12 px-1 text-center py-0.5 font-bold" />
+                                
+                                <label class="font-bold">Max :</label>
+                                <input type="number" x-model.number="shift.nb_max" min="1" 
+                                       @change="triggerAutoSave()"
+                                       class="brutal-input w-12 px-1 text-center py-0.5 font-bold" />
+
+                                <label class="font-bold">Référent :</label>
+                                <select x-model="shift.referent_id" 
+                                        @change="triggerAutoSave()"
+                                        class="brutal-input px-1 py-0.5 font-bold">
+                                    <option value="">-- Aucun --</option>
+                                    <template x-for="ref in getReferents()" :key="ref.id">
+                                        <option :value="ref.id" x-text="ref.prenom + ' ' + ref.nom"></option>
+                                    </template>
+                                </select>
+
+                                <button @click="deleteVisualShift(lineIdx, shiftIdx)" class="text-red-500 hover:text-red-700 font-bold ml-1">
+                                    ✕
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- 4. CONFIGURATION DES PÉRIODES DU JOUR -->
+    <div class="brutal-card bg-white p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-black">📅 4. Tranches Horaires des Périodes</h3>
+            <button @click="addVisualPeriod()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
+                ➕ Créer une Période
+            </button>
+        </div>
+        <p class="text-sm font-bold text-gray-500 mb-6">
+            Définissez les tranches pour ce jour. Les créneaux tracés ci-dessus s'associent automatiquement en fonction de leur milieu.
+        </p>
+
+        <div class="space-y-4">
+            <template x-for="(per, idx) in visualPeriods" :key="per.id || idx">
+                <div class="flex flex-wrap items-center gap-4 border-2 border-brutal-black p-4 bg-gray-50 shadow-brutal-sm">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Nom de la Période (Généré)</label>
+                        <div class="bg-gray-100 border-2 border-brutal-black px-3 py-2 font-black text-sm" x-text="per.nom"></div>
+                    </div>
+                    
+                    <div class="w-24">
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Début (Heure)</label>
+                        <input type="number" step="0.25" x-model.number="per.debut" 
+                               @input="validateAndAutoAssignPeriods()" 
+                               @change="triggerAutoSave()"
+                               class="brutal-input w-full px-2 py-2 font-mono font-bold text-center" />
+                        <span class="text-[10px] text-gray-400 font-bold" x-text="formatDecimalHour(per.debut)"></span>
+                    </div>
+
+                    <div class="w-24">
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Fin (Heure)</label>
+                        <input type="number" step="0.25" x-model.number="per.fin" 
+                               @input="validateAndAutoAssignPeriods()" 
+                               @change="triggerAutoSave()"
+                               class="brutal-input w-full px-2 py-2 font-mono font-bold text-center" />
+                        <span class="text-[10px] text-gray-400 font-bold" x-text="formatDecimalHour(per.fin)"></span>
+                    </div>
+
+                    <div class="w-28">
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Crédit (€)</label>
+                        <input type="number" step="0.5" x-model.number="per.montant_credit" 
+                               @change="triggerAutoSave()"
+                               class="brutal-input w-full px-3 py-2 font-mono font-bold text-right" />
+                    </div>
+
+                    <div class="w-16">
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Ordre</label>
+                        <input type="number" x-model.number="per.ordre" 
+                               @change="triggerAutoSave()"
+                               class="brutal-input w-full px-2 py-2 font-bold text-center" />
+                    </div>
+
+                    <button @click="deleteVisualPeriod(idx)" class="brutal-btn bg-red-100 hover:bg-red-200 border-2 border-brutal-black p-2 mt-4">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- CONFLITS & ERREURS DE PLANIFICATION -->
+    <div x-show="periodConflicts.length > 0" class="brutal-card bg-red-100 border-4 border-red-600 p-6">
+        <h4 class="text-xl font-black text-red-800 mb-3">⚠️ Conflits de Planification Détectés</h4>
+        <ul class="list-disc pl-6 space-y-1 text-sm font-bold text-red-700">
+            <template x-for="(conflict, i) in periodConflicts" :key="i">
+                <li x-text="conflict"></li>
+            </template>
+        </ul>
+    </div>
+
+    <!-- BOUTON DE SAUVEGARDE GLOBALE (ENREGISTREMENT AUTOMATIQUE) -->
+    <div class="brutal-card bg-yellow-300 p-8 flex flex-col md:flex-row gap-4 items-center justify-between shadow-brutal">
+        <div>
+            <h4 class="text-2xl font-black">💾 Sauvegarde en Temps Réel</h4>
+            <p class="font-bold text-sm text-gray-700 mt-1">
+                Toutes vos actions (glisser, redimensionner, modifier du texte, ajouter/supprimer) sont enregistrées automatiquement à la volée sur Supabase.
+            </p>
+        </div>
+        <button @click="saveVisualCreator(false)" :disabled="loading"
+            class="brutal-btn bg-brutal-black text-white px-8 py-4 text-lg font-black shadow-brutal hover:bg-gray-800 transition-colors">
+            <span x-show="!loading">🔄 Forcer la synchronisation</span>
+            <span x-show="loading">⏳ Synchronisation...</span>
+        </button>
+    </div>
+
+</div>

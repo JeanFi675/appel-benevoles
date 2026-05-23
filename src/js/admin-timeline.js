@@ -86,6 +86,7 @@ export function initAdminTimelineApp() {
     selectedDay: null,
     toasts: [],
     tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, inscrits: 0, debutStr: '', finStr: '', x: 0, y: 0 },
+    dbProgramme: null,
 
     get availableDays() {
       const days = new Set();
@@ -316,10 +317,11 @@ export function initAdminTimelineApp() {
 
     // Événements du programme pour le jour sélectionné, avec position % sur l'axe
     get programmeDuJour() {
-      if (!this.selectedDay || !PROGRAMME.days[this.selectedDay]) return [];
+      const prog = this.dbProgramme || PROGRAMME;
+      if (!this.selectedDay || !prog.days[this.selectedDay]) return [];
       const range = this.hourRange;
       const total = range.end - range.start;
-      return PROGRAMME.days[this.selectedDay].events.map(ev => ({
+      return prog.days[this.selectedDay].events.map(ev => ({
         ...ev,
         xPct: Math.max(0, Math.min(100, ((ev.hStart - range.start) / total) * 100))
       }));
@@ -327,7 +329,8 @@ export function initAdminTimelineApp() {
 
     // Texte d'information générale du programme (avant le premier ##)
     get programmeMeta() {
-      return PROGRAMME.meta;
+      const prog = this.dbProgramme || PROGRAMME;
+      return prog.meta || [];
     },
 
     showTooltip(poste, event) {
@@ -382,7 +385,47 @@ export function initAdminTimelineApp() {
       let { user } = await AuthService.getSession();
       if (!user) { window.location.href = 'index.html'; return; }
       this.user = user;
+      await this.loadProgramme();
       await this.checkAdminRole();
+    },
+
+    async loadProgramme() {
+      try {
+        const { data, error } = await ApiService.fetch('programme', {
+          order: { column: 'heure', ascending: true }
+        });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const days = {};
+          data.forEach(item => {
+            const dateKey = item.date_ref; // format YYYY-MM-DD
+            if (!days[dateKey]) {
+              const d = new Date(dateKey + 'T00:00:00');
+              const label = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+              days[dateKey] = { label, events: [] };
+            }
+            
+            // Convert time '07:00:00' to hStart decimal and timeLabel
+            const [h, m] = item.heure.split(':');
+            const hStart = parseInt(h) + parseInt(m) / 60;
+            const timeLabel = `${h}h${m}`;
+            
+            days[dateKey].events.push({
+              num: days[dateKey].events.length + 1,
+              timeLabel,
+              hStart,
+              description: item.description,
+              id: item.id
+            });
+          });
+          this.dbProgramme = { meta: [], days };
+        } else {
+          this.dbProgramme = null;
+        }
+      } catch (err) {
+        console.warn('Erreur chargement programme de la DB, utilisation du fallback programme.md :', err.message);
+        this.dbProgramme = null;
+      }
     },
 
     async checkAdminRole() {

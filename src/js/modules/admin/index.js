@@ -8,13 +8,14 @@ import { formatDateTime, formatDateTimeForInput, formatTime } from '../../utils.
 export const AdminModule = {
     isAdmin: false,
     loading: true,
-    activeTab: 'postes',
+    activeTab: 'visual-creator',
     toasts: [],
 
     // Data
     postes: [],
     benevoles: [],
     periodes: [],
+    dbProgramme: null,
     
     // Stats
     stats: {
@@ -388,8 +389,9 @@ export const AdminModule = {
         const p3 = this.loadPeriodes();
         const p4 = this.loadConfig();
         const p5 = this.loadAdhesionsClub();
+        const p6 = this.loadProgramme();
 
-        await Promise.all([p1, p2, p3, p4, p5]);
+        await Promise.all([p1, p2, p3, p4, p5, p6]);
         this.initReferentAssignments();
     },
 
@@ -784,6 +786,45 @@ export const AdminModule = {
             this.periodes = data || [];
         } catch (error) {
             this.showToast('❌ Erreur chargement périodes : ' + error.message, 'error');
+        }
+    },
+
+    async loadProgramme() {
+        try {
+            const { data, error } = await ApiService.fetch('programme', {
+                order: { column: 'heure', ascending: true }
+            });
+            if (error) throw error;
+            if (data && data.length > 0) {
+                const days = {};
+                data.forEach(item => {
+                    const dateKey = item.date_ref; // format YYYY-MM-DD
+                    if (!days[dateKey]) {
+                        const d = new Date(dateKey + 'T00:00:00');
+                        const label = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                        days[dateKey] = { label, events: [] };
+                    }
+                    
+                    // Convert time '07:00:00' to hStart decimal and timeLabel
+                    const [h, m] = item.heure.split(':');
+                    const hStart = parseInt(h) + parseInt(m) / 60;
+                    const timeLabel = `${h}h${m}`;
+                    
+                    days[dateKey].events.push({
+                        num: days[dateKey].events.length + 1,
+                        timeLabel,
+                        hStart,
+                        description: item.description,
+                        id: item.id
+                    });
+                });
+                this.dbProgramme = { meta: [], days };
+            } else {
+                this.dbProgramme = null;
+            }
+        } catch (err) {
+            console.warn('Erreur chargement programme de la DB :', err.message);
+            this.dbProgramme = null;
         }
     },
 
@@ -1381,6 +1422,702 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         } finally {
             this.sendingRappel = false;
         }
+    },
+
+    // --- Planning Interactif (Créateur Visuel) ---
+    visualDaySelected: '',
+    visualDays: [],
+    visualProgramEvents: [],
+    visualPeriods: [],
+    visualLines: [],
+    visualDeletedPosteIds: [],
+    visualDeletedPeriodIds: [],
+    visualDeletedEventIds: [],
+    dragState: null,
+    hoursRange: { start: 6, end: 22 },
+    periodConflicts: [],
+    autoSaveStatus: 'synced', // 'synced', 'saving', 'error'
+    autoSaveTimeout: null,
+
+    getLocalDateKey(isoStr) {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    },
+
+    async initVisualCreator() {
+        const days = new Set();
+        
+        // Extraire les jours des postes existants en utilisant getLocalDateKey
+        this.postes.forEach(p => {
+            if (p.periode_debut) {
+                days.add(this.getLocalDateKey(p.periode_debut));
+            }
+        });
+        
+        // Extraire du programme de la DB s'il est chargé
+        if (this.dbProgramme && this.dbProgramme.days) {
+            Object.keys(this.dbProgramme.days).forEach(d => days.add(d));
+        }
+        
+        // Fallback s'il n'y a rien
+        if (days.size === 0) {
+            days.add('2026-05-16');
+            days.add('2026-05-17');
+        }
+        
+        this.visualDays = Array.from(days).sort();
+        
+        // Sélectionner le premier jour par défaut
+        if (this.visualDays.length > 0) {
+            await this.selectVisualDay(this.visualDays[0]);
+        }
+    },
+
+    async selectVisualDay(day) {
+        this.visualDaySelected = day;
+        this.visualDeletedPosteIds = [];
+        this.visualDeletedPeriodIds = [];
+        this.visualDeletedEventIds = [];
+        this.dragState = null;
+        
+        // 1. Charger les événements de programme pour ce jour
+        this.visualProgramEvents = [];
+        
+        const timelineAppEl = document.querySelector('[x-data="adminTimelineApp()"]');
+        let currentDbProg = null;
+        if (timelineAppEl && timelineAppEl.__x && timelineAppEl.__x.$data) {
+            currentDbProg = timelineAppEl.__x.$data.dbProgramme;
+        }
+
+        const activeProg = currentDbProg || (this.dbProgramme);
+        if (activeProg && activeProg.days && activeProg.days[day]) {
+            this.visualProgramEvents = activeProg.days[day].events.map(ev => ({
+                id: ev.id || null,
+                hStart: ev.hStart,
+                description: ev.description
+            }));
+        }
+
+        // 2. Filtrer les postes de ce jour en utilisant getLocalDateKey
+        const dayPostes = this.postes.filter(p => p.periode_debut && this.getLocalDateKey(p.periode_debut) === day);
+
+        // 3. Filtrer les périodes de ce jour
+        const d = new Date(day + 'T00:00:00');
+        const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+        
+        // On isole la partie "Jour DD Mois" (ex: "Samedi 16 Mai") pour matcher même si l'année diffère légèrement
+        const dayPrefixNoYear = dayPrefix.split(' 202')[0];
+
+        const dayPeriods = this.periodes.filter(per => {
+            const hasPostsOnDay = dayPostes.some(p => p.periode_id === per.id);
+            const isDayPrefix = per.nom && per.nom.startsWith(dayPrefixNoYear);
+            return isDayPrefix || hasPostsOnDay;
+        });
+
+        this.visualPeriods = dayPeriods.map((per, index) => {
+            const perPostes = dayPostes.filter(p => p.periode_id === per.id);
+            let debut = 8;
+            let fin = 13;
+            
+            if (perPostes.length > 0) {
+                const starts = perPostes.map(p => {
+                    const d = new Date(p.periode_debut);
+                    return d.getHours() + d.getMinutes() / 60;
+                });
+                const ends = perPostes.map(p => {
+                    const d = new Date(p.periode_fin);
+                    return d.getHours() + d.getMinutes() / 60;
+                });
+                debut = Math.min(...starts);
+                fin = Math.max(...ends);
+            } else {
+                if (index === 0) { debut = 7; fin = 13; }
+                else if (index === 1) { debut = 13; fin = 19; }
+                else { debut = 19; fin = 22; }
+            }
+            
+            return {
+                id: per.id,
+                nom: per.nom,
+                ordre: per.ordre,
+                montant_credit: per.montant_credit || 0.00,
+                debut,
+                fin
+            };
+        }).sort((a, b) => a.ordre - b.ordre);
+
+        // S'assurer qu'il y a au moins une période par défaut pour le jour s'il n'y en a aucune
+        if (this.visualPeriods.length === 0) {
+            const tempPerId = `temp-per-${Date.now()}`;
+            this.visualPeriods.push({
+                id: tempPerId,
+                nom: `${dayPrefix} - 08:00 / 12:00`,
+                ordre: 1,
+                montant_credit: 10.00,
+                debut: 8,
+                fin: 12,
+                isNew: true
+            });
+        }
+
+        // 4. Regrouper les postes de ce jour par Titre et Description (Lignes du Gantt)
+        const groups = {};
+        dayPostes.forEach(p => {
+            const key = `${p.titre.trim()}|||${(p.description || '').trim()}`;
+            if (!groups[key]) {
+                groups[key] = {
+                    titre: p.titre,
+                    description: p.description || '',
+                    shifts: []
+                };
+            }
+            
+            const dStart = new Date(p.periode_debut);
+            const dEnd = new Date(p.periode_fin);
+            const startHour = dStart.getHours() + dStart.getMinutes() / 60;
+            const endHour = dEnd.getHours() + dEnd.getMinutes() / 60;
+            
+            groups[key].shifts.push({
+                id: p.id,
+                debut: startHour,
+                fin: endHour,
+                nb_min: p.nb_min,
+                nb_max: p.nb_max,
+                referent_id: p.referent_id || '',
+                inscrits_actuels: p.inscrits_actuels || 0,
+                periode_id: p.periode_id || null,
+                error: null
+            });
+        });
+
+        this.visualLines = Object.values(groups).map((line, index) => ({
+            ...line,
+            lineIndex: index
+        }));
+
+        this.validateAndAutoAssignPeriods();
+    },
+
+    addVisualDay() {
+        const d = prompt("Entrez la date du nouveau jour (Format: AAAA-MM-JJ) :", "2026-05-18");
+        if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            if (!this.visualDays.includes(d)) {
+                this.visualDays.push(d);
+                this.visualDays.sort();
+                this.selectVisualDay(d);
+            } else {
+                this.showToast("Ce jour existe déjà !", "warning");
+            }
+        } else if (d) {
+            this.showToast("Format de date invalide. Utilisez AAAA-MM-JJ.", "error");
+        }
+    },
+
+    addVisualLine(titre = '', description = '') {
+        const index = this.visualLines.length;
+        this.visualLines.push({
+            titre: titre || 'Nouveau type de poste',
+            description: description || '',
+            shifts: [],
+            lineIndex: index
+        });
+        this.triggerAutoSave();
+    },
+
+    deleteVisualLine(lineIndex) {
+        if (!confirm("Voulez-vous supprimer cette ligne de postes et tous ses créneaux ?")) return;
+        const line = this.visualLines[lineIndex];
+        if (line && line.shifts) {
+            line.shifts.forEach(shift => {
+                if (shift.id && !shift.id.startsWith('temp-')) {
+                    this.visualDeletedPosteIds.push(shift.id);
+                }
+            });
+        }
+        this.visualLines.splice(lineIndex, 1);
+        this.visualLines.forEach((l, idx) => l.lineIndex = idx);
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    addVisualShift(lineIndex) {
+        const line = this.visualLines[lineIndex];
+        if (!line) return;
+
+        let debut = 8;
+        let fin = 12;
+        
+        let hasOverlap = true;
+        while (hasOverlap && fin <= this.hoursRange.end) {
+            hasOverlap = line.shifts.some(s => (debut < s.fin && fin > s.debut));
+            if (hasOverlap) {
+                debut += 1;
+                fin += 1;
+            }
+        }
+
+        if (hasOverlap) {
+            debut = this.hoursRange.start;
+            fin = debut + 2;
+        }
+
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        line.shifts.push({
+            id: tempId,
+            debut,
+            fin,
+            nb_min: 1,
+            nb_max: 5,
+            referent_id: '',
+            inscrits_actuels: 0,
+            periode_id: null,
+            error: null
+        });
+
+        line.shifts.sort((a, b) => a.debut - b.debut);
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    deleteVisualShift(lineIndex, shiftIndex) {
+        const line = this.visualLines[lineIndex];
+        if (!line) return;
+        const shift = line.shifts[shiftIndex];
+        if (shift.id && !shift.id.startsWith('temp-')) {
+            this.visualDeletedPosteIds.push(shift.id);
+        }
+        line.shifts.splice(shiftIndex, 1);
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    startDrag(event, lineIndex, shiftIndex, mode) {
+        event.preventDefault();
+        const line = this.visualLines[lineIndex];
+        if (!line) return;
+        const shift = line.shifts[shiftIndex];
+        if (!shift) return;
+
+        const container = event.target.closest('.timeline-track');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        
+        this.dragState = {
+            lineIndex,
+            shiftIndex,
+            mode,
+            initialDebut: shift.debut,
+            initialFin: shift.fin,
+            startX: event.clientX || (event.touches ? event.touches[0].clientX : 0),
+            containerWidth: rect.width || 800
+        };
+
+        const handleMove = (e) => this.handleDrag(e);
+        const handleUp = () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleUp);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleUp);
+            this.stopDrag();
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleUp);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleUp);
+    },
+
+    handleDrag(event) {
+        if (!this.dragState) return;
+        if (event.cancelable) event.preventDefault();
+
+        const clientX = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+        const dx = clientX - this.dragState.startX;
+        
+        const totalHours = this.hoursRange.end - this.hoursRange.start;
+        const deltaHours = (dx / this.dragState.containerWidth) * totalHours;
+        const deltaHoursSnapped = Math.round(deltaHours / 0.25) * 0.25;
+
+        const line = this.visualLines[this.dragState.lineIndex];
+        const shift = line.shifts[this.dragState.shiftIndex];
+
+        if (this.dragState.mode === 'move') {
+            let newDebut = this.dragState.initialDebut + deltaHoursSnapped;
+            let newFin = this.dragState.initialFin + deltaHoursSnapped;
+            
+            if (newDebut < this.hoursRange.start) {
+                const diff = this.hoursRange.start - newDebut;
+                newDebut += diff;
+                newFin += diff;
+            }
+            if (newFin > this.hoursRange.end) {
+                const diff = newFin - this.hoursRange.end;
+                newDebut -= diff;
+                newFin -= diff;
+            }
+
+            const otherOverlap = line.shifts.some((s, idx) => {
+                if (idx === this.dragState.shiftIndex) return false;
+                return (newDebut < s.fin && newFin > s.debut);
+            });
+
+            if (!otherOverlap) {
+                shift.debut = newDebut;
+                shift.fin = newFin;
+            }
+        } 
+        else if (this.dragState.mode === 'resize-start') {
+            let newDebut = this.dragState.initialDebut + deltaHoursSnapped;
+            newDebut = Math.max(this.hoursRange.start, Math.min(shift.fin - 0.5, newDebut));
+
+            const previousShift = line.shifts[this.dragState.shiftIndex - 1];
+            if (previousShift && newDebut < previousShift.fin) {
+                newDebut = previousShift.fin;
+            }
+
+            shift.debut = newDebut;
+        } 
+        else if (this.dragState.mode === 'resize-end') {
+            let newFin = this.dragState.initialFin + deltaHoursSnapped;
+            newFin = Math.min(this.hoursRange.end, Math.max(shift.debut + 0.5, newFin));
+
+            const nextShift = line.shifts[this.dragState.shiftIndex + 1];
+            if (nextShift && newFin > nextShift.debut) {
+                newFin = nextShift.debut;
+            }
+
+            shift.fin = newFin;
+        }
+
+        this.validateAndAutoAssignPeriods();
+    },
+
+    stopDrag() {
+        this.dragState = null;
+        this.visualLines.forEach(line => {
+            line.shifts.sort((a, b) => a.debut - b.debut);
+        });
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    addVisualPeriod() {
+        // Ajouter une période avec heures par défaut
+        const ordre = this.visualPeriods.length + 1;
+        let debut = 8;
+        let fin = 12;
+        
+        if (this.visualPeriods.length > 0) {
+            const last = this.visualPeriods[this.visualPeriods.length - 1];
+            debut = last.fin;
+            fin = Math.min(this.hoursRange.end, debut + 4);
+        }
+
+        const tempPerId = `temp-per-${Date.now()}`;
+        this.visualPeriods.push({
+            id: tempPerId,
+            nom: '', // Sera défini par validateAndAutoAssignPeriods()
+            ordre,
+            montant_credit: 10.00,
+            debut,
+            fin,
+            isNew: true
+        });
+
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    deleteVisualPeriod(index) {
+        if (!confirm("Voulez-vous supprimer cette période ? Les postes associés seront automatiquement réassignés.")) return;
+        const per = this.visualPeriods[index];
+        if (per && per.id && !String(per.id).startsWith('temp-')) {
+            this.visualDeletedPeriodIds.push(per.id);
+        }
+        this.visualPeriods.splice(index, 1);
+        this.visualPeriods.forEach((p, idx) => p.ordre = idx + 1);
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    addVisualProgramEvent() {
+        const desc = prompt("Description de l'événement (ex: Qualifications U15) :");
+        if (!desc || desc.trim() === '') return;
+        
+        const hStr = prompt("Heure de début (Format: HHhMM, ex: 08h30) :", "08h00");
+        const m = hStr ? hStr.match(/^(\d{1,2})h(\d{2})$/) : null;
+        if (!m) {
+            this.showToast("Format d'heure invalide. Utilisez HHhMM (ex: 08h30).", "error");
+            return;
+        }
+
+        const h = parseInt(m[1]);
+        const min = parseInt(m[2]);
+        const hStart = h + min / 60;
+
+        this.visualProgramEvents.push({
+            id: `temp-ev-${Date.now()}`,
+            hStart,
+            description: desc.trim()
+        });
+
+        this.visualProgramEvents.sort((a, b) => a.hStart - b.hStart);
+        this.triggerAutoSave();
+    },
+
+    deleteVisualProgramEvent(index) {
+        const ev = this.visualProgramEvents[index];
+        if (ev && ev.id && !String(ev.id).startsWith('temp-')) {
+            this.visualDeletedEventIds.push(ev.id);
+        }
+        this.visualProgramEvents.splice(index, 1);
+        this.triggerAutoSave();
+    },
+
+    validateAndAutoAssignPeriods() {
+        this.periodConflicts = [];
+        
+        // Trier les périodes par début
+        this.visualPeriods.sort((a, b) => a.debut - b.debut);
+        this.visualPeriods.forEach((p, idx) => p.ordre = idx + 1);
+
+        // Auto-nommer chaque période en fonction de son jour et de ses heures
+        const d = new Date(this.visualDaySelected + 'T00:00:00');
+        const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+
+        const formatHourMin = (dec) => {
+            const h = Math.floor(dec);
+            const m = Math.round((dec - h) * 60);
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+        };
+
+        this.visualPeriods.forEach(per => {
+            per.nom = `${dayPrefix} - ${formatHourMin(per.debut)} / ${formatHourMin(per.fin)}`;
+        });
+
+        // Assigner chaque shift à sa période en fonction de son milieu (midpoint)
+        this.visualLines.forEach(line => {
+            line.shifts.forEach(shift => {
+                shift.error = null;
+                shift.periode_id = null;
+
+                const mid = (shift.debut + shift.fin) / 2;
+
+                // Trouver la période contenant le milieu du shift
+                const matchingPeriod = this.visualPeriods.find(per => {
+                    return (mid >= per.debut && mid <= per.fin);
+                });
+
+                if (matchingPeriod) {
+                    shift.periode_id = matchingPeriod.id;
+                } else {
+                    // Fallback sur la période la plus proche
+                    if (this.visualPeriods.length > 0) {
+                        shift.periode_id = this.visualPeriods[0].id;
+                    }
+                }
+            });
+        });
+    },
+
+    triggerAutoSave() {
+        this.autoSaveStatus = 'saving';
+        if (this.autoSaveTimeout) {
+            clearTimeout(this.autoSaveTimeout);
+        }
+        this.autoSaveTimeout = setTimeout(async () => {
+            try {
+                await this.saveVisualCreator(true);
+                this.autoSaveStatus = 'synced';
+            } catch (err) {
+                console.error("Erreur de sauvegarde automatique:", err);
+                this.autoSaveStatus = 'error';
+            }
+        }, 1000);
+    },
+
+    async saveVisualCreator(isSilent = false) {
+        this.validateAndAutoAssignPeriods();
+
+        if (!isSilent) {
+            this.loading = true;
+        }
+        
+        try {
+            const deletePromises = [];
+            
+            if (this.visualDeletedPosteIds.length > 0) {
+                deletePromises.push(ApiService.delete('postes', { id: this.visualDeletedPosteIds }));
+            }
+            if (this.visualDeletedPeriodIds.length > 0) {
+                deletePromises.push(ApiService.delete('periodes', { id: this.visualDeletedPeriodIds }));
+            }
+            if (this.visualDeletedEventIds.length > 0) {
+                try {
+                    deletePromises.push(ApiService.delete('programme', { id: this.visualDeletedEventIds }));
+                } catch(e){}
+            }
+
+            if (deletePromises.length > 0) {
+                await Promise.all(deletePromises);
+                // Vider les listes de suppression après exécution réussie
+                this.visualDeletedPosteIds = [];
+                this.visualDeletedPeriodIds = [];
+                this.visualDeletedEventIds = [];
+            }
+
+            const periodIdMapping = {};
+            for (const per of this.visualPeriods) {
+                const perPayload = {
+                    nom: per.nom,
+                    ordre: parseInt(per.ordre),
+                    montant_credit: parseFloat(per.montant_credit || 0.00)
+                };
+
+                if (String(per.id).startsWith('temp-per-')) {
+                    const { data, error } = await ApiService.insert('periodes', perPayload);
+                    if (error) throw error;
+                    periodIdMapping[per.id] = data.id;
+                    per.id = data.id;
+                } else {
+                    const { error } = await ApiService.update('periodes', perPayload, { id: per.id });
+                    if (error) throw error;
+                    periodIdMapping[per.id] = per.id;
+                }
+            }
+
+            const formatDecimalToISO = (dec) => {
+                const h = Math.floor(dec);
+                const m = Math.round((dec - h) * 60);
+                const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+                return new Date(`${this.visualDaySelected}T${timeStr}`).toISOString();
+            };
+
+            for (const line of this.visualLines) {
+                for (const shift of line.shifts) {
+                    let finalPeriodId = shift.periode_id;
+                    if (String(finalPeriodId).startsWith('temp-per-')) {
+                        finalPeriodId = periodIdMapping[finalPeriodId];
+                    }
+
+                    const postePayload = {
+                        titre: line.titre.trim(),
+                        description: line.description.trim() || null,
+                        periode_debut: formatDecimalToISO(shift.debut),
+                        periode_fin: formatDecimalToISO(shift.fin),
+                        nb_min: parseInt(shift.nb_min),
+                        nb_max: parseInt(shift.nb_max),
+                        referent_id: shift.referent_id || null,
+                        periode_id: finalPeriodId
+                    };
+
+                    if (String(shift.id).startsWith('temp-')) {
+                        const { error } = await ApiService.insert('postes', postePayload);
+                        if (error) throw error;
+                    } else {
+                        const { error } = await ApiService.update('postes', postePayload, { id: shift.id });
+                        if (error) throw error;
+                    }
+                }
+            }
+
+            try {
+                await ApiService.delete('programme', { date_ref: this.visualDaySelected });
+            } catch (err) {}
+
+            for (const ev of this.visualProgramEvents) {
+                const h = Math.floor(ev.hStart);
+                const min = Math.round((ev.hStart - h) * 60);
+                const heureStr = `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:00`;
+                
+                try {
+                    await ApiService.insert('programme', {
+                        date_ref: this.visualDaySelected,
+                        heure: heureStr,
+                        description: ev.description.trim()
+                    });
+                } catch(e) {}
+            }
+
+            if (!isSilent) {
+                this.showToast("💾 Configuration du planning enregistrée avec succès !", "success");
+            }
+            
+            await this.loadData();
+            
+            const timelineAppEl = document.querySelector('[x-data="adminTimelineApp()"]');
+            if (timelineAppEl && timelineAppEl.__x && timelineAppEl.__x.$data) {
+                const timelineData = timelineAppEl.__x.$data;
+                if (typeof timelineData.loadProgramme === 'function') {
+                    await timelineData.loadProgramme();
+                }
+                if (typeof timelineData.loadPostes === 'function') {
+                    await timelineData.loadPostes();
+                }
+            }
+            
+            // Pour éviter les sauts de focus, on ne recharge pas les sélections de jour en arrière-plan pendant que l'utilisateur tape
+            if (!isSilent) {
+                await this.selectVisualDay(this.visualDaySelected);
+            } else {
+                // En mode silencieux, on remet juste les compteurs d'inscrits à jour ou on fait une resynchronisation locale
+                // mais sans détruire/recréer visualLines si on est en cours d'édition.
+                // Cependant, on doit s'assurer que les IDs temporaires des shifts et périodes nouvellement créés
+                // sont remplacés par leurs vrais IDs de base de données pour les futures modifications.
+                // Cela est géré en mettant à jour this.visualLines et les shifts correspondants.
+                this.postes.forEach(p => {
+                    this.visualLines.forEach(line => {
+                        if (line.titre.trim() === p.titre.trim()) {
+                            line.shifts.forEach(shift => {
+                                if (String(shift.id).startsWith('temp-')) {
+                                    // Trouver un poste de la DB avec la même tranche horaire
+                                    const dStart = new Date(p.periode_debut);
+                                    const dEnd = new Date(p.periode_fin);
+                                    const startHour = dStart.getHours() + dStart.getMinutes() / 60;
+                                    const endHour = dEnd.getHours() + dEnd.getMinutes() / 60;
+                                    
+                                    if (Math.abs(startHour - shift.debut) < 0.01 && Math.abs(endHour - shift.fin) < 0.01) {
+                                        shift.id = p.id;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                });
+            }
+
+        } catch (error) {
+            console.error("Erreur enregistrement planning interactif:", error);
+            if (!isSilent) {
+                this.showToast(`❌ Erreur d'enregistrement : ${error.message}`, "error");
+            }
+            throw error;
+        } finally {
+            if (!isSilent) {
+                this.loading = false;
+            }
+        }
+    },
+
+    formatDecimalHour(dec) {
+        const h = Math.floor(dec);
+        const m = Math.round((dec - h) * 60);
+        return `${String(h).padStart(2,'0')}h${String(m).padStart(2,'0')}`;
+    },
+
+    formatDay(dayKey) {
+        if (!dayKey) return '';
+        const [y, m, d] = dayKey.split('-');
+        const date = new Date(Number(y), Number(m) - 1, Number(d));
+        const formatted = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+        return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     },
 
     // --- Helpers ---

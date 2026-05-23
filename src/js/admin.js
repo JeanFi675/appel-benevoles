@@ -44,6 +44,7 @@ document.addEventListener("alpine:init", () => {
 
       // Wait for data before showing UI
       await this.loadData();
+      await this.initVisualCreator();
       this.loading = false;
 
       // Auth listener
