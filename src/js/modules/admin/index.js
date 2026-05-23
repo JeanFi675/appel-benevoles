@@ -2445,6 +2445,307 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         }
     },
 
+    saveLinesOrder() {
+        if (!this.visualDaySelected) return;
+        const order = this.visualLines.map(line => `${line.titre.trim()}|||${(line.description || '').trim()}`);
+        localStorage.setItem(`admin_planning_lines_order_${this.visualDaySelected}`, JSON.stringify(order));
+    },
+
+    openAddShiftModal(lineIndex = -1) {
+        this.hideShiftTooltip();
+        if (lineIndex !== -1) {
+            const line = this.visualLines[lineIndex];
+            this.addShiftData = {
+                lineIndex,
+                titre: line.titre,
+                description: line.description,
+                debut: 8,
+                fin: 12,
+                nb_min: 1,
+                nb_max: 5,
+                referent_id: ''
+            };
+        } else {
+            this.addShiftData = {
+                lineIndex: -1,
+                titre: '',
+                description: '',
+                debut: 8,
+                fin: 12,
+                nb_min: 1,
+                nb_max: 5,
+                referent_id: ''
+            };
+        }
+        this.showAddShiftModal = true;
+    },
+
+    confirmAddShift() {
+        if (!this.addShiftData.titre.trim()) {
+            this.showToast("Le titre du poste est obligatoire", "error");
+            return;
+        }
+        if (this.addShiftData.debut >= this.addShiftData.fin) {
+            this.showToast("L'heure de fin doit être supérieure à l'heure de début", "error");
+            return;
+        }
+
+        const debut = parseFloat(this.addShiftData.debut);
+        const fin = parseFloat(this.addShiftData.fin);
+        const nb_min = parseInt(this.addShiftData.nb_min);
+        const nb_max = parseInt(this.addShiftData.nb_max);
+        const referent_id = this.addShiftData.referent_id;
+
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const newShift = {
+            id: tempId,
+            debut,
+            fin,
+            nb_min,
+            nb_max,
+            referent_id,
+            inscrits_actuels: 0,
+            periode_id: null,
+            error: null
+        };
+
+        if (this.addShiftData.lineIndex !== -1) {
+            const line = this.visualLines[this.addShiftData.lineIndex];
+            
+            const hasOverlap = line.shifts.some(s => (debut < s.fin && fin > s.debut));
+            if (hasOverlap) {
+                this.showToast("Ce créneau chevauche un créneau existant sur la même ligne", "error");
+                return;
+            }
+
+            line.shifts.push(newShift);
+            line.shifts.sort((a, b) => a.debut - b.debut);
+        } else {
+            const index = this.visualLines.length;
+            this.visualLines.push({
+                titre: this.addShiftData.titre.trim(),
+                description: this.addShiftData.description.trim(),
+                shifts: [newShift],
+                lineIndex: index
+            });
+            this.saveLinesOrder();
+        }
+
+        this.showAddShiftModal = false;
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    openEditShiftModal(lineIndex, shiftIndex) {
+        this.hideShiftTooltip();
+        const line = this.visualLines[lineIndex];
+        const shift = line.shifts[shiftIndex];
+        if (!line || !shift) return;
+
+        this.editShiftData = {
+            lineIndex,
+            shiftIndex,
+            id: shift.id,
+            titre: line.titre,
+            description: line.description,
+            debut: shift.debut,
+            fin: shift.fin,
+            nb_min: shift.nb_min,
+            nb_max: shift.nb_max,
+            referent_id: shift.referent_id || ''
+        };
+        this.showEditShiftModal = true;
+    },
+
+    saveEditShift() {
+        if (!this.editShiftData.titre.trim()) {
+            this.showToast("Le titre du poste est obligatoire", "error");
+            return;
+        }
+        if (this.editShiftData.debut >= this.editShiftData.fin) {
+            this.showToast("L'heure de fin doit être supérieure à l'heure de début", "error");
+            return;
+        }
+
+        const line = this.visualLines[this.editShiftData.lineIndex];
+        const shift = line.shifts[this.editShiftData.shiftIndex];
+        if (!line || !shift) return;
+
+        const debut = parseFloat(this.editShiftData.debut);
+        const fin = parseFloat(this.editShiftData.fin);
+
+        const hasOverlap = line.shifts.some((s, idx) => {
+            if (idx === this.editShiftData.shiftIndex) return false;
+            return (debut < s.fin && fin > s.debut);
+        });
+
+        if (hasOverlap) {
+            this.showToast("Ce créneau chevauche un créneau existant sur la même ligne", "error");
+            return;
+        }
+
+        const titreChange = line.titre !== this.editShiftData.titre.trim();
+        const descChange = line.description !== this.editShiftData.description.trim();
+        
+        line.titre = this.editShiftData.titre.trim();
+        line.description = this.editShiftData.description.trim();
+
+        shift.debut = debut;
+        shift.fin = fin;
+        shift.nb_min = parseInt(this.editShiftData.nb_min);
+        shift.nb_max = parseInt(this.editShiftData.nb_max);
+        shift.referent_id = this.editShiftData.referent_id || null;
+
+        line.shifts.sort((a, b) => a.debut - b.debut);
+
+        if (titreChange || descChange) {
+            this.saveLinesOrder();
+        }
+
+        this.showEditShiftModal = false;
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    deleteShiftFromModal() {
+        if (this.editShiftData.lineIndex === -1 || this.editShiftData.shiftIndex === -1) return;
+        if (!confirm("Voulez-vous supprimer ce créneau ?")) return;
+
+        const line = this.visualLines[this.editShiftData.lineIndex];
+        const shift = line.shifts[this.editShiftData.shiftIndex];
+        
+        if (shift.id && !String(shift.id).startsWith('temp-')) {
+            this.visualDeletedPosteIds.push(shift.id);
+        }
+
+        line.shifts.splice(this.editShiftData.shiftIndex, 1);
+        
+        this.showEditShiftModal = false;
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    showShiftTooltip(event, line, shift) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        
+        let referentNom = 'Aucun';
+        if (shift.referent_id) {
+            const ref = this.getReferents().find(r => r.id === shift.referent_id);
+            if (ref) {
+                referentNom = `${ref.prenom} ${ref.nom}`;
+            }
+        }
+
+        this.hoveredShift = {
+            shift,
+            line,
+            referentNom,
+            x: event.clientX + 15,
+            y: event.clientY + 15
+        };
+    },
+
+    updateShiftTooltip(event) {
+        if (this.hoveredShift) {
+            this.hoveredShift.x = event.clientX + 15;
+            this.hoveredShift.y = event.clientY + 15;
+        }
+    },
+
+    hideShiftTooltip() {
+        this.hoveredShift = null;
+    },
+
+    startLineDragTimer(event, lineIndex) {
+        if (event.target.closest('button') || event.target.closest('a') || event.target.closest('input')) {
+            return;
+        }
+        
+        event.preventDefault();
+        const clientY = event.clientY || (event.touches ? event.touches[0].clientY : 0);
+        
+        this.lineDragTimer = setTimeout(() => {
+            this.startLineDrag(event, lineIndex, clientY);
+        }, 400);
+        
+        const clearTimer = () => {
+            if (this.lineDragTimer) {
+                clearTimeout(this.lineDragTimer);
+                this.lineDragTimer = null;
+            }
+            document.removeEventListener('mouseup', clearTimer);
+            document.removeEventListener('touchend', clearTimer);
+        };
+        document.addEventListener('mouseup', clearTimer);
+        document.addEventListener('touchend', clearTimer);
+    },
+
+    startLineDrag(event, lineIndex, startY) {
+        this.lineDragTimer = null;
+        this.lineDragState = {
+            lineIndex,
+            startY,
+            currentY: startY
+        };
+        
+        const handleMove = (e) => {
+            if (!this.lineDragState) return;
+            const currentY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+            this.handleLineDrag(currentY);
+        };
+        
+        const handleUp = () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleUp);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleUp);
+            this.stopLineDrag();
+        };
+        
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleUp);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleUp);
+    },
+
+    handleLineDrag(currentY) {
+        if (!this.lineDragState) return;
+        
+        const diffY = currentY - this.lineDragState.startY;
+        const lineIdx = this.lineDragState.lineIndex;
+        
+        const threshold = 35;
+        if (diffY > threshold && lineIdx < this.visualLines.length - 1) {
+            const temp = this.visualLines[lineIdx];
+            this.visualLines[lineIdx] = this.visualLines[lineIdx + 1];
+            this.visualLines[lineIdx + 1] = temp;
+            
+            this.visualLines[lineIdx].lineIndex = lineIdx;
+            this.visualLines[lineIdx + 1].lineIndex = lineIdx + 1;
+            
+            this.lineDragState.lineIndex = lineIdx + 1;
+            this.lineDragState.startY = currentY;
+            this.saveLinesOrder();
+        } else if (diffY < -threshold && lineIdx > 0) {
+            const temp = this.visualLines[lineIdx];
+            this.visualLines[lineIdx] = this.visualLines[lineIdx - 1];
+            this.visualLines[lineIdx - 1] = temp;
+            
+            this.visualLines[lineIdx].lineIndex = lineIdx;
+            this.visualLines[lineIdx - 1].lineIndex = lineIdx - 1;
+            
+            this.lineDragState.lineIndex = lineIdx - 1;
+            this.lineDragState.startY = currentY;
+            this.saveLinesOrder();
+        }
+    },
+
+    stopLineDrag() {
+        this.lineDragState = null;
+        this.saveLinesOrder();
+        this.triggerAutoSave();
+    },
+
     formatDecimalHour(dec) {
         const h = Math.floor(dec);
         const m = Math.round((dec - h) * 60);

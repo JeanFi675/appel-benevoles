@@ -95,7 +95,7 @@
     <div class="brutal-card bg-white p-8 overflow-x-auto">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-black">📊 3. Tracer vos Créneaux de Postes</h3>
-            <button type="button" @click="addVisualLine()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
+            <button type="button" @click="openAddShiftModal(-1)" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
                 ➕ Ajouter un Type de Poste (Ligne)
             </button>
         </div>
@@ -108,7 +108,7 @@
                     <template x-for="h in Array.from({length: hoursRange.end - hoursRange.start + 1}, (_, i) => hoursRange.start + i)">
                         <div class="absolute text-xs font-black text-gray-500"
                              :style="'left: ' + (((h - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; transform: translateX(-50%);'">
-                            <span x-text="String(h).padStart(2,'0') + 'h'"></span>
+                             <span x-text="String(h).padStart(2,'0') + 'h'"></span>
                         </div>
                     </template>
                 </div>
@@ -151,28 +151,29 @@
 
             <!-- Lignes de Postes -->
             <template x-for="(line, lineIdx) in visualLines" :key="lineIdx">
-                <div class="flex items-center gap-4 border-b-2 border-gray-100 pb-2">
+                <div class="flex items-center gap-4 border-b-2 border-gray-100 pb-1 pt-1 transition-all"
+                     :class="{ 'opacity-40 scale-[0.98] border-dashed border-2 border-yellow-400 bg-yellow-50': lineDragState && lineDragState.lineIndex === lineIdx }">
                     
-                    <!-- Colonne infos du poste -->
-                    <div style="width: 220px;" class="flex-shrink-0 space-y-1">
-                        <input type="text" x-model="line.titre" placeholder="Titre (ex: Juge)" 
-                               @change="triggerAutoSave()"
-                               class="brutal-input w-full px-2 py-1 font-black text-sm" />
-                        <input type="text" x-model="line.description" placeholder="Description courte" 
-                               @change="triggerAutoSave()"
-                               class="brutal-input w-full px-2 py-1 text-xs font-bold text-gray-600" />
-                        <div class="flex justify-between items-center text-xs">
-                            <button type="button" @click="addVisualShift(lineIdx)" class="text-blue-600 hover:text-blue-800 font-bold">
-                                ➕ Ajouter créneau
+                    <!-- Colonne infos du poste compacte avec réordonnancement par clic long -->
+                    <div style="width: 220px;" class="flex-shrink-0 flex items-center justify-between pr-2 cursor-grab select-none active:cursor-grabbing border-r-2 border-gray-200"
+                         @mousedown="startLineDragTimer($event, lineIdx)"
+                         @touchstart="startLineDragTimer($event, lineIdx)"
+                         title="Clic long maintenu pour monter/descendre la ligne">
+                        <div class="min-w-0 flex-1">
+                            <span class="font-black text-sm text-brutal-black block truncate" x-text="line.titre" :title="line.titre"></span>
+                        </div>
+                        <div class="flex items-center gap-2 ml-2 shrink-0">
+                            <button type="button" @click="openAddShiftModal(lineIdx)" class="text-blue-600 hover:text-blue-800 font-black text-xs p-1" title="Ajouter un créneau">
+                                ➕
                             </button>
-                            <button type="button" @click="deleteVisualLine(lineIdx)" class="text-red-500 hover:text-red-700 font-bold">
-                                Supprimer ligne
+                            <button type="button" @click="deleteVisualLine(lineIdx)" class="text-red-500 hover:text-red-700 font-black text-xs p-1" title="Supprimer la ligne">
+                                🗑️
                             </button>
                         </div>
                     </div>
 
                     <!-- Colonne Timeline interactive -->
-                    <div class="relative flex-1 bg-gray-50 border-3 border-brutal-black timeline-track shadow-brutal-sm rounded" style="height: 48px;">
+                    <div class="relative flex-1 bg-gray-50 border-3 border-brutal-black timeline-track shadow-brutal-sm rounded" style="height: 38px;">
                         
                         <!-- Lignes verticales de la grille horaire -->
                         <template x-for="h in Array.from({length: hoursRange.end - hoursRange.start + 1}, (_, i) => hoursRange.start + i)">
@@ -184,7 +185,7 @@
                         <template x-for="ev in visualProgramEvents">
                             <div class="absolute h-full border-r-2 border-amber-400 border-dashed pointer-events-none z-10"
                                  :style="'left: ' + (((ev.hStart - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
-                                 :title="ev.description"></div>
+                                  :title="ev.description"></div>
                         </template>
 
                         <!-- Barres de créneaux (Shifts) -->
@@ -193,7 +194,10 @@
                                  :class="shift.error ? 'bg-red-200 border-red-600 text-red-800 shadow-none' : 'bg-brutal-ice hover:bg-cyan-200'"
                                  :style="'left: ' + (((shift.debut - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; width: ' + (((shift.fin - shift.debut) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
                                  @mousedown="startDrag($event, lineIdx, shiftIdx, 'move')"
-                                 @touchstart="startDrag($event, lineIdx, shiftIdx, 'move')">
+                                 @touchstart="startDrag($event, lineIdx, shiftIdx, 'move')"
+                                 @mouseenter="showShiftTooltip($event, line, shift)"
+                                 @mouseleave="hideShiftTooltip()"
+                                 @mousemove="updateShiftTooltip($event)">
 
                                 <!-- Poignée gauche (Resize Start) -->
                                 <div class="absolute left-0 top-0 bottom-0 w-2 bg-brutal-black cursor-ew-resize opacity-50 hover:opacity-100"
@@ -203,8 +207,6 @@
                                 <!-- Contenu / Texte -->
                                 <div class="flex-1 text-center font-black select-none pointer-events-none px-2 text-xs truncate">
                                     <span x-text="formatDecimalHour(shift.debut) + '–' + formatDecimalHour(shift.fin)"></span>
-                                    <span class="ml-1 bg-white px-1 py-0.5 border border-black rounded text-[9px]" 
-                                          x-text="'Min:' + shift.nb_min + ' Max:' + shift.nb_max"></span>
                                     <template x-if="shift.error">
                                         <span class="ml-1 bg-red-600 text-white font-bold px-1 rounded text-[8px]" x-text="shift.error"></span>
                                     </template>
@@ -214,42 +216,6 @@
                                 <div class="absolute right-0 top-0 bottom-0 w-2 bg-brutal-black cursor-ew-resize opacity-50 hover:opacity-100"
                                      @mousedown.stop="startDrag($event, lineIdx, shiftIdx, 'resize-end')"
                                      @touchstart.stop="startDrag($event, lineIdx, shiftIdx, 'resize-end')"></div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Paramètres avancés par ligne (S'affiche sous la timeline) -->
-                <div x-show="line.shifts.length > 0" class="flex gap-4 items-center bg-gray-50 border border-gray-300 p-3 ml-[236px] shadow-brutal-sm">
-                    <span class="font-bold text-xs uppercase text-gray-500">Créneaux :</span>
-                    <div class="flex flex-wrap gap-4 text-xs">
-                        <template x-for="(shift, shiftIdx) in line.shifts" :key="shift.id || shiftIdx">
-                            <div class="flex items-center gap-2 border-r border-gray-300 pr-4">
-                                <span class="font-black" x-text="formatDecimalHour(shift.debut) + '–' + formatDecimalHour(shift.fin)"></span>
-                                
-                                <label class="font-bold">Min :</label>
-                                <input type="number" x-model.number="shift.nb_min" min="1" 
-                                       @change="triggerAutoSave()"
-                                       class="brutal-input w-12 px-1 text-center py-0.5 font-bold" />
-                                
-                                <label class="font-bold">Max :</label>
-                                <input type="number" x-model.number="shift.nb_max" min="1" 
-                                       @change="triggerAutoSave()"
-                                       class="brutal-input w-12 px-1 text-center py-0.5 font-bold" />
-
-                                <label class="font-bold">Référent :</label>
-                                <select x-model="shift.referent_id" 
-                                        @change="triggerAutoSave()"
-                                        class="brutal-input px-1 py-0.5 font-bold">
-                                    <option value="">-- Aucun --</option>
-                                    <template x-for="ref in getReferents()" :key="ref.id">
-                                        <option :value="ref.id" x-text="ref.prenom + ' ' + ref.nom"></option>
-                                    </template>
-                                </select>
-
-                                <button type="button" @click="deleteVisualShift(lineIdx, shiftIdx)" class="text-red-500 hover:text-red-700 font-bold ml-1">
-                                    ✕
-                                </button>
                             </div>
                         </template>
                     </div>
@@ -364,6 +330,194 @@
                 <button type="button" @click="showAddDayModal = false" class="brutal-btn bg-gray-200 px-6 py-3 font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
                     Annuler
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip Flottant au survol d'un créneau -->
+    <div x-show="hoveredShift" 
+         x-cloak 
+         class="fixed z-50 pointer-events-none bg-white border-3 border-brutal-black p-4 shadow-brutal-sm rounded max-w-xs transition-all duration-75"
+         :style="'left: ' + hoveredShift?.x + 'px; top: ' + hoveredShift?.y + 'px;'">
+         <div class="space-y-2">
+             <h5 class="font-black text-xs uppercase text-gray-400">Détails du créneau</h5>
+             <p class="font-black text-sm text-brutal-black" x-text="hoveredShift?.line.titre"></p>
+             <template x-if="hoveredShift?.line.description">
+                 <p class="font-bold text-[10px] text-gray-500" x-text="hoveredShift?.line.description"></p>
+             </template>
+             <div class="border-t border-gray-200 my-1"></div>
+             <p class="font-bold text-xs">
+                 ⏰ Horaires : <span class="font-black" x-text="formatDecimalHour(hoveredShift?.shift.debut) + ' – ' + formatDecimalHour(hoveredShift?.shift.fin)"></span>
+             </p>
+             <p class="font-bold text-xs">
+                 👥 Inscrits : <span class="font-black" x-text="hoveredShift?.shift.inscrits_actuels"></span> 
+                 (Besoins : <span class="font-black" x-text="hoveredShift?.shift.nb_min"></span> min / <span class="font-black" x-text="hoveredShift?.shift.nb_max"></span> max)
+             </p>
+             <p class="font-bold text-xs">
+                 👑 Référent : <span class="font-black text-blue-700" x-text="hoveredShift?.referentNom"></span>
+             </p>
+         </div>
+    </div>
+
+    <!-- Modal : Ajouter un créneau / ligne -->
+    <div x-show="showAddShiftModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="showAddShiftModal = false">
+        <div class="absolute inset-0 bg-brutal-black opacity-80" @click="showAddShiftModal = false"></div>
+        <div class="relative bg-brutal-white border-4 border-brutal-black shadow-brutal w-full max-w-lg p-6 flex flex-col"
+             @click.stop>
+            <h3 class="text-2xl font-black mb-4 flex items-center gap-2">
+                ➕ <span x-text="addShiftData.lineIndex !== -1 ? 'Ajouter un créneau' : 'Créer un Type de Poste'"></span>
+            </h3>
+            <p class="text-xs font-bold text-gray-600 mb-4" x-text="addShiftData.lineIndex !== -1 ? 'Ajoutez un nouveau créneau horaire pour ce type de poste.' : 'Créez un nouveau type de poste avec son premier créneau horaire.'"></p>
+            
+            <div class="space-y-4">
+                <!-- Titre du poste -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-gray-500 mb-1">Titre du Poste</label>
+                    <input type="text" x-model="addShiftData.titre" :disabled="addShiftData.lineIndex !== -1"
+                           class="brutal-input w-full px-3 py-2 font-black text-sm" placeholder="ex: Juge de difficulté, Accueil, Buvette" required />
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-gray-500 mb-1">Description courte (optionnel)</label>
+                    <input type="text" x-model="addShiftData.description" :disabled="addShiftData.lineIndex !== -1"
+                           class="brutal-input w-full px-3 py-2 font-bold text-xs text-gray-700" placeholder="ex: Assurer la liaison avec les officiels..." />
+                </div>
+
+                <!-- Horaires -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Heure de Début</label>
+                        <input type="number" step="0.25" x-model.number="addShiftData.debut"
+                               class="brutal-input w-full px-3 py-2 font-mono font-bold text-center" min="6" max="22" />
+                        <span class="text-[10px] text-gray-400 font-bold" x-text="formatDecimalHour(addShiftData.debut)"></span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Heure de Fin</label>
+                        <input type="number" step="0.25" x-model.number="addShiftData.fin"
+                               class="brutal-input w-full px-3 py-2 font-mono font-bold text-center" min="6" max="22" />
+                        <span class="text-[10px] text-gray-400 font-bold" x-text="formatDecimalHour(addShiftData.fin)"></span>
+                    </div>
+                </div>
+
+                <!-- Capacités -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Nombre Min Bénévoles</label>
+                        <input type="number" x-model.number="addShiftData.nb_min" min="1"
+                               class="brutal-input w-full px-3 py-2 font-bold text-center" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Nombre Max Bénévoles</label>
+                        <input type="number" x-model.number="addShiftData.nb_max" min="1"
+                               class="brutal-input w-full px-3 py-2 font-bold text-center" />
+                    </div>
+                </div>
+
+                <!-- Référent -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-gray-500 mb-1">Référent Désigné (optionnel)</label>
+                    <select x-model="addShiftData.referent_id" class="brutal-input w-full px-3 py-2 font-bold text-sm">
+                        <option value="">-- Aucun référent --</option>
+                        <template x-for="ref in getReferents()" :key="ref.id">
+                            <option :value="ref.id" x-text="ref.prenom + ' ' + ref.nom"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button type="button" @click="confirmAddShift()" class="brutal-btn bg-brutal-ice flex-1 py-3 font-black shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                    ✅ Enregistrer
+                </button>
+                <button type="button" @click="showAddShiftModal = false" class="brutal-btn bg-gray-200 px-6 py-3 font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                    Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal : Modifier un créneau -->
+    <div x-show="showEditShiftModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="showEditShiftModal = false">
+        <div class="absolute inset-0 bg-brutal-black opacity-80" @click="showEditShiftModal = false"></div>
+        <div class="relative bg-brutal-white border-4 border-brutal-black shadow-brutal w-full max-w-lg p-6 flex flex-col"
+             @click.stop>
+            <h3 class="text-2xl font-black mb-4 flex items-center gap-2">
+                ✏️ Modifier le Créneau
+            </h3>
+            <p class="text-xs font-bold text-gray-600 mb-4">Modifiez les horaires, les besoins ou l'identité de ce poste.</p>
+            
+            <div class="space-y-4">
+                <!-- Titre du poste -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-gray-500 mb-1">Titre du Poste (Modifie toute la ligne)</label>
+                    <input type="text" x-model="editShiftData.titre"
+                           class="brutal-input w-full px-3 py-2 font-black text-sm" placeholder="ex: Juge" required />
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-gray-500 mb-1">Description courte (Modifie toute la ligne)</label>
+                    <input type="text" x-model="editShiftData.description"
+                           class="brutal-input w-full px-3 py-2 font-bold text-xs text-gray-700" placeholder="ex: Assurer la liaison..." />
+                </div>
+
+                <!-- Horaires -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Heure de Début</label>
+                        <input type="number" step="0.25" x-model.number="editShiftData.debut"
+                               class="brutal-input w-full px-3 py-2 font-mono font-bold text-center" min="6" max="22" />
+                        <span class="text-[10px] text-gray-400 font-bold" x-text="formatDecimalHour(editShiftData.debut)"></span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Heure de Fin</label>
+                        <input type="number" step="0.25" x-model.number="editShiftData.fin"
+                               class="brutal-input w-full px-3 py-2 font-mono font-bold text-center" min="6" max="22" />
+                        <span class="text-[10px] text-gray-400 font-bold" x-text="formatDecimalHour(editShiftData.fin)"></span>
+                    </div>
+                </div>
+
+                <!-- Capacités -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Nombre Min Bénévoles</label>
+                        <input type="number" x-model.number="editShiftData.nb_min" min="1"
+                               class="brutal-input w-full px-3 py-2 font-bold text-center" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-500 mb-1">Nombre Max Bénévoles</label>
+                        <input type="number" x-model.number="editShiftData.nb_max" min="1"
+                               class="brutal-input w-full px-3 py-2 font-bold text-center" />
+                    </div>
+                </div>
+
+                <!-- Référent -->
+                <div>
+                    <label class="block text-xs font-black uppercase text-gray-500 mb-1">Référent Désigné</label>
+                    <select x-model="editShiftData.referent_id" class="brutal-input w-full px-3 py-2 font-bold text-sm">
+                        <option value="">-- Aucun référent --</option>
+                        <template x-for="ref in getReferents()" :key="ref.id">
+                            <option :value="ref.id" x-text="ref.prenom + ' ' + ref.nom"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 mt-6 justify-between">
+                <button type="button" @click="deleteShiftFromModal()" class="brutal-btn bg-red-100 hover:bg-red-200 text-red-600 border-red-600 px-4 py-3 font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                    🗑️ Supprimer le créneau
+                </button>
+                <div class="flex gap-2 flex-1 justify-end">
+                    <button type="button" @click="saveEditShift()" class="brutal-btn bg-yellow-300 px-6 py-3 font-black shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex-1 sm:flex-initial">
+                        💾 Sauvegarder
+                    </button>
+                    <button type="button" @click="showEditShiftModal = false" class="brutal-btn bg-gray-200 px-6 py-3 font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                        Annuler
+                    </button>
+                </div>
             </div>
         </div>
     </div>
