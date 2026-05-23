@@ -121,7 +121,11 @@ export const ApiService = {
         let query = supabase.from(table).delete();
 
         for (const [key, value] of Object.entries(match)) {
-            query = query.eq(key, value);
+            if (Array.isArray(value)) {
+                query = query.in(key, value);
+            } else {
+                query = query.eq(key, value);
+            }
         }
 
         return await query;

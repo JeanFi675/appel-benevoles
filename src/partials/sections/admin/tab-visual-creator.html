@@ -44,6 +44,12 @@
             <button type="button" @click="addVisualDay()" class="brutal-btn bg-brutal-ice px-6 py-3 text-lg font-black flex items-center gap-2">
                 ➕ Ajouter un jour
             </button>
+            <template x-if="visualDaySelected">
+                <button type="button" @click="deleteVisualDay(visualDaySelected)" 
+                        class="brutal-btn bg-red-100 hover:bg-red-200 text-red-600 px-6 py-3 text-lg font-black flex items-center gap-2 border-red-600 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                    🗑️ Supprimer ce jour
+                </button>
+            </template>
         </div>
     </div>
 

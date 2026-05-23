@@ -920,6 +920,30 @@ export const AdminModule = {
                 periode_fin: new Date(this.posteForm.periode_fin).toISOString()
             };
 
+            // Validation de non-chevauchement temporel pour le même type de poste (même titre)
+            const start = new Date(payload.periode_debut).getTime();
+            const end = new Date(payload.periode_fin).getTime();
+            const titreLower = payload.titre.trim().toLowerCase();
+
+            const hasOverlap = this.postes.some(p => {
+                // Exclure le poste en cours d'édition
+                if (this.editingPoste && p.id === this.editingPoste.id) return false;
+
+                // Même titre (type de poste) ?
+                if (p.titre.trim().toLowerCase() !== titreLower) return false;
+
+                // Chevauchement horaire ?
+                const pStart = new Date(p.periode_debut).getTime();
+                const pEnd = new Date(p.periode_fin).getTime();
+
+                // Tolérance de 36s (36000ms) pour éviter les micro-imprécisions
+                return (start < pEnd - 36000 && end > pStart + 36000);
+            });
+
+            if (hasOverlap) {
+                throw new Error("un poste de même type (titre) existe déjà sur un créneau horaire qui se chevauche.");
+            }
+
             if (this.editingPoste) {
                 const { error } = await ApiService.update('postes', payload, { id: this.editingPoste.id });
                 if (error) throw error;
@@ -1442,6 +1466,37 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     showAddDayModal: false,
     newDayDate: '2026-05-18',
 
+    // États pour les modals d'édition et création
+    showAddShiftModal: false,
+    addShiftData: {
+        lineIndex: -1,
+        titre: '',
+        description: '',
+        debut: 8,
+        fin: 12,
+        nb_min: 1,
+        nb_max: 5,
+        referent_id: ''
+    },
+    showEditShiftModal: false,
+    editShiftData: {
+        lineIndex: -1,
+        shiftIndex: -1,
+        id: '',
+        titre: '',
+        description: '',
+        debut: 8,
+        fin: 12,
+        nb_min: 1,
+        nb_max: 5,
+        referent_id: ''
+    },
+    // État pour le tooltip au survol
+    hoveredShift: null, // { shift, line, referentNom, x: 0, y: 0 }
+    // États pour le drag-and-drop de lignes (clic long)
+    lineDragTimer: null,
+    lineDragState: null, // { lineIndex: -1, startY: 0, currentY: 0 }
+
     getLocalDateKey(isoStr) {
         if (!isoStr) return '';
         const d = new Date(isoStr);
@@ -1633,7 +1688,30 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             });
         });
 
-        this.visualLines = Object.values(groups).map((line, index) => ({
+        const initialLines = Object.values(groups);
+        
+        // Charger l'ordre trié du localStorage
+        const savedOrderStr = localStorage.getItem(`admin_planning_lines_order_${day}`);
+        if (savedOrderStr) {
+            try {
+                const savedOrder = JSON.parse(savedOrderStr); // tableau de "titre|||description"
+                initialLines.sort((a, b) => {
+                    const keyA = `${a.titre.trim()}|||${(a.description || '').trim()}`;
+                    const keyB = `${b.titre.trim()}|||${(b.description || '').trim()}`;
+                    const idxA = savedOrder.indexOf(keyA);
+                    const idxB = savedOrder.indexOf(keyB);
+                    
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return 0; // Conserver l'ordre d'origine
+                });
+            } catch (e) {
+                console.error("Erreur lors de la lecture de l'ordre des lignes dans localStorage:", e);
+            }
+        }
+
+        this.visualLines = initialLines.map((line, index) => ({
             ...line,
             lineIndex: index
         }));
@@ -1661,6 +1739,75 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             }
         } else {
             this.showToast("Format de date invalide. Utilisez AAAA-MM-JJ.", "error");
+        }
+    },
+
+    async deleteVisualDay(day) {
+        if (!day) return;
+        
+        const formattedDayStr = this.formatDay(day);
+        if (!confirm(`⚠️ Attention : Êtes-vous sûr de vouloir supprimer le jour "${formattedDayStr}" ?\n\nCette action supprimera DÉFINITIVEMENT :\n- Tous les postes et créneaux associés à ce jour\n- Toutes les périodes définies pour ce jour\n- Toutes les inscriptions de bénévoles sur ces postes\n- Tous les événements de programme de ce jour\n\nCette action est irréversible et modifiera directement la base de production. Voulez-vous continuer ?`)) {
+            return;
+        }
+
+        this.loading = true;
+
+        try {
+            // 1. Filtrer les postes de ce jour à l'aide de getLocalDateKey
+            const dayPostes = this.postes.filter(p => p.periode_debut && this.getLocalDateKey(p.periode_debut) === day);
+            const dayPosteIds = dayPostes.map(p => p.id);
+
+            // 2. Filtrer les périodes associées à ce jour
+            const d = new Date(day + 'T00:00:00');
+            const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+            const dayPrefixNoYear = dayPrefix.split(' 202')[0];
+
+            const dayPeriods = this.periodes.filter(per => {
+                const hasPostsOnDay = dayPostes.some(p => p.periode_id === per.id);
+                const isDayPrefix = per.nom && per.nom.startsWith(dayPrefixNoYear);
+                return isDayPrefix || hasPostsOnDay;
+            });
+            const dayPeriodIds = dayPeriods.map(per => per.id);
+
+            // 3. Supprimer de Supabase de manière ordonnée
+            // A. Postes (la contrainte foreign key ON DELETE CASCADE se charge des inscriptions associées)
+            if (dayPosteIds.length > 0) {
+                const { error: postError } = await ApiService.delete('postes', { id: dayPosteIds });
+                if (postError) throw postError;
+            }
+
+            // B. Périodes
+            if (dayPeriodIds.length > 0) {
+                const { error: periodError } = await ApiService.delete('periodes', { id: dayPeriodIds });
+                if (periodError) throw periodError;
+            }
+
+            // C. Programme du jour
+            const { error: progError } = await ApiService.delete('programme', { date_ref: day });
+            if (progError) {
+                console.warn("Erreur lors de la suppression du programme :", progError);
+            }
+
+            // 4. Mettre à jour l'état local
+            this.visualDays = this.visualDays.filter(d => d !== day);
+
+            // 5. Recharger toutes les données pour rafraîchir l'application
+            await this.loadData();
+
+            // 6. Sélectionner un autre jour
+            if (this.visualDays.length > 0) {
+                await this.selectVisualDay(this.visualDays[0]);
+            } else {
+                await this.initVisualCreator();
+            }
+
+            this.showToast(`✅ Le jour "${formattedDayStr}" et toutes ses données associées ont été supprimés avec succès.`, 'success');
+        } catch (err) {
+            console.error("Erreur de suppression du jour :", err);
+            this.showToast(`❌ Erreur lors de la suppression : ${err.message}`, 'error');
+        } finally {
+            this.loading = false;
         }
     },
 
@@ -1761,7 +1908,8 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             initialDebut: shift.debut,
             initialFin: shift.fin,
             startX: event.clientX || (event.touches ? event.touches[0].clientX : 0),
-            containerWidth: rect.width || 800
+            containerWidth: rect.width || 800,
+            hasMoved: false
         };
 
         const handleMove = (e) => this.handleDrag(e);
@@ -1785,6 +1933,10 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
         const clientX = event.clientX || (event.touches ? event.touches[0].clientX : 0);
         const dx = clientX - this.dragState.startX;
+
+        if (Math.abs(dx) > 4) {
+            this.dragState.hasMoved = true;
+        }
         
         const totalHours = this.hoursRange.end - this.hoursRange.start;
         const deltaHours = (dx / this.dragState.containerWidth) * totalHours;
@@ -1845,6 +1997,14 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     },
 
     stopDrag() {
+        if (this.dragState && !this.dragState.hasMoved && this.dragState.mode === 'move') {
+            const lIdx = this.dragState.lineIndex;
+            const sIdx = this.dragState.shiftIndex;
+            this.dragState = null;
+            this.openEditShiftModal(lIdx, sIdx);
+            return;
+        }
+
         this.dragState = null;
         this.visualLines.forEach(line => {
             line.shifts.sort((a, b) => a.debut - b.debut);
@@ -1971,6 +2131,53 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 }
             });
         });
+
+        // Détecter les conflits de chevauchement de créneaux pour des postes de même type (même titre)
+        const allShifts = [];
+        this.visualLines.forEach(line => {
+            line.shifts.forEach(shift => {
+                allShifts.push({
+                    shift,
+                    lineTitle: line.titre.trim().toLowerCase(),
+                    lineTitleRaw: line.titre.trim(),
+                    lineDescription: line.description.trim()
+                });
+            });
+        });
+
+        const formatDecimalHour = (dec) => {
+            const h = Math.floor(dec);
+            const m = Math.round((dec - h) * 60);
+            return `${String(h).padStart(2,'0')}h${String(m).padStart(2,'0')}`;
+        };
+
+        for (let i = 0; i < allShifts.length; i++) {
+            const s1 = allShifts[i];
+            for (let j = i + 1; j < allShifts.length; j++) {
+                const s2 = allShifts[j];
+
+                // Même type de poste (même titre) ?
+                if (s1.lineTitle === s2.lineTitle) {
+                    // Chevauchement horaire ? Tolérance de 0.01h (36s) pour éviter les imprécisions des flottants
+                    if (s1.shift.debut < s2.shift.fin - 0.01 && s1.shift.fin > s2.shift.debut + 0.01) {
+                        s1.shift.error = 'Chevauchement';
+                        s2.shift.error = 'Chevauchement';
+
+                        const time1 = `${formatDecimalHour(s1.shift.debut)}–${formatDecimalHour(s1.shift.fin)}`;
+                        const time2 = `${formatDecimalHour(s2.shift.debut)}–${formatDecimalHour(s2.shift.fin)}`;
+
+                        let conflictMsg = `Le créneau ${time1} de "${s1.lineTitleRaw}"`;
+                        if (s1.lineDescription) conflictMsg += ` (${s1.lineDescription})`;
+                        conflictMsg += ` chevauche le créneau ${time2} de "${s2.lineTitleRaw}"`;
+                        if (s2.lineDescription) conflictMsg += ` (${s2.lineDescription})`;
+
+                        if (!this.periodConflicts.includes(conflictMsg)) {
+                            this.periodConflicts.push(conflictMsg);
+                        }
+                    }
+                }
+            }
+        }
     },
 
     triggerAutoSave() {
@@ -1991,6 +2198,13 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
     async saveVisualCreator(isSilent = false) {
         this.validateAndAutoAssignPeriods();
+
+        if (this.periodConflicts.length > 0) {
+            if (!isSilent) {
+                this.showToast("❌ Enregistrement impossible : veuillez corriger les chevauchements de créneaux détectés.", "error");
+            }
+            throw new Error("Chevauchement de créneaux de poste détecté.");
+        }
 
         if (!isSilent) {
             this.loading = true;
