@@ -1451,16 +1451,51 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     async initVisualCreator() {
         const days = new Set();
         
-        // Extraire les jours des postes existants en utilisant getLocalDateKey
+        // 1. Extraire les jours des postes existants en utilisant getLocalDateKey
         this.postes.forEach(p => {
             if (p.periode_debut) {
                 days.add(this.getLocalDateKey(p.periode_debut));
             }
         });
         
-        // Extraire du programme de la DB s'il est chargé
+        // 2. Extraire du programme de la DB s'il est chargé
         if (this.dbProgramme && this.dbProgramme.days) {
             Object.keys(this.dbProgramme.days).forEach(d => days.add(d));
+        }
+
+        // 3. Extraire également les jours à partir des périodes existantes dans la base de données.
+        // Si une période a été créée pour un jour mais n'a pas encore de postes ou de programme,
+        // son nom commencera par le préfixe textuel du jour (ex: "Lundi 18 mai").
+        // Pour les détecter, on peut scanner une plage de dates raisonnable autour des jours déjà identifiés (ou de la date actuelle).
+        let baseDate = new Date();
+        if (days.size > 0) {
+            // Utiliser le premier jour identifié comme base
+            const sortedIdentified = Array.from(days).sort();
+            baseDate = new Date(sortedIdentified[0] + 'T00:00:00');
+        }
+
+        // Générer une plage de 30 jours avant et 30 jours après la date de base
+        for (let i = -30; i <= 30; i++) {
+            const tempDate = new Date(baseDate.getTime());
+            tempDate.setDate(baseDate.getDate() + i);
+            
+            const y = tempDate.getFullYear();
+            const m = String(tempDate.getMonth() + 1).padStart(2, '0');
+            const day = String(tempDate.getDate()).padStart(2, '0');
+            const dateKey = `${y}-${m}-${day}`;
+
+            // Si le jour est déjà dans les Set, inutile de tester
+            if (days.has(dateKey)) continue;
+
+            const dayLabel = tempDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+            const dayPrefixNoYear = dayPrefix.split(' 202')[0];
+
+            // Vérifier si une période commence par le libellé textuel de ce jour
+            const hasMatchingPeriod = this.periodes.some(per => per.nom && per.nom.startsWith(dayPrefixNoYear));
+            if (hasMatchingPeriod) {
+                days.add(dateKey);
+            }
         }
         
         // Fallback s'il n'y a rien
@@ -1499,7 +1534,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 id: ev.id || null,
                 hStart: ev.hStart,
                 description: ev.description
-            }));
+            })).sort((a, b) => a.hStart - b.hStart);
         }
 
         // 2. Filtrer les postes de ce jour en utilisant getLocalDateKey
@@ -1610,6 +1645,8 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 this.visualDays.push(d);
                 this.visualDays.sort();
                 this.selectVisualDay(d);
+                // Déclencher immédiatement la sauvegarde automatique pour enregistrer la période par défaut créée pour ce nouveau jour dans Supabase
+                this.triggerAutoSave();
             } else {
                 this.showToast("Ce jour existe déjà !", "warning");
             }

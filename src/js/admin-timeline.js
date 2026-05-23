@@ -2,74 +2,8 @@
 import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
-import programmeRaw from "../data/programme.md?raw";
 
-// ---------------------------------------------------------------------------
-// Parsing du programme.md
-// Format des événements : HHhMM[-HHhMM] | Description
-// Format des en-têtes   : ## Jour JJ mois AAAA
-// ---------------------------------------------------------------------------
-const MOIS_FR = {
-  janvier: 1, février: 2, mars: 3, avril: 4, mai: 5, juin: 6,
-  juillet: 7, août: 8, septembre: 9, octobre: 10, novembre: 11, décembre: 12
-};
-
-function parseProgramme(text) {
-  const result = { meta: [], days: {} };
-  let currentDay = null;
-  let counter = 0;
-  let passedFirstSection = false;
-
-  for (const line of text.split('\n')) {
-    const t = line.trim();
-
-    if (t.startsWith('# ') || t === '---' || !t) {
-      if (!passedFirstSection && t && !t.startsWith('#') && t !== '---') {
-        result.meta.push(t.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'));
-      }
-      continue;
-    }
-
-    // En-tête de jour : ## Samedi 16 mai 2026
-    if (t.startsWith('## ')) {
-      passedFirstSection = true;
-      const m = t.slice(3).match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
-      if (m) {
-        const month = MOIS_FR[m[2].toLowerCase()];
-        if (month) {
-          currentDay = `${m[3]}-${String(month).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
-          result.days[currentDay] = { label: t.slice(3).trim(), events: [] };
-          counter = 0;
-        }
-      }
-      continue;
-    }
-
-    if (!passedFirstSection) {
-      result.meta.push(t.replace(/\*\*(.+?)\*\*/g, '$1'));
-      continue;
-    }
-
-    if (!currentDay) continue;
-
-    // Ligne d'événement : 07h00 | ... ou 09h00-13h30 | ...
-    const ev = t.match(/^(\d{1,2})h(\d{2})(?:\s*[-–]\s*(\d{1,2})h(\d{2}))?\s*\|\s*(.+)/);
-    if (ev) {
-      counter++;
-      const h1 = parseInt(ev[1]), m1 = parseInt(ev[2]);
-      const h2 = ev[3] ? parseInt(ev[3]) : null;
-      const m2 = ev[4] ? parseInt(ev[4]) : null;
-      const hStart = h1 + m1 / 60;
-      const timeLabel = h2 !== null
-        ? `${String(h1).padStart(2,'0')}h${String(m1).padStart(2,'0')} – ${String(h2).padStart(2,'0')}h${String(m2).padStart(2,'0')}`
-        : `${String(h1).padStart(2,'0')}h${String(m1).padStart(2,'0')}`;
-      result.days[currentDay].events.push({ num: counter, timeLabel, hStart, description: ev[5].trim() });
-    }
-  }
-  return result;
-}
-
-const PROGRAMME = parseProgramme(programmeRaw);
+const PROGRAMME = { meta: [], days: {} };
 
 // ---------------------------------------------------------------------------
 // Composant Alpine
@@ -88,21 +22,37 @@ export function initAdminTimelineApp() {
     tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, inscrits: 0, debutStr: '', finStr: '', x: 0, y: 0 },
     dbProgramme: null,
 
+    getLocalDateKey(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    },
+
     get availableDays() {
       const days = new Set();
+      
+      // Jours des postes
       this.postes.forEach(p => {
-        const d = new Date(p.periode_debut);
-        days.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+        if (p.periode_debut) {
+          days.add(this.getLocalDateKey(p.periode_debut));
+        }
       });
+      
+      // Jours du programme en DB
+      if (this.dbProgramme && this.dbProgramme.days) {
+        Object.keys(this.dbProgramme.days).forEach(d => days.add(d));
+      }
+      
       return Array.from(days).sort();
     },
 
     get postesDuJour() {
       if (!this.selectedDay) return [];
       return this.postes.filter(p => {
-        const d = new Date(p.periode_debut);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        return key === this.selectedDay;
+        return this.getLocalDateKey(p.periode_debut) === this.selectedDay;
       }).sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime());
     },
 
@@ -349,6 +299,22 @@ export function initAdminTimelineApp() {
       };
     },
 
+    showProgramTooltip(ev, event) {
+      const offRight = event.clientX + 300 > window.innerWidth;
+      this.tooltip = {
+        show: true,
+        titre: `Repère #${ev.num || ''}`,
+        description: ev.description || '',
+        nb_min: 0,
+        nb_max: 0,
+        inscrits: null,
+        debutStr: ev.timeLabel || '',
+        finStr: '',
+        x: offRight ? event.clientX - 300 : event.clientX,
+        y: event.clientY
+      };
+    },
+
     moveTooltip(event) {
       if (this.tooltip.show) {
         const offRight = event.clientX + 300 > window.innerWidth;
@@ -423,7 +389,7 @@ export function initAdminTimelineApp() {
           this.dbProgramme = null;
         }
       } catch (err) {
-        console.warn('Erreur chargement programme de la DB, utilisation du fallback programme.md :', err.message);
+        console.warn('Erreur chargement programme de la DB :', err.message);
         this.dbProgramme = null;
       }
     },

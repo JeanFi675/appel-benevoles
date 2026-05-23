@@ -35,13 +35,13 @@
         <h3 class="text-2xl font-black mb-4">📅 1. Choisissez un Jour</h3>
         <div class="flex flex-wrap gap-3 items-center">
             <template x-for="day in visualDays" :key="day">
-                <button @click="selectVisualDay(day)"
+                <button type="button" @click="selectVisualDay(day)"
                     class="brutal-btn px-6 py-3 text-lg font-black"
                     :class="visualDaySelected === day ? 'bg-yellow-300' : 'bg-white hover:bg-gray-100'">
                     <span x-text="formatDay(day)"></span>
                 </button>
             </template>
-            <button @click="addVisualDay()" class="brutal-btn bg-brutal-ice px-6 py-3 text-lg font-black flex items-center gap-2">
+            <button type="button" @click="addVisualDay()" class="brutal-btn bg-brutal-ice px-6 py-3 text-lg font-black flex items-center gap-2">
                 ➕ Ajouter un jour
             </button>
         </div>
@@ -51,7 +51,7 @@
     <div class="brutal-card bg-white p-8">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-black">⏰ 2. Repères de Programme du Jour</h3>
-            <button @click="addVisualProgramEvent()" class="brutal-btn bg-amber-400 px-4 py-2 font-black shadow-brutal-sm text-sm">
+            <button type="button" @click="addVisualProgramEvent()" class="brutal-btn bg-amber-400 px-4 py-2 font-black shadow-brutal-sm text-sm">
                 ➕ Ajouter un événement
             </button>
         </div>
@@ -68,12 +68,16 @@
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" x-show="visualProgramEvents.length > 0">
             <template x-for="(ev, index) in visualProgramEvents" :key="ev.id || index">
                 <div class="border-3 border-brutal-black p-3 bg-gray-50 flex justify-between items-center shadow-brutal-sm">
-                    <div class="min-w-0">
-                        <span class="inline-block bg-amber-400 border-2 border-brutal-black px-2 py-0.5 text-xs font-black" 
-                              x-text="formatDecimalHour(ev.hStart)"></span>
-                        <p class="font-bold text-sm truncate mt-1" :title="ev.description" x-text="ev.description"></p>
+                    <div class="min-w-0 flex items-center gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 bg-brutal-black text-white text-xs font-black flex items-center justify-center rounded-full" 
+                              x-text="index + 1"></span>
+                        <div class="min-w-0">
+                            <span class="inline-block bg-amber-400 border-2 border-brutal-black px-2 py-0.5 text-xs font-black" 
+                                  x-text="formatDecimalHour(ev.hStart)"></span>
+                            <p class="font-bold text-sm truncate mt-1" :title="ev.description" x-text="ev.description"></p>
+                        </div>
                     </div>
-                    <button @click="deleteVisualProgramEvent(index)" class="text-red-600 hover:text-red-800 font-bold p-1 ml-2 text-sm">
+                    <button type="button" @click="deleteVisualProgramEvent(index)" class="text-red-600 hover:text-red-800 font-bold p-1 ml-2 text-sm shrink-0">
                         🗑️
                     </button>
                 </div>
@@ -85,7 +89,7 @@
     <div class="brutal-card bg-white p-8 overflow-x-auto">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-black">📊 3. Tracer vos Créneaux de Postes</h3>
-            <button @click="addVisualLine()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
+            <button type="button" @click="addVisualLine()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
                 ➕ Ajouter un Type de Poste (Ligne)
             </button>
         </div>
@@ -104,6 +108,20 @@
                 </div>
             </div>
 
+            <!-- Repères Programme (Visualisation) -->
+            <div class="flex items-center gap-4 animate-fade-in" x-show="visualProgramEvents.length > 0">
+                <div style="width: 220px;" class="flex-shrink-0 text-right pr-4 text-xs font-black uppercase text-amber-600">Repères Programme</div>
+                <div class="relative flex-1" style="height: 24px;">
+                    <template x-for="(ev, index) in visualProgramEvents" :key="ev.id || index">
+                        <div class="absolute top-0 w-6 h-6 bg-amber-400 border-2 border-brutal-black text-brutal-black text-[10px] font-black flex items-center justify-center rounded-full cursor-default shadow-brutal-sm"
+                             :style="'left: ' + (((ev.hStart - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; transform: translateX(-50%);'"
+                             :title="formatDecimalHour(ev.hStart) + ' — ' + ev.description">
+                            <span x-text="index + 1"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- Grille des Périodes (Visualisation) -->
             <div class="flex items-center gap-4">
                 <div style="width: 220px;" class="flex-shrink-0 text-right pr-4 text-xs font-black uppercase text-gray-500">Périodes associées</div>
@@ -114,6 +132,13 @@
                              :title="per.nom + ' (' + formatDecimalHour(per.debut) + ' - ' + formatDecimalHour(per.fin) + ')'">
                             <span x-text="per.nom"></span>
                         </div>
+                    </template>
+
+                    <!-- Repères du programme (vertical orange dashed lines) sur les périodes -->
+                    <template x-for="ev in visualProgramEvents">
+                        <div class="absolute h-full border-r-2 border-amber-400 border-dashed pointer-events-none z-10"
+                             :style="'left: ' + (((ev.hStart - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
+                             :title="ev.description"></div>
                     </template>
                 </div>
             </div>
@@ -131,10 +156,10 @@
                                @change="triggerAutoSave()"
                                class="brutal-input w-full px-2 py-1 text-xs font-bold text-gray-600" />
                         <div class="flex justify-between items-center text-xs">
-                            <button @click="addVisualShift(lineIdx)" class="text-blue-600 hover:text-blue-800 font-bold">
+                            <button type="button" @click="addVisualShift(lineIdx)" class="text-blue-600 hover:text-blue-800 font-bold">
                                 ➕ Ajouter créneau
                             </button>
-                            <button @click="deleteVisualLine(lineIdx)" class="text-red-500 hover:text-red-700 font-bold">
+                            <button type="button" @click="deleteVisualLine(lineIdx)" class="text-red-500 hover:text-red-700 font-bold">
                                 Supprimer ligne
                             </button>
                         </div>
@@ -216,7 +241,7 @@
                                     </template>
                                 </select>
 
-                                <button @click="deleteVisualShift(lineIdx, shiftIdx)" class="text-red-500 hover:text-red-700 font-bold ml-1">
+                                <button type="button" @click="deleteVisualShift(lineIdx, shiftIdx)" class="text-red-500 hover:text-red-700 font-bold ml-1">
                                     ✕
                                 </button>
                             </div>
@@ -231,7 +256,7 @@
     <div class="brutal-card bg-white p-8">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-black">📅 4. Tranches Horaires des Périodes</h3>
-            <button @click="addVisualPeriod()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
+            <button type="button" @click="addVisualPeriod()" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
                 ➕ Créer une Période
             </button>
         </div>
@@ -279,7 +304,7 @@
                                class="brutal-input w-full px-2 py-2 font-bold text-center" />
                     </div>
 
-                    <button @click="deleteVisualPeriod(idx)" class="brutal-btn bg-red-100 hover:bg-red-200 border-2 border-brutal-black p-2 mt-4">
+                    <button type="button" @click="deleteVisualPeriod(idx)" class="brutal-btn bg-red-100 hover:bg-red-200 border-2 border-brutal-black p-2 mt-4">
                         🗑️ Supprimer
                     </button>
                 </div>
@@ -305,7 +330,7 @@
                 Toutes vos actions (glisser, redimensionner, modifier du texte, ajouter/supprimer) sont enregistrées automatiquement à la volée sur Supabase.
             </p>
         </div>
-        <button @click="saveVisualCreator(false)" :disabled="loading"
+        <button type="button" @click="saveVisualCreator(false)" :disabled="loading"
             class="brutal-btn bg-brutal-black text-white px-8 py-4 text-lg font-black shadow-brutal hover:bg-gray-800 transition-colors">
             <span x-show="!loading">🔄 Forcer la synchronisation</span>
             <span x-show="loading">⏳ Synchronisation...</span>

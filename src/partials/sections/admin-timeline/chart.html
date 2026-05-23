@@ -11,9 +11,9 @@
   >
     <div class="font-black text-sm" x-text="tooltip.titre"></div>
     <div class="text-xs font-bold text-gray-500 mt-1">
-      <span x-text="tooltip.debutStr"></span> – <span x-text="tooltip.finStr"></span>
+      <span x-text="tooltip.debutStr"></span><span x-show="tooltip.finStr"> – <span x-text="tooltip.finStr"></span></span>
     </div>
-    <div class="text-xs mt-1 font-bold">Bénévoles : <span x-text="tooltip.inscrits"></span> / <span x-text="tooltip.nb_min + '–' + tooltip.nb_max"></span></div>
+    <div class="text-xs mt-1 font-bold" x-show="tooltip.inscrits !== null">Bénévoles : <span x-text="tooltip.inscrits"></span> / <span x-text="tooltip.nb_min + '–' + tooltip.nb_max"></span></div>
     <div class="text-xs text-gray-600 mt-2 italic leading-snug" x-show="tooltip.description" x-text="tooltip.description"></div>
   </div>
 
@@ -78,8 +78,11 @@
             <div x-show="programmeDuJour.length > 0" class="relative mt-1" style="height: 24px;">
               <template x-for="ev in programmeDuJour" :key="'cprog-' + ev.num">
                 <div
-                  class="absolute top-0 w-6 h-6 bg-amber-400 border-2 border-brutal-black text-brutal-black text-xs font-black flex items-center justify-center rounded-full"
+                  class="absolute top-0 w-6 h-6 bg-amber-400 border-2 border-brutal-black text-brutal-black text-xs font-black flex items-center justify-center rounded-full cursor-pointer hover:opacity-85 shadow-sm transition-opacity"
                   :style="'left:' + ev.xPct + '%; transform: translateX(-50%);'"
+                  @mouseenter="showProgramTooltip(ev, $event)"
+                  @mousemove="moveTooltip($event)"
+                  @mouseleave="hideTooltip()"
                   x-text="ev.num"
                 ></div>
               </template>
@@ -183,9 +186,11 @@
           <div class="relative flex-1" style="height: 22px;">
             <template x-for="ev in programmeDuJour" :key="'pm-' + ev.num">
               <div
-                class="absolute top-0 w-6 h-6 bg-amber-400 border-2 border-brutal-black text-brutal-black text-xs font-black flex items-center justify-center rounded-full cursor-default shadow-sm"
+                class="absolute top-0 w-6 h-6 bg-amber-400 border-2 border-brutal-black text-brutal-black text-xs font-black flex items-center justify-center rounded-full cursor-pointer hover:opacity-85 shadow-sm transition-opacity"
                 :style="'left:' + ev.xPct + '%; transform: translateX(-50%);'"
-                :title="ev.timeLabel + ' — ' + ev.description"
+                @mouseenter="showProgramTooltip(ev, $event)"
+                @mousemove="moveTooltip($event)"
+                @mouseleave="hideTooltip()"
                 x-text="ev.num"
               ></div>
             </template>
