@@ -453,7 +453,7 @@ export const AdminModule = {
             if (!p.referent_id) {
                 if (!orphans[p.titre]) orphans[p.titre] = [];
                 const periode = this.periodes.find(per => per.id === p.periode_id);
-                if (periode) {
+                if (periode && !orphans[p.titre].some(per => per.id === p.periode_id)) {
                     orphans[p.titre].push(periode);
                 }
             }
@@ -1245,6 +1245,7 @@ export const AdminModule = {
                     const dureeH = (new Date(p.periode_fin).getTime() - new Date(p.periode_debut).getTime()) / 3600000;
                     const inscrits = p.inscrits_actuels || 0;
                     return {
+                        id: p.id,
                         titre: p.titre,
                         debut: p.periode_debut,
                         fin: p.periode_fin,
