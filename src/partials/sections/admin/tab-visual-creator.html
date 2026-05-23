@@ -337,4 +337,29 @@
         </button>
     </div>
 
+    <!-- Modal : Ajouter un jour -->
+    <div x-show="showAddDayModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @keydown.escape.window="showAddDayModal = false">
+        <div class="absolute inset-0 bg-brutal-black opacity-80" @click="showAddDayModal = false"></div>
+        <div class="relative bg-brutal-white border-4 border-brutal-black shadow-brutal w-full max-w-md p-6 flex flex-col"
+            @click.stop>
+            <h3 class="text-2xl font-black mb-4">📅 Ajouter un nouveau jour</h3>
+            <p class="text-sm font-bold text-gray-600 mb-4">
+                Saisissez la date du nouveau jour de compétition à planifier.
+            </p>
+            <div class="mb-6">
+                <label class="block text-xs font-black uppercase text-gray-500 mb-2">Date</label>
+                <input type="date" x-model="newDayDate" class="brutal-input w-full px-4 py-3 font-mono font-bold text-lg" required />
+            </div>
+            <div class="flex gap-3">
+                <button type="button" @click="confirmAddVisualDay()" class="brutal-btn bg-brutal-ice flex-1 py-3 font-black shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                    ✅ Confirmer
+                </button>
+                <button type="button" @click="showAddDayModal = false" class="brutal-btn bg-gray-200 px-6 py-3 font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                    Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>

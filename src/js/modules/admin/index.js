@@ -1438,6 +1438,8 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     periodConflicts: [],
     autoSaveStatus: 'synced', // 'synced', 'saving', 'error'
     autoSaveTimeout: null,
+    showAddDayModal: false,
+    newDayDate: '2026-05-18',
 
     getLocalDateKey(isoStr) {
         if (!isoStr) return '';
@@ -1639,18 +1641,24 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     },
 
     addVisualDay() {
-        const d = prompt("Entrez la date du nouveau jour (Format: AAAA-MM-JJ) :", "2026-05-18");
+        this.newDayDate = '2026-05-18';
+        this.showAddDayModal = true;
+    },
+
+    confirmAddVisualDay() {
+        const d = this.newDayDate;
         if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
             if (!this.visualDays.includes(d)) {
                 this.visualDays.push(d);
                 this.visualDays.sort();
                 this.selectVisualDay(d);
+                this.showAddDayModal = false;
                 // Déclencher immédiatement la sauvegarde automatique pour enregistrer la période par défaut créée pour ce nouveau jour dans Supabase
                 this.triggerAutoSave();
             } else {
                 this.showToast("Ce jour existe déjà !", "warning");
             }
-        } else if (d) {
+        } else {
             this.showToast("Format de date invalide. Utilisez AAAA-MM-JJ.", "error");
         }
     },
@@ -2010,19 +2018,98 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 this.visualDeletedEventIds = [];
             }
 
+            // 1. Rassembler toutes les périodes (existantes d'autres jours et courantes du créateur visuel)
+            const currentPeriodIds = new Set(this.visualPeriods.map(p => p.id));
+            const otherDayPeriods = this.periodes.filter(p => !currentPeriodIds.has(p.id));
+            
+            const allPeriodsToSave = [
+                ...otherDayPeriods.map(p => ({ ...p, isNew: false })),
+                ...this.visualPeriods.map(p => ({ ...p, isNew: String(p.id).startsWith('temp-per-') }))
+            ];
+
+            // 2. Fonction robuste pour calculer le poids chronologique d'une période
+            const getPeriodeWeight = (per) => {
+                // Si c'est une période du jour sélectionné
+                if (currentPeriodIds.has(per.id)) {
+                    const vp = this.visualPeriods.find(p => p.id === per.id);
+                    const dayTime = new Date(this.visualDaySelected + 'T00:00:00').getTime();
+                    const hourOffset = (vp.debut || 0) * 3600000;
+                    return dayTime + hourOffset;
+                }
+
+                // Si elle a des postes associés dans la base
+                const perPostes = this.postes.filter(p => p.periode_id === per.id && p.periode_debut);
+                if (perPostes.length > 0) {
+                    const starts = perPostes.map(p => new Date(p.periode_debut).getTime());
+                    return Math.min(...starts);
+                }
+
+                // Sinon, essayer de parser la date depuis son nom (ex: "Samedi 16 mai 2026 - 08:00 / 12:00")
+                if (per.nom) {
+                    const cleanNom = per.nom.toLowerCase();
+                    const moisMap = {
+                        'janvier': 0, 'fevrier': 1, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5,
+                        'juillet': 6, 'aout': 7, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'decembre': 11, 'décembre': 11
+                    };
+
+                    const match = cleanNom.match(/(\d{1,2})\s+([a-zéû]+)/);
+                    if (match) {
+                        const dayNum = parseInt(match[1]);
+                        const moisStr = match[2];
+                        if (moisMap[moisStr] !== undefined) {
+                            const yearMatch = cleanNom.match(/20\d{2}/);
+                            const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+                            const parsedDate = new Date(year, moisMap[moisStr], dayNum);
+                            
+                            let hour = 8;
+                            const timeMatch = cleanNom.match(/(\d{1,2})[:h](\d{2})/);
+                            if (timeMatch) {
+                                hour = parseInt(timeMatch[1]) + parseInt(timeMatch[2]) / 60;
+                            }
+                            return parsedDate.getTime() + hour * 3600000;
+                        }
+                    }
+                }
+
+                // Par défaut, basé sur l'ordre existant
+                return 9999999999999 + (per.ordre || 0);
+            };
+
+            // 3. Trier toutes les périodes par poids chronologique
+            allPeriodsToSave.sort((a, b) => getPeriodeWeight(a) - getPeriodeWeight(b));
+
+            // 4. Attribuer les ordres cibles de 1 à N
+            allPeriodsToSave.forEach((per, index) => {
+                per.ordreCible = index + 1;
+            });
+
+            // 5. Étape de libération des ordres pour les périodes existantes afin d'éviter tout conflit de clé unique
+            // On attribue temporairement un ordre supérieur à 10000 à toutes les périodes existantes en base de données
+            for (const per of allPeriodsToSave) {
+                if (!per.isNew) {
+                    const tempOrdre = 10000 + per.ordreCible;
+                    const { error } = await ApiService.update('periodes', { ordre: tempOrdre }, { id: per.id });
+                    if (error) throw error;
+                }
+            }
+
+            // 6. Sauvegarder et appliquer les ordres réels finaux
             const periodIdMapping = {};
-            for (const per of this.visualPeriods) {
+            for (const per of allPeriodsToSave) {
                 const perPayload = {
                     nom: per.nom,
-                    ordre: parseInt(per.ordre),
+                    ordre: parseInt(per.ordreCible),
                     montant_credit: parseFloat(per.montant_credit || 0.00)
                 };
 
-                if (String(per.id).startsWith('temp-per-')) {
+                if (per.isNew) {
                     const { data, error } = await ApiService.insert('periodes', perPayload);
                     if (error) throw error;
                     periodIdMapping[per.id] = data.id;
-                    per.id = data.id;
+                    
+                    // Mettre à jour l'ID localement dans this.visualPeriods si c'est la période du jour en cours
+                    const localVp = this.visualPeriods.find(vp => vp.id === per.id);
+                    if (localVp) localVp.id = data.id;
                 } else {
                     const { error } = await ApiService.update('periodes', perPayload, { id: per.id });
                     if (error) throw error;
