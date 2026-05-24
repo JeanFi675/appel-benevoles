@@ -1320,6 +1320,12 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     },
     // État pour le tooltip au survol
     hoveredShift: null, // { shift, line, referentNom, x: 0, y: 0 }
+    
+    // États pour le tracé visuel de créneau
+    isDrawingShift: false,
+    drawingLineIndex: -1,
+    drawingState: null, // { lineIdx, startHour, currentHour, containerWidth, containerLeft }
+
     // États pour le drag-and-drop de lignes (clic long)
     lineDragTimer: null,
     lineDragState: null, // { lineIndex: -1, startY: 0, currentY: 0 }
@@ -2627,6 +2633,112 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         if (!this.visualDaySelected) return;
         const order = this.visualLines.map(line => `${line.titre.trim()}|||${(line.description || '').trim()}`);
         localStorage.setItem(`admin_planning_lines_order_${this.visualDaySelected}`, JSON.stringify(order));
+    },
+
+    armDrawShift(lineIdx) {
+        this.hideShiftTooltip();
+        this.isDrawingShift = true;
+        this.drawingLineIndex = lineIdx;
+        this.showToast("👉 Cliquez-glissez sur la ligne en pointillés orange pour tracer votre créneau.", "info");
+    },
+
+    cancelDrawShift() {
+        this.isDrawingShift = false;
+        this.drawingLineIndex = -1;
+        this.drawingState = null;
+    },
+
+    startDrawingShift(event, lineIdx) {
+        if (!this.isDrawingShift || this.drawingLineIndex !== lineIdx) return;
+        event.preventDefault();
+        
+        const container = event.currentTarget;
+        const rect = container.getBoundingClientRect();
+        const clientX = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+        const clickX = clientX - rect.left;
+        const pct = clickX / rect.width;
+        
+        const totalHours = this.hoursRange.end - this.hoursRange.start;
+        const startHour = this.hoursRange.start + pct * totalHours;
+        const startHourSnapped = Math.max(this.hoursRange.start, Math.min(this.hoursRange.end, Math.round(startHour / 0.25) * 0.25));
+        
+        this.drawingState = {
+            lineIdx,
+            startHour: startHourSnapped,
+            currentHour: startHourSnapped,
+            containerWidth: rect.width,
+            containerLeft: rect.left
+        };
+        
+        const handleMove = (e) => this.handleDrawingMove(e);
+        const handleUp = () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleUp);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleUp);
+            this.stopDrawingShift();
+        };
+        
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleUp);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleUp);
+    },
+
+    handleDrawingMove(event) {
+        if (!this.drawingState) return;
+        if (event.cancelable) event.preventDefault();
+        
+        const clientX = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+        const clickX = clientX - this.drawingState.containerLeft;
+        const pct = clickX / this.drawingState.containerWidth;
+        
+        const totalHours = this.hoursRange.end - this.hoursRange.start;
+        const currentHour = this.hoursRange.start + pct * totalHours;
+        const currentHourSnapped = Math.max(this.hoursRange.start, Math.min(this.hoursRange.end, Math.round(currentHour / 0.25) * 0.25));
+        
+        this.drawingState.currentHour = currentHourSnapped;
+    },
+
+    stopDrawingShift() {
+        if (!this.drawingState) return;
+        
+        let debut = Math.min(this.drawingState.startHour, this.drawingState.currentHour);
+        let fin = Math.max(this.drawingState.startHour, this.drawingState.currentHour);
+        
+        // Si durée trop courte ou nulle, par défaut 1h
+        if (fin - debut < 0.25) {
+            if (debut + 1 <= this.hoursRange.end) {
+                fin = debut + 1;
+            } else {
+                debut = fin - 1;
+            }
+        }
+        
+        const lineIdx = this.drawingState.lineIdx;
+        this.drawingState = null;
+        this.isDrawingShift = false;
+        this.drawingLineIndex = -1;
+        
+        this.openAddShiftModalWithTimes(lineIdx, debut, fin);
+    },
+
+    openAddShiftModalWithTimes(lineIndex, debut, fin) {
+        this.hideShiftTooltip();
+        const line = this.visualLines[lineIndex];
+        if (!line) return;
+        
+        this.addShiftData = {
+            lineIndex,
+            titre: line.titre,
+            description: line.description,
+            debut,
+            fin,
+            nb_min: 1,
+            nb_max: 5,
+            referent_id: ''
+        };
+        this.showAddShiftModal = true;
     },
 
     openAddShiftModal(lineIndex = -1) {

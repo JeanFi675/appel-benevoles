@@ -203,9 +203,17 @@
                             <span class="font-black text-sm text-brutal-black block truncate" x-text="line.titre" :title="line.titre"></span>
                         </div>
                         <div class="flex items-center gap-2 ml-2 shrink-0">
-                            <button type="button" @click="openAddShiftModal(lineIdx)" class="text-blue-600 hover:text-blue-800 font-black text-xs p-1" title="Ajouter un créneau">
-                                ➕
-                            </button>
+                            <!-- Bouton + ou Annuler le tracé selon l'état -->
+                            <template x-if="!isDrawingShift || drawingLineIndex !== lineIdx">
+                                <button type="button" @click="armDrawShift(lineIdx)" class="text-blue-600 hover:text-blue-800 font-black text-xs p-1" title="Tracer un créneau">
+                                    ➕
+                                </button>
+                            </template>
+                            <template x-if="isDrawingShift && drawingLineIndex === lineIdx">
+                                <button type="button" @click="cancelDrawShift()" class="text-red-600 hover:text-red-800 font-black text-xs p-1" title="Annuler le tracé (Sortir du mode dessin)">
+                                    ❌
+                                </button>
+                            </template>
                             <button type="button" @click="deleteVisualLine(lineIdx)" class="text-red-500 hover:text-red-700 font-black text-xs p-1" title="Supprimer la ligne">
                                 🗑️
                             </button>
@@ -213,7 +221,13 @@
                     </div>
 
                     <!-- Colonne Timeline interactive -->
-                    <div class="relative flex-1 bg-gray-50 border-3 border-brutal-black timeline-track shadow-brutal-sm rounded" style="height: 38px;">
+                    <div class="relative flex-1 bg-gray-50 border-3 border-brutal-black timeline-track shadow-brutal-sm rounded transition-all select-none" 
+                         style="height: 38px;"
+                         :class="{
+                             'border-dashed border-amber-400 bg-amber-50/50 cursor-crosshair ring-2 ring-amber-300 ring-opacity-50 animate-pulse': isDrawingShift && drawingLineIndex === lineIdx
+                         }"
+                         @mousedown="isDrawingShift && drawingLineIndex === lineIdx && startDrawingShift($event, lineIdx)"
+                         @touchstart="isDrawingShift && drawingLineIndex === lineIdx && startDrawingShift($event, lineIdx)">
                         
                         <!-- Lignes verticales de la grille horaire -->
                         <template x-for="h in Array.from({length: hoursRange.end - hoursRange.start + 1}, (_, i) => hoursRange.start + i)">
@@ -226,6 +240,14 @@
                             <div class="absolute h-full border-r-2 border-amber-400 border-dashed pointer-events-none z-10"
                                  :style="'left: ' + (((ev.hStart - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%;'"
                                   :title="ev.description"></div>
+                        </template>
+
+                        <!-- Preview de tracé (drawing overlay) -->
+                        <template x-if="drawingState && drawingState.lineIdx === lineIdx">
+                            <div class="absolute top-1 bottom-1 bg-amber-200 border-3 border-dashed border-amber-600 rounded-sm opacity-70 flex items-center justify-center font-black text-xs text-amber-800 pointer-events-none select-none z-30 animate-pulse"
+                                 :style="'left: ' + (((Math.min(drawingState.startHour, drawingState.currentHour) - hoursRange.start) / (hoursRange.end - hoursRange.start)) * 100) + '%; width: ' + (((Math.max(drawingState.startHour, drawingState.currentHour) - Math.min(drawingState.startHour, drawingState.currentHour)) / (hoursRange.end - hoursRange.start)) * 100) + '%;'">
+                                <span x-text="formatDecimalHour(Math.min(drawingState.startHour, drawingState.currentHour)) + ' – ' + formatDecimalHour(Math.max(drawingState.startHour, drawingState.currentHour))"></span>
+                            </div>
                         </template>
 
                         <!-- Barres de créneaux (Shifts) -->
