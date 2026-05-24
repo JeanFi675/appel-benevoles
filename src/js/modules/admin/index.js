@@ -204,6 +204,96 @@ export const AdminModule = {
         });
     },
 
+    exportBenevolesExcel() {
+        const filtered = this.getFilteredBenevoles();
+        if (filtered.length === 0) {
+            this.showToast('⚠️ Aucun bénévole à exporter.', 'warning');
+            return;
+        }
+
+        // En-têtes du fichier
+        const headers = [
+            'Nom',
+            'Prénom',
+            'Email',
+            'Téléphone',
+            'Taille T-shirt',
+            'Rôle',
+            'Club (Type adhésion)',
+            'Inscriptions',
+            'Postes Référent',
+            'Total Cagnotte Matériel (D)',
+            'Compte Principal Famille ?',
+            'Consommé Global Famille (D)',
+            'Reste Global Famille (D)',
+            'Bénévole d\'Or ?',
+            'Créé le'
+        ];
+
+        // Traduction des rôles pour l'export
+        const roleTraduit = {
+            'admin': '🔐 Administrateur',
+            'referent': '👔 Référent',
+            'juge': '⚖️ Juge',
+            'admin-juge': '🔑 Admin-Juge',
+            'officiel': '🎖️ Officiel',
+            'benevole': '👤 Bénévole'
+        };
+
+        const rows = [headers];
+
+        filtered.forEach(b => {
+            const adhesionType = b.adhesion ? b.adhesion.type : '—';
+            const roleStr = roleTraduit[b.role] || b.role || '👤 Bénévole';
+            const dateStr = b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR') : '';
+
+            rows.push([
+                b.nom || '',
+                b.prenom || '',
+                b.email || '',
+                b.telephone || '',
+                b.taille_tshirt || '',
+                roleStr,
+                adhesionType,
+                b.nb_inscriptions || 0,
+                b.nb_postes_referent || 0,
+                b.cagnotte_total || 0,
+                b.is_family_head ? 'Oui' : (b.user_id ? 'Non (Membre famille)' : 'Non (Compte unique)'),
+                b.cagnotte_real_consumed || 0,
+                b.cagnotte_solde || 0,
+                b.benevole_or ? 'Oui' : 'Non',
+                dateStr
+            ]);
+        });
+
+        // Conversion en CSV avec séparateur point-virgule et échappement
+        const csvContent = rows.map(row => 
+            row.map(val => {
+                const str = String(val).replace(/"/g, '""');
+                return `"${str}"`;
+            }).join(';')
+        ).join('\r\n');
+
+        // Ajout du BOM UTF-8 pour Excel sous Windows pour préserver les accents
+        const bom = '\uFEFF';
+        const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+        
+        // Déclenchement du téléchargement
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `export_benevoles_${dateStr}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showToast('✅ Export Excel réussi !', 'success');
+        }
+    },
+
     // Computed for form
     getPostesForSelectedPeriod() {
         if (!this.newInscriptionForm.periode_id) return [];

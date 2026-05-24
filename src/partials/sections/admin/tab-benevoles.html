@@ -38,6 +38,12 @@
         </select>
       </div>
       <button
+        @click="exportBenevolesExcel()"
+        class="brutal-btn bg-emerald-400 text-brutal-black px-4 py-3 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-black uppercase text-sm whitespace-nowrap"
+      >
+        📥 Exporter Excel
+      </button>
+      <button
         @click="openAddBenevoleModal()"
         class="brutal-btn bg-brutal-yellow text-brutal-black px-4 py-3 shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-black uppercase text-sm whitespace-nowrap"
       >
