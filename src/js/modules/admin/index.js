@@ -84,23 +84,7 @@ export const AdminModule = {
         poste_id: ''
     },
 
-    // Forms
-    editingPoste: null,
-    posteForm: {
-        titre: '',
-        periode_id: '',
-        periode_debut: '',
-        periode_fin: '',
-        referent_id: '',
-        description: '',
-        nb_min: 1,
-        nb_max: 5
-    },
-    periodeForm: {
-        nom: '',
-        ordre: 1,
-        montant_credit: 0.00
-    },
+
 
     // Expose utils
     formatDateTime,
@@ -915,184 +899,7 @@ export const AdminModule = {
     },
 
     // --- Actions ---
-
-    async savePoste() {
-        this.loading = true;
-        try {
-            const payload = {
-                ...this.posteForm,
-                referent_id: this.posteForm.referent_id || null,
-                // L'input datetime-local est en heure locale → convertir en UTC pour Supabase
-                periode_debut: new Date(this.posteForm.periode_debut).toISOString(),
-                periode_fin: new Date(this.posteForm.periode_fin).toISOString()
-            };
-
-            // Validation de non-chevauchement temporel pour le même type de poste (même titre)
-            const start = new Date(payload.periode_debut).getTime();
-            const end = new Date(payload.periode_fin).getTime();
-            const titreLower = payload.titre.trim().toLowerCase();
-
-            const hasOverlap = this.postes.some(p => {
-                // Exclure le poste en cours d'édition
-                if (this.editingPoste && p.id === this.editingPoste.id) return false;
-
-                // Même titre (type de poste) ?
-                if (p.titre.trim().toLowerCase() !== titreLower) return false;
-
-                // Chevauchement horaire ?
-                const pStart = new Date(p.periode_debut).getTime();
-                const pEnd = new Date(p.periode_fin).getTime();
-
-                // Tolérance de 36s (36000ms) pour éviter les micro-imprécisions
-                return (start < pEnd - 36000 && end > pStart + 36000);
-            });
-
-            if (hasOverlap) {
-                throw new Error("un poste de même type (titre) existe déjà sur un créneau horaire qui se chevauche.");
-            }
-
-            if (this.editingPoste) {
-                const { error } = await ApiService.update('postes', payload, { id: this.editingPoste.id });
-                if (error) throw error;
-                this.showToast('✅ Poste modifié avec succès !', 'success');
-            } else {
-                const { error } = await ApiService.insert('postes', payload);
-                if (error) throw error;
-                this.showToast('✅ Poste créé avec succès !', 'success');
-            }
-
-            this.editingPoste = null;
-            this.resetPosteForm();
-            await this.loadPostes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
-        }
-    },
-
-    async deletePoste(id) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer ce poste ?')) return;
-        this.loading = true;
-        try {
-            const { error } = await ApiService.delete('postes', { id });
-            if (error) throw error;
-            this.showToast('✅ Poste supprimé', 'success');
-            await this.loadPostes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
-        }
-    },
-
-    editPoste(poste) {
-        this.editingPoste = poste;
-        this.posteForm = {
-            titre: poste.titre,
-            periode_id: poste.periode_id,
-            periode_debut: formatDateTimeForInput(poste.periode_debut),
-            periode_fin: formatDateTimeForInput(poste.periode_fin),
-            referent_id: poste.referent_id || '',
-            description: poste.description || '',
-            nb_min: poste.nb_min,
-            nb_max: poste.nb_max
-        };
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-
-    cancelEdit() {
-        this.editingPoste = null;
-        this.resetPosteForm();
-    },
-
-    resetPosteForm() {
-        this.posteForm = {
-            titre: '',
-            periode_id: '',
-            periode_debut: '',
-            periode_fin: '',
-            referent_id: '',
-            description: '',
-            nb_min: 1,
-            nb_max: 5
-        };
-    },
-
-    // --- Periodes ---
-
-    async createPeriode() {
-        this.loading = true;
-        try {
-            const { error } = await ApiService.insert('periodes', this.periodeForm);
-            if (error) throw error;
-            this.showToast('✅ Période créée avec succès !', 'success');
-            this.periodeForm = { nom: '', ordre: this.periodes.length + 1, montant_credit: 0.00 };
-            await this.loadPeriodes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
-        }
-    },
-
-    async updatePeriodeOrder(periodeId, newOrder) {
-        try {
-            const { error } = await ApiService.update('periodes', { ordre: parseInt(newOrder) }, { id: periodeId });
-            if (error) throw error;
-            this.showToast('✅ Ordre mis à jour', 'success');
-            await this.loadPeriodes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        }
-    },
-
-    async updatePeriodeAmount(periodeId, newAmount) {
-        try {
-            const { error } = await ApiService.update('periodes', { montant_credit: parseFloat(newAmount) }, { id: periodeId });
-            if (error) throw error;
-            this.showToast('✅ Montant mis à jour', 'success');
-            await this.loadPeriodes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        }
-    },
-
-    async renamePeriode(periode) {
-        const newName = prompt("Nouveau nom de la période :", periode.nom);
-        if (newName && newName.trim() !== "" && newName !== periode.nom) {
-            await this.updatePeriodeName(periode.id, newName.trim());
-        }
-    },
-
-    async updatePeriodeName(periodeId, newName) {
-        this.loading = true;
-        try {
-            const { error } = await ApiService.update('periodes', { nom: newName }, { id: periodeId });
-            if (error) throw error;
-            this.showToast('✅ Nom de la période mis à jour', 'success');
-            await this.loadPeriodes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
-        }
-    },
-
-    async deletePeriode(periodeId) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cette période ?')) return;
-        this.loading = true;
-        try {
-            const { error } = await ApiService.delete('periodes', { id: periodeId });
-            if (error) throw error;
-            this.showToast('✅ Période supprimée', 'success');
-            await this.loadPeriodes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        } finally {
-            this.loading = false;
-        }
-    },
+    // (Les méthodes manuelles savePoste, deletePoste, editPoste, createPeriode, etc. ont été supprimées car la gestion se fait désormais exclusivement via le Planning Interactif)
 
     getPostesCountForPeriode(periodeId) {
         return this.postes.filter(p => p.periode_id === periodeId).length;
@@ -1981,29 +1788,42 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const shift = line.shifts[this.dragState.shiftIndex];
 
         if (this.dragState.mode === 'move') {
+            const duration = this.dragState.initialFin - this.dragState.initialDebut;
             let newDebut = this.dragState.initialDebut + deltaHoursSnapped;
-            let newFin = this.dragState.initialFin + deltaHoursSnapped;
-            
-            if (newDebut < this.hoursRange.start) {
-                const diff = this.hoursRange.start - newDebut;
-                newDebut += diff;
-                newFin += diff;
-            }
-            if (newFin > this.hoursRange.end) {
-                const diff = newFin - this.hoursRange.end;
-                newDebut -= diff;
-                newFin -= diff;
-            }
 
-            const otherOverlap = line.shifts.some((s, idx) => {
-                if (idx === this.dragState.shiftIndex) return false;
-                return (newDebut < s.fin && newFin > s.debut);
+            // Identifie le créneau immédiatement à gauche (le plus grand s.fin <= début initial)
+            let gaucheShift = null;
+            line.shifts.forEach((s, idx) => {
+                if (idx === this.dragState.shiftIndex) return;
+                if (s.fin <= this.dragState.initialDebut) {
+                    if (!gaucheShift || s.fin > gaucheShift.fin) {
+                        gaucheShift = s;
+                    }
+                }
             });
 
-            if (!otherOverlap) {
-                shift.debut = newDebut;
-                shift.fin = newFin;
-            }
+            // Identifie le créneau immédiatement à droite (le plus petit s.debut >= fin initiale)
+            let droiteShift = null;
+            line.shifts.forEach((s, idx) => {
+                if (idx === this.dragState.shiftIndex) return;
+                if (s.debut >= this.dragState.initialFin) {
+                    if (!droiteShift || s.debut < droiteShift.debut) {
+                        droiteShift = s;
+                    }
+                }
+            });
+
+            // Détermine les limites physiques réelles (bornes de glissement)
+            const limiteGauche = gaucheShift ? gaucheShift.fin : this.hoursRange.start;
+            const limiteDroite = droiteShift ? droiteShift.debut : this.hoursRange.end;
+
+            // Contraint newDebut pour rester strictement dans l'intervalle de sécurité
+            newDebut = Math.max(limiteGauche, Math.min(limiteDroite - duration, newDebut));
+            const newFin = newDebut + duration;
+
+            // Applique les valeurs directement
+            shift.debut = newDebut;
+            shift.fin = newFin;
         } 
         else if (this.dragState.mode === 'resize-start') {
             let newDebut = this.dragState.initialDebut + deltaHoursSnapped;
@@ -2534,9 +2354,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             if (this.visualDeletedPosteIds.length > 0) {
                 deletePromises.push(ApiService.delete('postes', { id: this.visualDeletedPosteIds }));
             }
-            if (this.visualDeletedPeriodIds.length > 0) {
-                deletePromises.push(ApiService.delete('periodes', { id: this.visualDeletedPeriodIds }));
-            }
             if (this.visualDeletedEventIds.length > 0) {
                 try {
                     deletePromises.push(ApiService.delete('programme', { id: this.visualDeletedEventIds }));
@@ -2547,13 +2364,31 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 await Promise.all(deletePromises);
                 // Vider les listes de suppression après exécution réussie
                 this.visualDeletedPosteIds = [];
-                this.visualDeletedPeriodIds = [];
                 this.visualDeletedEventIds = [];
+            }
+
+            // Gérer la suppression des périodes de manière séquentielle et sûre
+            if (this.visualDeletedPeriodIds.length > 0) {
+                for (const periodId of this.visualDeletedPeriodIds) {
+                    // Détacher les postes qui référencent cette période dans la base de données
+                    const { error: detachError } = await ApiService.updateMany('postes', { periode_id: null }, { periode_id: periodId });
+                    if (detachError) {
+                        console.error(`[Detach] Erreur pour la période ${periodId}:`, detachError);
+                    }
+                }
+                
+                // Supprimer physiquement la période de la table 'periodes'
+                const { error: deletePerError } = await ApiService.delete('periodes', { id: this.visualDeletedPeriodIds });
+                if (deletePerError) {
+                    throw deletePerError;
+                }
+                this.visualDeletedPeriodIds = [];
             }
 
             // 1. Rassembler toutes les périodes (existantes d'autres jours et courantes du créateur visuel)
             const currentPeriodIds = new Set(this.visualPeriods.map(p => p.id));
-            const otherDayPeriods = this.periodes.filter(p => !currentPeriodIds.has(p.id));
+            const deletedPeriodIdsSet = new Set(this.visualDeletedPeriodIds);
+            const otherDayPeriods = this.periodes.filter(p => !currentPeriodIds.has(p.id) && !deletedPeriodIdsSet.has(p.id));
             
             const allPeriodsToSave = [
                 ...otherDayPeriods.map(p => ({ ...p, isNew: false })),
