@@ -2367,6 +2367,9 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 this.visualDeletedEventIds = [];
             }
 
+            // Conserver les IDs supprimés dans un Set avant de vider le tableau lors de la suppression physique
+            const deletedPeriodIdsSet = new Set(this.visualDeletedPeriodIds);
+
             // Gérer la suppression des périodes de manière séquentielle et sûre
             if (this.visualDeletedPeriodIds.length > 0) {
                 for (const periodId of this.visualDeletedPeriodIds) {
@@ -2387,7 +2390,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
             // 1. Rassembler toutes les périodes (existantes d'autres jours et courantes du créateur visuel)
             const currentPeriodIds = new Set(this.visualPeriods.map(p => p.id));
-            const deletedPeriodIdsSet = new Set(this.visualDeletedPeriodIds);
             const otherDayPeriods = this.periodes.filter(p => !currentPeriodIds.has(p.id) && !deletedPeriodIdsSet.has(p.id));
             
             const allPeriodsToSave = [
