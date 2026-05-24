@@ -19,7 +19,7 @@ export function initAdminTimelineApp() {
     inscriptionCounts: {},
     selectedDay: null,
     toasts: [],
-    tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, inscrits: 0, debutStr: '', finStr: '', x: 0, y: 0 },
+    tooltip: { show: false, titre: '', description: '', nb_min: 0, nb_max: 0, inscrits: 0, debutStr: '', finStr: '', liste_benevoles: [], x: 0, y: 0 },
     dbProgramme: null,
 
     getLocalDateKey(isoStr) {
@@ -294,6 +294,7 @@ export function initAdminTimelineApp() {
         inscrits: poste.inscrits,
         debutStr: poste.debutStr || this.formatTime(new Date(poste.periode_debut).getTime()),
         finStr: poste.finStr || this.formatTime(new Date(poste.periode_fin).getTime()),
+        liste_benevoles: poste.liste_benevoles || [],
         x: offRight ? event.clientX - 300 : event.clientX,
         y: event.clientY
       };
@@ -413,12 +414,21 @@ export function initAdminTimelineApp() {
 
     async loadPostes() {
       try {
-        const { data, error } = await ApiService.fetch('postes', {
-          select: 'id, titre, description, periode_debut, periode_fin, nb_min, nb_max',
+        const { data, error } = await ApiService.fetch('public_planning', {
+          select: 'poste_id, titre, description, periode_debut, periode_fin, nb_min, nb_max, liste_benevoles',
           order: { column: 'periode_debut', ascending: true }
         });
         if (error) throw error;
-        this.postes = data || [];
+        this.postes = (data || []).map(p => ({
+          id: p.poste_id,
+          titre: p.titre,
+          description: p.description,
+          periode_debut: p.periode_debut,
+          periode_fin: p.periode_fin,
+          nb_min: p.nb_min,
+          nb_max: p.nb_max,
+          liste_benevoles: p.liste_benevoles || []
+        }));
       } catch (err) {
         console.error('Erreur chargement postes:', err);
         this.addToast('Erreur lors du chargement des postes', 'error');

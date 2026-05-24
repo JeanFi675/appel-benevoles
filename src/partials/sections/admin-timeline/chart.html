@@ -14,6 +14,16 @@
       <span x-text="tooltip.debutStr"></span><span x-show="tooltip.finStr"> – <span x-text="tooltip.finStr"></span></span>
     </div>
     <div class="text-xs mt-1 font-bold" x-show="tooltip.inscrits !== null">Bénévoles : <span x-text="tooltip.inscrits"></span> / <span x-text="tooltip.nb_min + '–' + tooltip.nb_max"></span></div>
+    <template x-if="tooltip.liste_benevoles && tooltip.liste_benevoles.length > 0">
+      <div class="text-xs mt-2 border-t-2 border-dashed border-brutal-black pt-2">
+        <span class="font-black">Inscrits :</span>
+        <div class="flex flex-wrap gap-1 mt-1">
+          <template x-for="(benevole, idx) in tooltip.liste_benevoles" :key="idx">
+            <span class="px-1.5 py-0.5 bg-brutal-black text-brutal-white font-bold text-[10px] border border-brutal-black" x-text="benevole"></span>
+          </template>
+        </div>
+      </div>
+    </template>
     <div class="text-xs text-gray-600 mt-2 italic leading-snug" x-show="tooltip.description" x-text="tooltip.description"></div>
   </div>
 

@@ -112,6 +112,16 @@ export const ApiService = {
     },
 
     /**
+     * Upserts multiple records in a single batch.
+     * @param {string} table - The table name.
+     * @param {array} data - The array of data to upsert.
+     * @returns {Promise<{ data: any[], error: object|null }>} The upserted data.
+     */
+    async upsertMany(table, data) {
+        return await supabase.from(table).upsert(data).select();
+    },
+
+    /**
      * Deletes a record.
      * @param {string} table - The table name.
      * @param {object} match - The condition to match { column: value }.

@@ -572,9 +572,15 @@ export const AdminModule = {
 
             const postesWithCounts = await Promise.all(
                 (data || []).map(async (poste) => {
-                    const { data: inscriptions } = await ApiService.fetch('inscriptions', { eq: { poste_id: poste.id } });
+                    const { data: inscriptions } = await ApiService.fetch('inscriptions', {
+                        select: '*, benevoles(prenom, nom)',
+                        eq: { poste_id: poste.id }
+                    });
                     const count = inscriptions ? inscriptions.length : 0;
                     const inscrits_ids = (inscriptions || []).map(i => i.benevole_id);
+                    const inscrits_noms = (inscriptions || [])
+                        .map(i => i.benevoles ? `${i.benevoles.prenom} ${i.benevoles.nom}` : '')
+                        .filter(Boolean);
 
                     let referentIdentite = '-';
                     if (poste.benevoles) {
@@ -587,6 +593,7 @@ export const AdminModule = {
                         periode_ordre: poste.periodes?.ordre || 999,
                         inscrits_actuels: count,
                         inscrits_ids,
+                        inscrits_noms,
                         referent_identite: referentIdentite
                     };
                 })
@@ -1463,8 +1470,21 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     periodConflicts: [],
     autoSaveStatus: 'synced', // 'synced', 'saving', 'error'
     autoSaveTimeout: null,
+    isSavingVisual: false,
+    hasPendingChanges: false,
     showAddDayModal: false,
     newDayDate: '2026-05-18',
+
+    // États pour le filtrage et les crédits des périodes associées
+    selectedPeriodFilterId: null,
+    showPeriodCreditModal: false,
+    editPeriodCreditData: {
+        idx: -1,
+        nom: '',
+        montant_credit: 0
+    },
+    periodDragState: null,
+
 
     // États pour les modals d'édition et création
     showAddShiftModal: false,
@@ -1576,6 +1596,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         this.visualDeletedPeriodIds = [];
         this.visualDeletedEventIds = [];
         this.dragState = null;
+        this.selectedPeriodFilterId = null; // Réinitialiser le filtre de période au changement de jour
         
         // 1. Charger les événements de programme pour ce jour
         this.visualProgramEvents = [];
@@ -1613,25 +1634,37 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         });
 
         this.visualPeriods = dayPeriods.map((per, index) => {
-            const perPostes = dayPostes.filter(p => p.periode_id === per.id);
-            let debut = 8;
-            let fin = 13;
-            
-            if (perPostes.length > 0) {
-                const starts = perPostes.map(p => {
-                    const d = new Date(p.periode_debut);
-                    return d.getHours() + d.getMinutes() / 60;
-                });
-                const ends = perPostes.map(p => {
-                    const d = new Date(p.periode_fin);
-                    return d.getHours() + d.getMinutes() / 60;
-                });
-                debut = Math.min(...starts);
-                fin = Math.max(...ends);
-            } else {
-                if (index === 0) { debut = 7; fin = 13; }
-                else if (index === 1) { debut = 13; fin = 19; }
-                else { debut = 19; fin = 22; }
+            let debut = null;
+            let fin = null;
+
+            // Essayer d'extraire les heures personnalisées directement depuis le nom de la période
+            if (per.nom) {
+                const timeMatch = per.nom.match(/ - (\d{2})[:h](\d{2}) \/ (\d{2})[:h](\d{2})/);
+                if (timeMatch) {
+                    debut = parseInt(timeMatch[1]) + parseInt(timeMatch[2]) / 60;
+                    fin = parseInt(timeMatch[3]) + parseInt(timeMatch[4]) / 60;
+                }
+            }
+
+            // Fallback si l'extraction depuis le nom a échoué (anciennes périodes ou format libre)
+            if (debut === null || fin === null) {
+                const perPostes = dayPostes.filter(p => p.periode_id === per.id);
+                if (perPostes.length > 0) {
+                    const starts = perPostes.map(p => {
+                        const d = new Date(p.periode_debut);
+                        return d.getHours() + d.getMinutes() / 60;
+                    });
+                    const ends = perPostes.map(p => {
+                        const d = new Date(p.periode_fin);
+                        return d.getHours() + d.getMinutes() / 60;
+                    });
+                    debut = Math.min(...starts);
+                    fin = Math.max(...ends);
+                } else {
+                    if (index === 0) { debut = 7; fin = 13; }
+                    else if (index === 1) { debut = 13; fin = 19; }
+                    else { debut = 19; fin = 22; }
+                }
             }
             
             return {
@@ -1649,7 +1682,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             const tempPerId = `temp-per-${Date.now()}`;
             this.visualPeriods.push({
                 id: tempPerId,
-                nom: `${dayPrefix} - 08:00 / 12:00`,
+                nom: `${dayPrefixNoYear} - 08:00 / 12:00`,
                 ordre: 1,
                 montant_credit: 10.00,
                 debut: 8,
@@ -1657,6 +1690,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 isNew: true
             });
         }
+
 
         // 4. Regrouper les postes de ce jour par Titre et Description (Lignes du Gantt)
         const groups = {};
@@ -1683,6 +1717,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 nb_max: p.nb_max,
                 referent_id: p.referent_id || '',
                 inscrits_actuels: p.inscrits_actuels || 0,
+                inscrits_noms: p.inscrits_noms || [],
                 periode_id: p.periode_id || null,
                 error: null
             });
@@ -2089,14 +2124,99 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     validateAndAutoAssignPeriods() {
         this.periodConflicts = [];
         
-        // Trier les périodes par début
+        // 1. Calculer les extrêmes des créneaux de ce jour (H_min et H_max)
+        let H_min = 8;
+        let H_max = 18;
+        let hasShifts = false;
+
+        const allShifts = [];
+        this.visualLines.forEach(line => {
+            line.shifts.forEach(shift => {
+                allShifts.push({
+                    shift,
+                    lineTitle: line.titre.trim().toLowerCase(),
+                    lineTitleRaw: line.titre.trim(),
+                    lineDescription: line.description ? line.description.trim() : ''
+                });
+            });
+        });
+
+        if (allShifts.length > 0) {
+            hasShifts = true;
+            H_min = Math.min(...allShifts.map(s => s.shift.debut));
+            H_max = Math.max(...allShifts.map(s => s.shift.fin));
+        }
+
+        // S'assurer d'avoir au moins une période par défaut si la liste est vide
+        if (this.visualPeriods.length === 0) {
+            const tempPerId = `temp-per-${Date.now()}`;
+            this.visualPeriods.push({
+                id: tempPerId,
+                nom: '',
+                ordre: 1,
+                montant_credit: 10.00,
+                debut: H_min,
+                fin: H_max,
+                isNew: true
+            });
+        }
+
+        // Trier les périodes existantes par début
         this.visualPeriods.sort((a, b) => a.debut - b.debut);
+
+        // Fixer les extrémités absolues : début de la première période et fin de la dernière période
+        this.visualPeriods[0].debut = H_min;
+        this.visualPeriods[this.visualPeriods.length - 1].fin = H_max;
+
+        // Assurer la continuité exacte des jonctions intermédiaires et que chaque période dure au moins 0.5h (30 min)
+        for (let i = 0; i < this.visualPeriods.length - 1; i++) {
+            const current = this.visualPeriods[i];
+            const next = this.visualPeriods[i+1];
+            
+            // Faire coïncider la fin de l'une avec le début de l'autre
+            next.debut = current.fin;
+
+            // Limite de 0.5h pour le bloc courant
+            const minAllowedFin = current.debut + 0.5;
+            if (current.fin < minAllowedFin) {
+                current.fin = minAllowedFin;
+                next.debut = minAllowedFin;
+            }
+        }
+
+        // Si le recalibrage avant a poussé des bornes au-delà de la fin, faire une passe arrière
+        for (let i = this.visualPeriods.length - 1; i > 0; i--) {
+            const current = this.visualPeriods[i];
+            const prev = this.visualPeriods[i-1];
+            
+            if (current.debut > current.fin - 0.5) {
+                current.debut = current.fin - 0.5;
+                prev.fin = current.debut;
+            }
+        }
+
+        // Si l'intervalle total est trop petit pour respecter la contrainte de 30 min par période,
+        // on redistribue uniformément sur [H_min, H_max]
+        const totalDuration = H_max - H_min;
+        const numPeriods = this.visualPeriods.length;
+        const minRequiredTotal = numPeriods * 0.5;
+
+        if (totalDuration < minRequiredTotal) {
+            const step = totalDuration / numPeriods;
+            for (let i = 0; i < numPeriods; i++) {
+                this.visualPeriods[i].debut = H_min + i * step;
+                this.visualPeriods[i].fin = H_min + (i + 1) * step;
+            }
+        }
+
+        // Mettre à jour l'ordre de 1 à N
         this.visualPeriods.forEach((p, idx) => p.ordre = idx + 1);
 
-        // Auto-nommer chaque période en fonction de son jour et de ses heures
+        // Auto-nommer chaque période en fonction de son jour et de ses heures (exclusivité sans l'année)
         const d = new Date(this.visualDaySelected + 'T00:00:00');
         const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+        const dayPrefixNoYear = dayPrefix.split(' 202')[0];
 
         const formatHourMin = (dec) => {
             const h = Math.floor(dec);
@@ -2105,46 +2225,50 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         };
 
         this.visualPeriods.forEach(per => {
-            per.nom = `${dayPrefix} - ${formatHourMin(per.debut)} / ${formatHourMin(per.fin)}`;
+            per.nom = `${dayPrefixNoYear} - ${formatHourMin(per.debut)} / ${formatHourMin(per.fin)}`;
         });
 
-        // Assigner chaque shift à sa période en fonction de son milieu (midpoint)
+        // 2. Assigner chaque créneau (shift) à sa période avec la règle de la durée maximale de chevauchement
         this.visualLines.forEach(line => {
             line.shifts.forEach(shift => {
                 shift.error = null;
                 shift.periode_id = null;
 
-                const mid = (shift.debut + shift.fin) / 2;
+                let maxOverlap = 0;
+                let bestPeriodId = null;
 
-                // Trouver la période contenant le milieu du shift
-                const matchingPeriod = this.visualPeriods.find(per => {
-                    return (mid >= per.debut && mid <= per.fin);
+                this.visualPeriods.forEach(per => {
+                    const overlap = Math.max(0, Math.min(shift.fin, per.fin) - Math.max(shift.debut, per.debut));
+                    if (overlap > maxOverlap) {
+                        maxOverlap = overlap;
+                        bestPeriodId = per.id;
+                    }
                 });
 
-                if (matchingPeriod) {
-                    shift.periode_id = matchingPeriod.id;
+                if (bestPeriodId) {
+                    shift.periode_id = bestPeriodId;
                 } else {
-                    // Fallback sur la période la plus proche
+                    // Fallback sur la période la plus proche du milieu du shift si pas d'intersection
                     if (this.visualPeriods.length > 0) {
-                        shift.periode_id = this.visualPeriods[0].id;
+                        const mid = (shift.debut + shift.fin) / 2;
+                        let minDistance = Infinity;
+                        let closestPeriodId = this.visualPeriods[0].id;
+                        
+                        this.visualPeriods.forEach(per => {
+                            const perMid = (per.debut + per.fin) / 2;
+                            const dist = Math.abs(mid - perMid);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                closestPeriodId = per.id;
+                            }
+                        });
+                        shift.periode_id = closestPeriodId;
                     }
                 }
             });
         });
 
-        // Détecter les conflits de chevauchement de créneaux pour des postes de même type (même titre)
-        const allShifts = [];
-        this.visualLines.forEach(line => {
-            line.shifts.forEach(shift => {
-                allShifts.push({
-                    shift,
-                    lineTitle: line.titre.trim().toLowerCase(),
-                    lineTitleRaw: line.titre.trim(),
-                    lineDescription: line.description.trim()
-                });
-            });
-        });
-
+        // 3. Détecter les conflits de chevauchement pour des créneaux de même titre
         const formatDecimalHour = (dec) => {
             const h = Math.floor(dec);
             const m = Math.round((dec - h) * 60);
@@ -2156,9 +2280,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             for (let j = i + 1; j < allShifts.length; j++) {
                 const s2 = allShifts[j];
 
-                // Même type de poste (même titre) ?
                 if (s1.lineTitle === s2.lineTitle) {
-                    // Chevauchement horaire ? Tolérance de 0.01h (36s) pour éviter les imprécisions des flottants
                     if (s1.shift.debut < s2.shift.fin - 0.01 && s1.shift.fin > s2.shift.debut + 0.01) {
                         s1.shift.error = 'Chevauchement';
                         s2.shift.error = 'Chevauchement';
@@ -2180,6 +2302,195 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         }
     },
 
+    togglePeriodFilter(perId) {
+        if (this.selectedPeriodFilterId === perId) {
+            this.selectedPeriodFilterId = null;
+        } else {
+            this.selectedPeriodFilterId = perId;
+        }
+    },
+
+    splitVisualPeriod() {
+        if (this.visualPeriods.length === 0) {
+            this.validateAndAutoAssignPeriods();
+            return;
+        }
+
+        // Trouver la période la plus longue
+        let maxDuration = 0;
+        let longestPeriodIdx = 0;
+        this.visualPeriods.forEach((per, idx) => {
+            const dur = per.fin - per.debut;
+            if (dur > maxDuration) {
+                maxDuration = dur;
+                longestPeriodIdx = idx;
+            }
+        });
+
+        const targetPeriod = this.visualPeriods[longestPeriodIdx];
+        if (maxDuration < 1.0) {
+            this.showToast("La période la plus longue est trop courte pour être scindée (durée minimale d'une heure requise).", "warning");
+            return;
+        }
+
+        // Calculer le milieu snappé à 0.25h
+        const rawMid = (targetPeriod.debut + targetPeriod.fin) / 2;
+        const mid = Math.round(rawMid / 0.25) * 0.25;
+
+        // S'assurer que les deux nouvelles périodes durent au moins 0.5h
+        if (mid - targetPeriod.debut < 0.5 || targetPeriod.fin - mid < 0.5) {
+            this.showToast("Impossible de scinder à cet endroit : les périodes doivent durer au moins 30 minutes.", "warning");
+            return;
+        }
+
+        // Créer la nouvelle période
+        const tempPerId = `temp-per-${Date.now()}`;
+        const newPeriod = {
+            id: tempPerId,
+            nom: '',
+            ordre: targetPeriod.ordre + 1,
+            montant_credit: targetPeriod.montant_credit || 10.00,
+            debut: mid,
+            fin: targetPeriod.fin,
+            isNew: true
+        };
+
+        // Mettre à jour la fin de la période scindée
+        targetPeriod.fin = mid;
+
+        // Insérer la nouvelle période juste après celle scindée
+        this.visualPeriods.splice(longestPeriodIdx + 1, 0, newPeriod);
+
+        // Recalculer l'ordre
+        this.visualPeriods.forEach((p, idx) => p.ordre = idx + 1);
+
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    removeVisualPeriod() {
+        if (this.visualPeriods.length <= 1) {
+            this.showToast("Impossible de supprimer la dernière période restante. Il doit y en avoir au moins une.", "warning");
+            return;
+        }
+
+        let idxToDelete = this.visualPeriods.length - 1;
+        if (this.selectedPeriodFilterId !== null) {
+            const idx = this.visualPeriods.findIndex(p => p.id === this.selectedPeriodFilterId);
+            if (idx !== -1) {
+                idxToDelete = idx;
+            }
+        }
+
+        const per = this.visualPeriods[idxToDelete];
+        if (!per) return;
+
+        const timeStr = per.nom.split(' - ')[1] || per.nom;
+        if (!confirm(`Voulez-vous supprimer la période "${timeStr}" ?\nLes créneaux associés seront automatiquement réassignés aux autres périodes les plus adaptées.`)) {
+            return;
+        }
+
+        if (per.id && !String(per.id).startsWith('temp-per-')) {
+            this.visualDeletedPeriodIds.push(per.id);
+        }
+        this.visualPeriods.splice(idxToDelete, 1);
+        
+        // Si on a supprimé la période qui servait de filtre, réinitialiser le filtre
+        if (this.selectedPeriodFilterId === per.id) {
+            this.selectedPeriodFilterId = null;
+        }
+
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+
+    startPeriodDrag(event, index) {
+        event.preventDefault();
+        const per = this.visualPeriods[index];
+        const nextPer = this.visualPeriods[index + 1];
+        if (!per || !nextPer) return;
+
+        const container = event.target.closest('.relative');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        
+        this.periodDragState = {
+            index,
+            initialFin: per.fin,
+            startX: event.clientX || (event.touches ? event.touches[0].clientX : 0),
+            containerWidth: rect.width || 800,
+            minFin: per.debut + 0.5,
+            maxFin: nextPer.fin - 0.5
+        };
+
+        const handleMove = (e) => this.handlePeriodDrag(e);
+        const handleUp = () => {
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleUp);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleUp);
+            this.stopPeriodDrag();
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleUp);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleUp);
+    },
+
+    handlePeriodDrag(event) {
+        if (!this.periodDragState) return;
+        if (event.cancelable) event.preventDefault();
+
+        const clientX = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+        const dx = clientX - this.periodDragState.startX;
+        
+        const totalHours = this.hoursRange.end - this.hoursRange.start;
+        const deltaHours = (dx / this.periodDragState.containerWidth) * totalHours;
+        const deltaHoursSnapped = Math.round(deltaHours / 0.25) * 0.25;
+
+        let newFin = this.periodDragState.initialFin + deltaHoursSnapped;
+        newFin = Math.max(this.periodDragState.minFin, Math.min(this.periodDragState.maxFin, newFin));
+
+        const per = this.visualPeriods[this.periodDragState.index];
+        const nextPer = this.visualPeriods[this.periodDragState.index + 1];
+        
+        per.fin = newFin;
+        nextPer.debut = newFin;
+
+        this.validateAndAutoAssignPeriods();
+    },
+
+    stopPeriodDrag() {
+        this.periodDragState = null;
+        this.validateAndAutoAssignPeriods();
+        this.triggerAutoSave();
+    },
+
+    openPeriodCreditModal(idx) {
+        const per = this.visualPeriods[idx];
+        if (!per) return;
+        this.editPeriodCreditData = {
+            idx,
+            nom: per.nom,
+            montant_credit: per.montant_credit || 0
+        };
+        this.showPeriodCreditModal = true;
+    },
+
+    savePeriodCredit() {
+        const idx = this.editPeriodCreditData.idx;
+        if (idx !== -1 && this.visualPeriods[idx]) {
+            this.visualPeriods[idx].montant_credit = parseFloat(this.editPeriodCreditData.montant_credit || 0);
+            this.showPeriodCreditModal = false;
+            this.triggerAutoSave();
+        }
+    },
+
+
+
     triggerAutoSave() {
         this.autoSaveStatus = 'saving';
         if (this.autoSaveTimeout) {
@@ -2197,6 +2508,12 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     },
 
     async saveVisualCreator(isSilent = false) {
+        if (this.isSavingVisual) {
+            console.log("Sauvegarde déjà en cours, report de l'enregistrement...");
+            this.hasPendingChanges = true;
+            return;
+        }
+
         this.validateAndAutoAssignPeriods();
 
         if (this.periodConflicts.length > 0) {
@@ -2206,10 +2523,11 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             throw new Error("Chevauchement de créneaux de poste détecté.");
         }
 
+        this.isSavingVisual = true;
         if (!isSilent) {
             this.loading = true;
         }
-        
+
         try {
             const deletePromises = [];
             
@@ -2299,17 +2617,26 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             });
 
             // 5. Étape de libération des ordres pour les périodes existantes afin d'éviter tout conflit de clé unique
-            // On attribue temporairement un ordre supérieur à 10000 à toutes les périodes existantes en base de données
-            for (const per of allPeriodsToSave) {
-                if (!per.isNew) {
-                    const tempOrdre = 10000 + per.ordreCible;
-                    const { error } = await ApiService.update('periodes', { ordre: tempOrdre }, { id: per.id });
-                    if (error) throw error;
-                }
+            // On attribue temporairement un ordre supérieur à un offset aléatoire unique à toutes les périodes existantes
+            const baseOffset = 10000 + Math.floor(Math.random() * 10000) * 100;
+            const tempPeriodsPayload = allPeriodsToSave
+                .filter(per => !per.isNew)
+                .map(per => ({
+                    id: per.id,
+                    nom: per.nom,
+                    ordre: baseOffset + per.ordreCible,
+                    montant_credit: parseFloat(per.montant_credit || 0.00)
+                }));
+            
+            if (tempPeriodsPayload.length > 0) {
+                const { error } = await ApiService.upsertMany('periodes', tempPeriodsPayload);
+                if (error) throw error;
             }
 
             // 6. Sauvegarder et appliquer les ordres réels finaux
             const periodIdMapping = {};
+            const periodsToUpsert = [];
+
             for (const per of allPeriodsToSave) {
                 const perPayload = {
                     nom: per.nom,
@@ -2326,10 +2653,17 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                     const localVp = this.visualPeriods.find(vp => vp.id === per.id);
                     if (localVp) localVp.id = data.id;
                 } else {
-                    const { error } = await ApiService.update('periodes', perPayload, { id: per.id });
-                    if (error) throw error;
+                    periodsToUpsert.push({
+                        id: per.id,
+                        ...perPayload
+                    });
                     periodIdMapping[per.id] = per.id;
                 }
+            }
+
+            if (periodsToUpsert.length > 0) {
+                const { error } = await ApiService.upsertMany('periodes', periodsToUpsert);
+                if (error) throw error;
             }
 
             const formatDecimalToISO = (dec) => {
@@ -2436,11 +2770,18 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             console.error("Erreur enregistrement planning interactif:", error);
             if (!isSilent) {
                 this.showToast(`❌ Erreur d'enregistrement : ${error.message}`, "error");
+            } else {
+                this.showToast(`❌ Erreur de sauvegarde automatique : ${error.message}`, "error");
             }
             throw error;
         } finally {
+            this.isSavingVisual = false;
             if (!isSilent) {
                 this.loading = false;
+            }
+            if (this.hasPendingChanges) {
+                this.hasPendingChanges = false;
+                this.triggerAutoSave();
             }
         }
     },
@@ -2640,6 +2981,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             shift,
             line,
             referentNom,
+            inscrits_noms: shift.inscrits_noms || [],
             x: event.clientX + 15,
             y: event.clientY + 15
         };
