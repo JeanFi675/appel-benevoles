@@ -43,10 +43,7 @@ export const AdminModule = {
     sendingRappel: false,
     rappelResult: null,
 
-    // Adhésions club (NocoDB → Supabase)
-    adhesionsData: {},   // map mail normalisé → row
-    adhesionsNom: {},    // map "NOM_prenom_normalisé" → row (fallback)
-    adhesionsLoading: false,
+
 
     // Referents Assignments
     referentAssignments: {},
@@ -174,8 +171,6 @@ export const AdminModule = {
         let lastEmail = null;
         let isAlt = false;
 
-        const norm = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
-
         return filtered.map((b, index) => {
              if (this.benevolesSort === 'name_asc') {
                  // Quinconce based on email family grouping
@@ -191,15 +186,9 @@ export const AdminModule = {
                  isAlt = index % 2 !== 0;
              }
 
-             // 4. Enrichir avec l'adhésion club (par mail, puis par nom/prénom)
-             const adhesion = this.adhesionsData[b.email?.toLowerCase().trim()]
-                 || this.adhesionsNom[norm(b.nom) + '_' + norm(b.prenom)]
-                 || null;
-
              return {
                  ...b,
-                 bgClass: isAlt ? 'bg-gray-100' : 'bg-white',
-                 adhesion
+                 bgClass: isAlt ? 'bg-gray-100' : 'bg-white'
              };
         });
     },
@@ -462,10 +451,9 @@ export const AdminModule = {
         const p2 = this.loadPostes();
         const p3 = this.loadPeriodes();
         const p4 = this.loadConfig();
-        const p5 = this.loadAdhesionsClub();
         const p6 = this.loadProgramme();
 
-        await Promise.all([p1, p2, p3, p4, p5, p6]);
+        await Promise.all([p1, p2, p3, p4, p6]);
         this.initReferentAssignments();
     },
 
@@ -599,39 +587,7 @@ export const AdminModule = {
         }
     },
 
-    /**
-     * Charge les adhésions club depuis la table club_adhesions (importée depuis NocoDB).
-     * Construit deux maps pour le matching : par mail et par nom+prénom (avec normalisation des accents).
-     */
-    async loadAdhesionsClub() {
-        this.adhesionsLoading = true;
-        try {
-            const { data, error } = await ApiService.fetch('club_adhesions', {
-                select: 'mail, nom, prenom, type'
-            });
-            if (error) throw error;
 
-            const norm = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
-            const mapMail = {};
-            const mapNom = {};
-
-            for (const r of (data || [])) {
-                if (r.mail && r.mail.trim() !== '') {
-                    mapMail[r.mail.toLowerCase().trim()] = r;
-                }
-                const key = norm(r.nom) + '_' + norm(r.prenom);
-                if (key !== '_') mapNom[key] = r;
-            }
-
-            this.adhesionsData = mapMail;
-            this.adhesionsNom = mapNom;
-        } catch (error) {
-            // Ne pas bloquer l'interface si les adhésions ne chargent pas
-            console.warn('Adhésions club non disponibles :', error.message);
-        } finally {
-            this.adhesionsLoading = false;
-        }
-    },
 
     /**
      * Loads postes with inscription counts.

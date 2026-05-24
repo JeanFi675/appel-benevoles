@@ -325,7 +325,13 @@ export function initAdminTimelineApp() {
     },
 
     hideTooltip() { this.tooltip.show = false; },
-    selectDay(day) { this.selectedDay = day; },
+    selectDay(day) {
+      if (this.selectedDay === day) {
+        this.selectedDay = null;
+      } else {
+        this.selectedDay = day;
+      }
+    },
     resetDay() { this.selectedDay = null; },
 
     formatDay(dayKey) {
@@ -409,6 +415,10 @@ export function initAdminTimelineApp() {
         await this.loadPostes();
       } finally {
         this.loading = false;
+        const days = this.availableDays;
+        if (days.length > 0 && !this.selectedDay) {
+          this.selectedDay = days[0];
+        }
       }
     },
 
