@@ -1340,6 +1340,19 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     },
 
     async initVisualCreator() {
+        // Enregistrer la sécurité anti-fermeture
+        if (!window._beforeUnloadHandlerRegistered) {
+            window._beforeUnloadHandlerRegistered = true;
+            window.addEventListener('beforeunload', (e) => {
+                const hasPending = this.autoSaveTimeout || this.autoSaveStatus === 'saving' || this.isSavingVisual;
+                if (hasPending) {
+                    e.preventDefault();
+                    e.returnValue = 'Vous avez des modifications de planning non enregistrées. Voulez-vous vraiment quitter ?';
+                    return e.returnValue;
+                }
+            });
+        }
+
         const days = new Set();
         
         // 1. Extraire les jours des postes existants en utilisant getLocalDateKey
@@ -1492,7 +1505,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
         // S'assurer qu'il y a au moins une période par défaut pour le jour s'il n'y en a aucune
         if (this.visualPeriods.length === 0) {
-            const tempPerId = `temp-per-${Date.now()}`;
+            const tempPerId = crypto.randomUUID();
             this.visualPeriods.push({
                 id: tempPerId,
                 nom: `${dayPrefixNoYear} - 08:00 / 12:00`,
@@ -1675,7 +1688,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const line = this.visualLines[lineIndex];
         if (line && line.shifts) {
             line.shifts.forEach(shift => {
-                if (shift.id && !shift.id.startsWith('temp-')) {
+                if (shift.id && !shift.isNew) {
                     this.visualDeletedPosteIds.push(shift.id);
                 }
             });
@@ -1707,9 +1720,10 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             fin = debut + 2;
         }
 
-        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const tempId = crypto.randomUUID();
         line.shifts.push({
             id: tempId,
+            isNew: true,
             debut,
             fin,
             nb_min: 1,
@@ -1729,7 +1743,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const line = this.visualLines[lineIndex];
         if (!line) return;
         const shift = line.shifts[shiftIndex];
-        if (shift.id && !shift.id.startsWith('temp-')) {
+        if (shift.id && !shift.isNew) {
             this.visualDeletedPosteIds.push(shift.id);
         }
         line.shifts.splice(shiftIndex, 1);
@@ -1853,8 +1867,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
             shift.fin = newFin;
         }
-
-        this.validateAndAutoAssignPeriods();
     },
 
     stopDrag() {
@@ -1886,7 +1898,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             fin = Math.min(this.hoursRange.end, debut + 4);
         }
 
-        const tempPerId = `temp-per-${Date.now()}`;
+        const tempPerId = crypto.randomUUID();
         this.visualPeriods.push({
             id: tempPerId,
             nom: '', // Sera défini par validateAndAutoAssignPeriods()
@@ -1904,7 +1916,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     deleteVisualPeriod(index) {
         if (!confirm("Voulez-vous supprimer cette période ? Les postes associés seront automatiquement réassignés.")) return;
         const per = this.visualPeriods[index];
-        if (per && per.id && !String(per.id).startsWith('temp-')) {
+        if (per && per.id && !per.isNew) {
             this.visualDeletedPeriodIds.push(per.id);
         }
         this.visualPeriods.splice(index, 1);
@@ -1929,7 +1941,8 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const hStart = h + min / 60;
 
         this.visualProgramEvents.push({
-            id: `temp-ev-${Date.now()}`,
+            id: crypto.randomUUID(),
+            isNew: true,
             hStart,
             description: desc.trim()
         });
@@ -1940,7 +1953,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
     deleteVisualProgramEvent(index) {
         const ev = this.visualProgramEvents[index];
-        if (ev && ev.id && !String(ev.id).startsWith('temp-')) {
+        if (ev && ev.id && !ev.isNew) {
             this.visualDeletedEventIds.push(ev.id);
         }
         this.visualProgramEvents.splice(index, 1);
@@ -1975,7 +1988,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
         // S'assurer d'avoir au moins une période par défaut si la liste est vide
         if (this.visualPeriods.length === 0) {
-            const tempPerId = `temp-per-${Date.now()}`;
+            const tempPerId = crypto.randomUUID();
             this.visualPeriods.push({
                 id: tempPerId,
                 nom: '',
@@ -2170,7 +2183,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         }
 
         // Créer la nouvelle période
-        const tempPerId = `temp-per-${Date.now()}`;
+        const tempPerId = crypto.randomUUID();
         const newPeriod = {
             id: tempPerId,
             nom: '',
@@ -2285,8 +2298,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         
         per.fin = newFin;
         nextPer.debut = newFin;
-
-        this.validateAndAutoAssignPeriods();
     },
 
     stopPeriodDrag() {
@@ -2357,6 +2368,9 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         try {
             const deletePromises = [];
             
+            // Conserver les IDs supprimés dans un Set avant de vider le tableau lors de la suppression physique
+            const deletedPeriodIdsSet = new Set(this.visualDeletedPeriodIds);
+
             if (this.visualDeletedPosteIds.length > 0) {
                 deletePromises.push(ApiService.delete('postes', { id: this.visualDeletedPosteIds }));
             }
@@ -2368,25 +2382,21 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
             if (deletePromises.length > 0) {
                 await Promise.all(deletePromises);
-                // Vider les listes de suppression après exécution réussie
                 this.visualDeletedPosteIds = [];
                 this.visualDeletedEventIds = [];
             }
 
-            // Conserver les IDs supprimés dans un Set avant de vider le tableau lors de la suppression physique
-            const deletedPeriodIdsSet = new Set(this.visualDeletedPeriodIds);
-
-            // Gérer la suppression des périodes de manière séquentielle et sûre
+            // Gérer la suppression des périodes de manière robuste et sécurisée
             if (this.visualDeletedPeriodIds.length > 0) {
+                // Détacher les postes pour chaque période individuellement (compatible avec updateMany)
                 for (const periodId of this.visualDeletedPeriodIds) {
-                    // Détacher les postes qui référencent cette période dans la base de données
                     const { error: detachError } = await ApiService.updateMany('postes', { periode_id: null }, { periode_id: periodId });
                     if (detachError) {
-                        console.error(`[Detach] Erreur pour la période ${periodId}:`, detachError);
+                        console.error(`[Detach] Erreur pour la période ${periodId} :`, detachError);
                     }
                 }
                 
-                // Supprimer physiquement la période de la table 'periodes'
+                // Supprimer physiquement les périodes de la table 'periodes'
                 const { error: deletePerError } = await ApiService.delete('periodes', { id: this.visualDeletedPeriodIds });
                 if (deletePerError) {
                     throw deletePerError;
@@ -2399,13 +2409,12 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             const otherDayPeriods = this.periodes.filter(p => !currentPeriodIds.has(p.id) && !deletedPeriodIdsSet.has(p.id));
             
             const allPeriodsToSave = [
-                ...otherDayPeriods.map(p => ({ ...p, isNew: false })),
-                ...this.visualPeriods.map(p => ({ ...p, isNew: String(p.id).startsWith('temp-per-') }))
+                ...otherDayPeriods,
+                ...this.visualPeriods
             ];
 
             // 2. Fonction robuste pour calculer le poids chronologique d'une période
             const getPeriodeWeight = (per) => {
-                // Si c'est une période du jour sélectionné
                 if (currentPeriodIds.has(per.id)) {
                     const vp = this.visualPeriods.find(p => p.id === per.id);
                     const dayTime = new Date(this.visualDaySelected + 'T00:00:00').getTime();
@@ -2413,14 +2422,12 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                     return dayTime + hourOffset;
                 }
 
-                // Si elle a des postes associés dans la base
                 const perPostes = this.postes.filter(p => p.periode_id === per.id && p.periode_debut);
                 if (perPostes.length > 0) {
                     const starts = perPostes.map(p => new Date(p.periode_debut).getTime());
                     return Math.min(...starts);
                 }
 
-                // Sinon, essayer de parser la date depuis son nom (ex: "Samedi 16 mai 2026 - 08:00 / 12:00")
                 if (per.nom) {
                     const cleanNom = per.nom.toLowerCase();
                     const moisMap = {
@@ -2447,7 +2454,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                     }
                 }
 
-                // Par défaut, basé sur l'ordre existant
                 return 9999999999999 + (per.ordre || 0);
             };
 
@@ -2460,55 +2466,36 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             });
 
             // 5. Étape de libération des ordres pour les périodes existantes afin d'éviter tout conflit de clé unique
-            // On attribue temporairement un ordre supérieur à un offset aléatoire unique à toutes les périodes existantes
             const baseOffset = 10000 + Math.floor(Math.random() * 10000) * 100;
-            const tempPeriodsPayload = allPeriodsToSave
-                .filter(per => !per.isNew)
-                .map(per => ({
-                    id: per.id,
-                    nom: per.nom,
-                    ordre: baseOffset + per.ordreCible,
-                    montant_credit: parseFloat(per.montant_credit || 0.00)
-                }));
+            const tempPeriodsPayload = allPeriodsToSave.map(per => ({
+                id: per.id,
+                nom: per.nom,
+                ordre: baseOffset + per.ordreCible,
+                montant_credit: parseFloat(per.montant_credit || 0.00)
+            }));
             
             if (tempPeriodsPayload.length > 0) {
                 const { error } = await ApiService.upsertMany('periodes', tempPeriodsPayload);
                 if (error) throw error;
             }
 
-            // 6. Sauvegarder et appliquer les ordres réels finaux
-            const periodIdMapping = {};
-            const periodsToUpsert = [];
-
-            for (const per of allPeriodsToSave) {
-                const perPayload = {
-                    nom: per.nom,
-                    ordre: parseInt(per.ordreCible),
-                    montant_credit: parseFloat(per.montant_credit || 0.00)
-                };
-
-                if (per.isNew) {
-                    const { data, error } = await ApiService.insert('periodes', perPayload);
-                    if (error) throw error;
-                    periodIdMapping[per.id] = data.id;
-                    
-                    // Mettre à jour l'ID localement dans this.visualPeriods si c'est la période du jour en cours
-                    const localVp = this.visualPeriods.find(vp => vp.id === per.id);
-                    if (localVp) localVp.id = data.id;
-                } else {
-                    periodsToUpsert.push({
-                        id: per.id,
-                        ...perPayload
-                    });
-                    periodIdMapping[per.id] = per.id;
-                }
-            }
+            // 6. Sauvegarder et appliquer les ordres réels finaux (Tout en un seul upsert groupé !)
+            const periodsToUpsert = allPeriodsToSave.map(per => ({
+                id: per.id,
+                nom: per.nom,
+                ordre: parseInt(per.ordreCible),
+                montant_credit: parseFloat(per.montant_credit || 0.00)
+            }));
 
             if (periodsToUpsert.length > 0) {
                 const { error } = await ApiService.upsertMany('periodes', periodsToUpsert);
                 if (error) throw error;
             }
 
+            // Retirer le flag isNew de toutes les périodes
+            this.visualPeriods.forEach(p => delete p.isNew);
+
+            // 7. Sauvegarder tous les créneaux (postes) en une seule fois !
             const formatDecimalToISO = (dec) => {
                 const h = Math.floor(dec);
                 const m = Math.round((dec - h) * 60);
@@ -2516,14 +2503,11 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 return new Date(`${this.visualDaySelected}T${timeStr}`).toISOString();
             };
 
+            const postesToUpsert = [];
             for (const line of this.visualLines) {
                 for (const shift of line.shifts) {
-                    let finalPeriodId = shift.periode_id;
-                    if (String(finalPeriodId).startsWith('temp-per-')) {
-                        finalPeriodId = periodIdMapping[finalPeriodId];
-                    }
-
-                    const postePayload = {
+                    postesToUpsert.push({
+                        id: shift.id,
                         titre: line.titre.trim(),
                         description: line.description.trim() || null,
                         periode_debut: formatDecimalToISO(shift.debut),
@@ -2531,36 +2515,45 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                         nb_min: parseInt(shift.nb_min),
                         nb_max: parseInt(shift.nb_max),
                         referent_id: shift.referent_id || null,
-                        periode_id: finalPeriodId
-                    };
-
-                    if (String(shift.id).startsWith('temp-')) {
-                        const { error } = await ApiService.insert('postes', postePayload);
-                        if (error) throw error;
-                    } else {
-                        const { error } = await ApiService.update('postes', postePayload, { id: shift.id });
-                        if (error) throw error;
-                    }
+                        periode_id: shift.periode_id
+                    });
                 }
             }
+
+            if (postesToUpsert.length > 0) {
+                const { error: upsertPostesError } = await ApiService.upsertMany('postes', postesToUpsert);
+                if (upsertPostesError) throw upsertPostesError;
+            }
+
+            // Retirer le flag isNew de tous les créneaux sauvegardés
+            this.visualLines.forEach(line => {
+                line.shifts.forEach(shift => delete shift.isNew);
+            });
+
+            // 8. Sauvegarder les événements de programme en une seule fois !
+            const programmePayload = this.visualProgramEvents.map(ev => {
+                const h = Math.floor(ev.hStart);
+                const min = Math.round((ev.hStart - h) * 60);
+                const heureStr = `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:00`;
+                return {
+                    id: ev.id,
+                    date_ref: this.visualDaySelected,
+                    heure: heureStr,
+                    description: ev.description.trim()
+                };
+            });
 
             try {
                 await ApiService.delete('programme', { date_ref: this.visualDaySelected });
             } catch (err) {}
 
-            for (const ev of this.visualProgramEvents) {
-                const h = Math.floor(ev.hStart);
-                const min = Math.round((ev.hStart - h) * 60);
-                const heureStr = `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:00`;
-                
-                try {
-                    await ApiService.insert('programme', {
-                        date_ref: this.visualDaySelected,
-                        heure: heureStr,
-                        description: ev.description.trim()
-                    });
-                } catch(e) {}
+            if (programmePayload.length > 0) {
+                const { error: insertProgError } = await ApiService.upsertMany('programme', programmePayload);
+                if (insertProgError) throw insertProgError;
             }
+
+            // Retirer le flag isNew de tous les événements programme sauvegardés
+            this.visualProgramEvents.forEach(ev => delete ev.isNew);
 
             if (!isSilent) {
                 this.showToast("💾 Configuration du planning enregistrée avec succès !", "success");
@@ -2579,34 +2572,8 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 }
             }
             
-            // Pour éviter les sauts de focus, on ne recharge pas les sélections de jour en arrière-plan pendant que l'utilisateur tape
             if (!isSilent) {
                 await this.selectVisualDay(this.visualDaySelected);
-            } else {
-                // En mode silencieux, on remet juste les compteurs d'inscrits à jour ou on fait une resynchronisation locale
-                // mais sans détruire/recréer visualLines si on est en cours d'édition.
-                // Cependant, on doit s'assurer que les IDs temporaires des shifts et périodes nouvellement créés
-                // sont remplacés par leurs vrais IDs de base de données pour les futures modifications.
-                // Cela est géré en mettant à jour this.visualLines et les shifts correspondants.
-                this.postes.forEach(p => {
-                    this.visualLines.forEach(line => {
-                        if (line.titre.trim() === p.titre.trim()) {
-                            line.shifts.forEach(shift => {
-                                if (String(shift.id).startsWith('temp-')) {
-                                    // Trouver un poste de la DB avec la même tranche horaire
-                                    const dStart = new Date(p.periode_debut);
-                                    const dEnd = new Date(p.periode_fin);
-                                    const startHour = dStart.getHours() + dStart.getMinutes() / 60;
-                                    const endHour = dEnd.getHours() + dEnd.getMinutes() / 60;
-                                    
-                                    if (Math.abs(startHour - shift.debut) < 0.01 && Math.abs(endHour - shift.fin) < 0.01) {
-                                        shift.id = p.id;
-                                    }
-                                }
-                            });
-                        }
-                    });
-                });
             }
 
         } catch (error) {
@@ -2786,9 +2753,10 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const nb_max = parseInt(this.addShiftData.nb_max);
         const referent_id = this.addShiftData.referent_id;
 
-        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const tempId = crypto.randomUUID();
         const newShift = {
             id: tempId,
+            isNew: true,
             debut,
             fin,
             nb_min,
@@ -2904,7 +2872,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const line = this.visualLines[this.editShiftData.lineIndex];
         const shift = line.shifts[this.editShiftData.shiftIndex];
         
-        if (shift.id && !String(shift.id).startsWith('temp-')) {
+        if (shift.id && !shift.isNew) {
             this.visualDeletedPosteIds.push(shift.id);
         }
 
