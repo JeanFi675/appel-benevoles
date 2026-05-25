@@ -111,18 +111,19 @@ export const ApiService = {
      * @param {object} data - The data to upsert.
      * @returns {Promise<{ data: any, error: object|null }>} The upserted data.
      */
-    async upsert(table, data) {
-        return await supabase.from(table).upsert(data).select().single();
+    async upsert(table, data, options = {}) {
+        return await supabase.from(table).upsert(data, options).select().single();
     },
 
     /**
      * Upserts multiple records in a single batch.
      * @param {string} table - The table name.
      * @param {array} data - The array of data to upsert.
+     * @param {object} [options] - Options for the upsert (e.g. { onConflict: 'column' }).
      * @returns {Promise<{ data: any[], error: object|null }>} The upserted data.
      */
-    async upsertMany(table, data) {
-        return await supabase.from(table).upsert(data).select();
+    async upsertMany(table, data, options = {}) {
+        return await supabase.from(table).upsert(data, options).select();
     },
 
     /**

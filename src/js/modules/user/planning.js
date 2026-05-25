@@ -650,7 +650,12 @@ export const PlanningModule = {
                     id: 'all',
                     title: '', // Empty title triggers logic to hide header
                     expanded: true,
-                    postes: [...postes].sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime())
+                    postes: [...postes].sort((a, b) => {
+                        const oA = a.type_poste_ordre !== undefined ? a.type_poste_ordre : 999999;
+                        const oB = b.type_poste_ordre !== undefined ? b.type_poste_ordre : 999999;
+                        if (oA !== oB) return oA - oB;
+                        return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
+                    })
                 }];
             } else {
                 // GROUPED MODE for "Formulaire d'inscription"
@@ -690,9 +695,14 @@ export const PlanningModule = {
                     }
                 });
 
-                // Sort posts within subgroups
+                // Sort posts within subgroups (respecting row order first, then time)
                 subgroups.forEach(subgroup => {
-                    subgroup.postes.sort((a, b) => new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime());
+                    subgroup.postes.sort((a, b) => {
+                        const oA = a.type_poste_ordre !== undefined ? a.type_poste_ordre : 999999;
+                        const oB = b.type_poste_ordre !== undefined ? b.type_poste_ordre : 999999;
+                        if (oA !== oB) return oA - oB;
+                        return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
+                    });
                 });
             }
 

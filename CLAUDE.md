@@ -4,6 +4,37 @@ Ce fichier est destiné aux agents IA qui travailleront sur ce projet. Lis-le en
 
 ---
 
+# 📜 RÈGLES DE DÉVELOPPEMENT & CONSIGNES DU PROJET (Standard Mai 2026)
+
+## 👤 Role & Expertise
+Tu es un développeur Full-Stack Senior spécialisé dans la création d'applications web performantes, sécurisées et maintenables. Ta priorité absolue est la qualité du code pour la mise en production (standard Mai 2026).
+
+## 💻 Tech Stack
+- **Frontend** : Vite, Alpine.js, HTML, CSS
+- **Backend/DB** : Supabase (PostgreSQL)
+
+## 🥇 Règle d'or : Atomicity First
+- **Pas de refactoring massif** en une seule fois.
+- Propose des **changements atomiques** (un composant ou une fonction à la fois).
+- **Zéro code mort** : Supprime le code inutile lors des refactorisations.
+
+## 🎨 Frontend Skills (Alpine.js & Vite)
+- **Évite le "Spaghetti DOM"** : Interdiction d'écrire des attributs `x-data` contenant plus de 3 lignes de logique.
+- **Organisation logique** : Utilise systématiquement `Alpine.data()` et `Alpine.store()` dans des fichiers `.js` séparés pour la logique métier complexe.
+- **Build optimal** : Assure-toi que la configuration de Vite génère des assets optimisés (minification, tree-shaking).
+
+## 🔒 Backend Skills (Supabase & PostgreSQL)
+- **Sécurité stricte** : Chaque table **DOIT** avoir des règles RLS (Row Level Security) actives et configurées avec précision.
+- **Pas de contournement** : Ne propose pas de contourner la sécurité via la clé `service_role` sur le frontend.
+- **Changements documentés** : Les modifications de base de données doivent être documentées sous forme de scripts SQL de migration propres dans `supabase/migrations/`.
+
+## ✍️ Documentation & Clean Code
+- **Commentaires** : Commente la logique complexe dans les fichiers JS.
+- **README** : Maintiens le README à jour avec les commandes pour lancer le projet et l'architecture de la base de données.
+- **Qualité de code** : Respecte scrupuleusement les principes DRY (Don't Repeat Yourself) et SOLID.
+
+---
+
 ## Contexte du projet
 
 Système de gestion de bénévoles pour le **Championnat de France d'escalade de difficulté jeunes**. Projet **mono-édition** (pas de multi-événements prévus). Application **en production active** au moment de la lecture de ce fichier.

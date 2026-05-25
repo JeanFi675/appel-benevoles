@@ -454,9 +454,22 @@ export const AdminModule = {
         const p4 = this.loadConfig();
         const p5 = this.loadRepas();
         const p6 = this.loadProgramme();
+        const p7 = this.loadJours();
 
-        await Promise.all([p1, p2, p3, p4, p5, p6]);
+        await Promise.all([p1, p2, p3, p4, p5, p6, p7]);
         this.initReferentAssignments();
+    },
+
+    async loadJours() {
+        try {
+            const { data, error } = await ApiService.fetch('jours', {
+                order: { column: 'date_ref', ascending: true }
+            });
+            if (error) throw error;
+            this.dbJours = (data || []).map(j => j.date_ref);
+        } catch (error) {
+            console.error("Erreur chargement jours:", error);
+        }
     },
 
     initReferentAssignments() {
@@ -597,7 +610,7 @@ export const AdminModule = {
     async loadPostes() {
         try {
             const { data, error } = await ApiService.fetch('postes', {
-                select: '*, periodes(nom, ordre), benevoles(prenom, nom)'
+                select: '*, type_postes(titre, description, ordre), periodes(nom, ordre), benevoles(prenom, nom)'
             });
 
             if (error) throw error;
@@ -621,6 +634,9 @@ export const AdminModule = {
 
                     return {
                         ...poste,
+                        titre: poste.type_postes?.titre || '',
+                        description: poste.type_postes?.description || '',
+                        ordre: poste.type_postes?.ordre || 0,
                         periode_nom: poste.periodes?.nom || '-',
                         periode_ordre: poste.periodes?.ordre || 999,
                         inscrits_actuels: count,
@@ -1471,6 +1487,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
     // --- Planning Interactif (Créateur Visuel) ---
     visualDaySelected: '',
     visualDays: [],
+    dbJours: [],
     visualProgramEvents: [],
     visualPeriods: [],
     visualLines: [],
@@ -1558,7 +1575,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             });
         }
 
-        const days = new Set();
+        const days = new Set(this.dbJours || []);
         
         // 1. Extraire les jours des postes existants en utilisant getLocalDateKey
         this.postes.forEach(p => {
@@ -1728,10 +1745,13 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         dayPostes.forEach(p => {
             const key = `${p.titre.trim()}|||${(p.description || '').trim()}`;
             if (!groups[key]) {
+                const dayOrder = p.ordre !== undefined ? p.ordre : 999999;
+
                 groups[key] = {
                     titre: p.titre,
                     description: p.description || '',
-                    shifts: []
+                    shifts: [],
+                    ordre: dayOrder
                 };
             }
             
@@ -1756,26 +1776,13 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
         const initialLines = Object.values(groups);
         
-        // Charger l'ordre trié du localStorage
-        const savedOrderStr = localStorage.getItem(`admin_planning_lines_order_${day}`);
-        if (savedOrderStr) {
-            try {
-                const savedOrder = JSON.parse(savedOrderStr); // tableau de "titre|||description"
-                initialLines.sort((a, b) => {
-                    const keyA = `${a.titre.trim()}|||${(a.description || '').trim()}`;
-                    const keyB = `${b.titre.trim()}|||${(b.description || '').trim()}`;
-                    const idxA = savedOrder.indexOf(keyA);
-                    const idxB = savedOrder.indexOf(keyB);
-                    
-                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-                    if (idxA !== -1) return -1;
-                    if (idxB !== -1) return 1;
-                    return 0; // Conserver l'ordre d'origine
-                });
-            } catch (e) {
-                console.error("Erreur lors de la lecture de l'ordre des lignes dans localStorage:", e);
+        // Trier par l'ordre persistant dans Supabase pour ce jour, puis alphabétiquement par titre
+        initialLines.sort((a, b) => {
+            if (a.ordre !== b.ordre) {
+                return a.ordre - b.ordre;
             }
-        }
+            return a.titre.localeCompare(b.titre);
+        });
 
         this.visualLines = initialLines.map((line, index) => ({
             ...line,
@@ -1819,40 +1826,21 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         this.loading = true;
 
         try {
-            // 1. Filtrer les postes de ce jour à l'aide de getLocalDateKey
-            const dayPostes = this.postes.filter(p => p.periode_debut && this.getLocalDateKey(p.periode_debut) === day);
-            const dayPosteIds = dayPostes.map(p => p.id);
 
-            // 2. Filtrer les périodes associées à ce jour
-            const d = new Date(day + 'T00:00:00');
-            const dayLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
-            const dayPrefixNoYear = dayPrefix.split(' 202')[0];
+            // 3. Supprimer de Supabase : on supprime le jour, les cascades DB font le reste
+            //    jours → type_postes (CASCADE) → postes (CASCADE) → inscriptions (CASCADE)
 
-            const dayPeriods = this.periodes.filter(per => {
-                const hasPostsOnDay = dayPostes.some(p => p.periode_id === per.id);
-                const isDayPrefix = per.nom && per.nom.startsWith(dayPrefixNoYear);
-                return isDayPrefix || hasPostsOnDay;
-            });
-            const dayPeriodIds = dayPeriods.map(per => per.id);
-
-            // 3. Supprimer de Supabase de manière ordonnée
-            // A. Postes (la contrainte foreign key ON DELETE CASCADE se charge des inscriptions associées)
-            if (dayPosteIds.length > 0) {
-                const { error: postError } = await ApiService.delete('postes', { id: dayPosteIds });
-                if (postError) throw postError;
-            }
-
-            // B. Périodes
-            if (dayPeriodIds.length > 0) {
-                const { error: periodError } = await ApiService.delete('periodes', { id: dayPeriodIds });
-                if (periodError) throw periodError;
-            }
-
-            // C. Programme du jour
+            // Programme du jour (pas en cascade, à supprimer manuellement)
             const { error: progError } = await ApiService.delete('programme', { date_ref: day });
             if (progError) {
                 console.warn("Erreur lors de la suppression du programme :", progError);
+            }
+
+            // Supprimer le jour — la cascade PostgreSQL nettoie type_postes, postes, inscriptions
+            const { error: jourError } = await ApiService.delete('jours', { date_ref: day });
+            if (jourError) {
+                console.error("Erreur lors de la suppression du jour de la table jours :", jourError);
+                throw jourError;
             }
 
             // 4. Mettre à jour l'état local
@@ -1897,6 +1885,11 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                     this.visualDeletedPosteIds.push(shift.id);
                 }
             });
+        }
+        // Marquer le type_poste de cette ligne pour suppression en DB
+        if (line && line.titre) {
+            this.visualDeletedTypePosteTitres = this.visualDeletedTypePosteTitres || [];
+            this.visualDeletedTypePosteTitres.push({ date_ref: this.visualDaySelected, titre: line.titre.trim() });
         }
         this.visualLines.splice(lineIndex, 1);
         this.visualLines.forEach((l, idx) => l.lineIndex = idx);
@@ -2700,6 +2693,10 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             // Retirer le flag isNew de toutes les périodes
             this.visualPeriods.forEach(p => delete p.isNew);
 
+            // 0. Enregistrer d'abord le jour dans la table jours
+            const { error: upsertJourError } = await ApiService.upsert('jours', { date_ref: this.visualDaySelected });
+            if (upsertJourError) throw upsertJourError;
+
             // 7. Sauvegarder tous les créneaux (postes) en une seule fois !
             const formatDecimalToISO = (dec) => {
                 const h = Math.floor(dec);
@@ -2708,13 +2705,48 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                 return new Date(`${this.visualDaySelected}T${timeStr}`).toISOString();
             };
 
+            // 1. Supprimer les types de postes marqués pour suppression (avec cascade sur postes)
+            const deletedTypeTitres = this.visualDeletedTypePosteTitres || [];
+            if (deletedTypeTitres.length > 0) {
+                // Supprimer un par un car on filtre sur deux colonnes (date_ref + titre)
+                for (const { date_ref, titre } of deletedTypeTitres) {
+                    // Ne supprimer que si ce titre n'existe plus dans les lignes actuelles
+                    const stillExists = this.visualLines.some(l => l.titre.trim() === titre);
+                    if (!stillExists) {
+                        await ApiService.delete('type_postes', { date_ref, titre });
+                    }
+                }
+                this.visualDeletedTypePosteTitres = [];
+            }
+
+            // 2. Sauvegarder les types de postes avec leur ordre recalculé
+            const typePostesPayload = this.visualLines.map((line, lineIndex) => ({
+                date_ref: this.visualDaySelected,
+                titre: line.titre.trim(),
+                description: line.description.trim() || null,
+                ordre: lineIndex
+            }));
+
+            let typePostesMap = {};
+            if (typePostesPayload.length > 0) {
+                const { data: typePostesSaved, error: upsertTypePostesError } = await ApiService.upsertMany('type_postes', typePostesPayload, { onConflict: 'date_ref,titre' });
+                if (upsertTypePostesError) throw upsertTypePostesError;
+                
+                (typePostesSaved || []).forEach(tp => {
+                    typePostesMap[tp.titre.trim()] = tp.id;
+                });
+            }
+
             const postesToUpsert = [];
-            for (const line of this.visualLines) {
+            this.visualLines.forEach((line) => {
+                const typePosteId = typePostesMap[line.titre.trim()];
+                if (!typePosteId) {
+                    throw new Error(`Type de poste non trouvé pour : ${line.titre}`);
+                }
                 for (const shift of line.shifts) {
                     postesToUpsert.push({
                         id: shift.id,
-                        titre: line.titre.trim(),
-                        description: line.description.trim() || null,
+                        type_poste_id: typePosteId,
                         periode_debut: formatDecimalToISO(shift.debut),
                         periode_fin: formatDecimalToISO(shift.fin),
                         nb_min: parseInt(shift.nb_min),
@@ -2723,7 +2755,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
                         periode_id: shift.periode_id
                     });
                 }
-            }
+            });
 
             if (postesToUpsert.length > 0) {
                 const { error: upsertPostesError } = await ApiService.upsertMany('postes', postesToUpsert);
@@ -2803,8 +2835,13 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
     saveLinesOrder() {
         if (!this.visualDaySelected) return;
-        const order = this.visualLines.map(line => `${line.titre.trim()}|||${(line.description || '').trim()}`);
-        localStorage.setItem(`admin_planning_lines_order_${this.visualDaySelected}`, JSON.stringify(order));
+        // Mettre à jour l'ordre de chaque ligne dans l'état local pour l'auto-save
+        this.visualLines.forEach((line, index) => {
+            line.lineIndex = index;
+            line.shifts.forEach(shift => {
+                shift.ordre = index;
+            });
+        });
     },
 
     armDrawShift(lineIdx) {
