@@ -37,20 +37,38 @@
         <h3 class="text-2xl font-black mb-4">⚙️ 0. Configuration des Formulaires d'Inscription</h3>
         
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Configuration T-Shirt -->
+            <!-- Configuration T-Shirt & Cagnotte -->
             <div class="space-y-4">
-                <h4 class="text-lg font-black uppercase text-gray-500">👕 Options T-Shirt</h4>
-                <div class="flex items-center justify-between p-4 bg-gray-50 border-2 border-brutal-black">
-                    <div class="pr-4">
-                        <p class="font-bold text-sm">Activer la question T-shirt</p>
-                        <p class="text-xs text-gray-500 font-bold">Si désactivée, les bénévoles ne verront pas la question sur la taille de T-shirt dans le formulaire.</p>
+                <div>
+                    <h4 class="text-lg font-black uppercase text-gray-500 mb-2">👕 Options T-Shirt</h4>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 border-2 border-brutal-black">
+                        <div class="pr-4">
+                            <p class="font-bold text-sm">Activer la question T-shirt</p>
+                            <p class="text-xs text-gray-500 font-bold">Si désactivée, les bénévoles ne verront pas la question sur la taille de T-shirt dans le formulaire.</p>
+                        </div>
+                        <button type="button" @click="toggleTshirtQuestion()"
+                                class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none flex-shrink-0"
+                                :class="config.tshirt_question_active ? 'bg-green-400' : 'bg-gray-300'">
+                            <span class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
+                                  :class="config.tshirt_question_active ? 'translate-x-7' : 'translate-x-0.5'"></span>
+                        </button>
                     </div>
-                    <button type="button" @click="toggleTshirtQuestion()"
-                            class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none flex-shrink-0"
-                            :class="config.tshirt_question_active ? 'bg-green-400' : 'bg-gray-300'">
-                        <span class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
-                              :class="config.tshirt_question_active ? 'translate-x-7' : 'translate-x-0.5'"></span>
-                    </button>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-black uppercase text-gray-500 mb-2">💶 Options Cagnotte</h4>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 border-2 border-brutal-black">
+                        <div class="pr-4">
+                            <p class="font-bold text-sm">Activer la cagnotte</p>
+                            <p class="text-xs text-gray-500 font-bold">Si désactivée, le widget "Mon Matériel" (cagnotte) sera masqué pour les bénévoles.</p>
+                        </div>
+                        <button type="button" @click="toggleCagnotte()"
+                                class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none flex-shrink-0"
+                                :class="config.cagnotte_active ? 'bg-green-400' : 'bg-gray-300'">
+                            <span class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
+                                  :class="config.cagnotte_active ? 'translate-x-7' : 'translate-x-0.5'"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
             

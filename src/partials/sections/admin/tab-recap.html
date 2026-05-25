@@ -58,17 +58,6 @@
             <span class="text-emerald-600" x-text="(stats.cagnotte.total_restant || 0) + ' D'"></span>
           </div>
         </div>
-
-        <span class="font-bold text-lg"
-          x-text="config.cagnotte_active ? 'Cagnotte ACTIVÉE' : 'Cagnotte DÉSACTIVÉE'"></span>
-        <button @click="toggleCagnotte()"
-          class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none"
-          :class="config.cagnotte_active ? 'bg-green-400' : 'bg-gray-300'">
-          <span class="sr-only">Activer la cagnotte</span>
-          <span
-            class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
-            :class="config.cagnotte_active ? 'translate-x-7' : 'translate-x-0.5'"></span>
-        </button>
       </div>
     </div>
   </div>
