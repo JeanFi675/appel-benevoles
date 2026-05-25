@@ -64,7 +64,7 @@ export const ApiService = {
      * @returns {Promise<{ data: any, error: object|null }>} The inserted data.
      */
     async insert(table, data) {
-        return await supabase.from(table).insert(data).select().single();
+        return await supabase.from(table).insert(data);
     },
 
     /**
