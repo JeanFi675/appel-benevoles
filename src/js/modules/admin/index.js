@@ -37,6 +37,8 @@ export const AdminModule = {
 
     repasList: [],
     newRepasName: '',
+    editingRepasId: null,
+    editingRepasName: '',
 
     // Mail de rappel
     sendingRappel: false,
@@ -965,6 +967,38 @@ export const AdminModule = {
             await this.loadBenevolesAndStats();
         } catch (error) {
             this.showToast('❌ Erreur suppression : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    startEditRepas(repas) {
+        this.editingRepasId = repas.id;
+        this.editingRepasName = repas.nom;
+    },
+
+    cancelEditRepas() {
+        this.editingRepasId = null;
+        this.editingRepasName = '';
+    },
+
+    async saveEditRepas(id) {
+        if (!this.editingRepasName || this.editingRepasName.trim() === '') return;
+        this.loading = true;
+        try {
+            const { error } = await ApiService.update('repas', {
+                nom: this.editingRepasName.trim()
+            }, { id });
+            
+            if (error) throw error;
+            
+            this.showToast('✅ Repas mis à jour avec succès !', 'success');
+            this.editingRepasId = null;
+            this.editingRepasName = '';
+            await this.loadRepas();
+            await this.loadBenevolesAndStats();
+        } catch (error) {
+            this.showToast('❌ Erreur modification repas : ' + error.message, 'error');
         } finally {
             this.loading = false;
         }
