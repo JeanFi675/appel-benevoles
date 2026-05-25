@@ -62,13 +62,48 @@
                 <!-- Liste des repas -->
                 <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
                     <template x-for="repas in repasList" :key="repas.id">
-                        <div class="flex items-center justify-between p-3 bg-gray-50 border-2 border-brutal-black">
-                            <span class="font-bold text-sm" x-text="repas.nom"></span>
-                            <button type="button" @click="deleteRepas(repas.id)" 
-                                    class="text-red-500 hover:text-red-700 font-black text-xs p-1" 
-                                    title="Supprimer ce repas">
-                                🗑️
-                            </button>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 border-2 border-brutal-black min-h-[52px]">
+                            <!-- Mode lecture -->
+                            <template x-if="editingRepasId !== repas.id">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="font-bold text-sm" x-text="repas.nom"></span>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" @click="startEditRepas(repas)" 
+                                                class="text-blue-600 hover:text-blue-800 font-black text-xs p-1" 
+                                                title="Modifier ce repas">
+                                            ✏️
+                                        </button>
+                                        <button type="button" @click="deleteRepas(repas.id)" 
+                                                class="text-red-500 hover:text-red-700 font-black text-xs p-1" 
+                                                title="Supprimer ce repas">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                            
+                            <!-- Mode édition -->
+                            <template x-if="editingRepasId === repas.id">
+                                <div class="flex items-center gap-2 w-full">
+                                    <input type="text" x-model="editingRepasName" 
+                                           class="brutal-input flex-1 px-2 py-1 text-sm font-bold bg-white" 
+                                           @keydown.enter="saveEditRepas(repas.id)"
+                                           @keydown.escape="cancelEditRepas()"
+                                           required />
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" @click="saveEditRepas(repas.id)" 
+                                                class="text-green-600 hover:text-green-800 font-black text-xs p-1 animate-pulse" 
+                                                title="Enregistrer">
+                                            💾
+                                        </button>
+                                        <button type="button" @click="cancelEditRepas()" 
+                                                class="text-gray-500 hover:text-gray-700 font-black text-xs p-1" 
+                                                title="Annuler">
+                                            ❌
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </template>
                     <template x-if="repasList.length === 0">
