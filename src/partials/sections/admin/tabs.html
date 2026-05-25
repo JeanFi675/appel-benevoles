@@ -12,6 +12,10 @@
         :class="{ 'active': activeTab === 'benevoles' }">
         👥 Bénévoles
     </button>
+    <button @click="activeTab = 'cagnotte-forcee'" class="tab-button px-8 py-4 font-black text-lg"
+        :class="{ 'active': activeTab === 'cagnotte-forcee' }">
+        💶 Cagnotte forcée
+    </button>
     <button @click="activeTab = 'mailing'" class="tab-button px-8 py-4 font-black text-lg"
         :class="{ 'active': activeTab === 'mailing' }">
         📧 Mailing

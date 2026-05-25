@@ -31,7 +31,8 @@ export const AdminModule = {
     // Configuration
     config: {
         cagnotte_active: false,
-        tshirt_question_active: true
+        tshirt_question_active: true,
+        tarif_cagnotte_journee: 15.00
     },
     savingConfig: false,
 
@@ -50,7 +51,15 @@ export const AdminModule = {
     referentAssignments: {},
     uniquePosteTitres: [],
 
-    // Search & Modal
+    // Cagnotte forcée
+    forcedSearchQuery: '',
+    selectedForcedBenevole: null,
+    forcedForm: {
+        cagnotte_forcee: false,
+        cagnotte_forcee_type: 'journee',
+        cagnotte_forcee_jours: [],
+        cagnotte_forcee_periodes_ids: []
+    },
 
     // Search & Modal
     searchQuery: '',
@@ -210,7 +219,7 @@ export const AdminModule = {
             'Compte Principal Famille ?',
             'Consommé Global Famille (D)',
             'Reste Global Famille (D)',
-            'Bénévole d\'Or ?',
+            'Cagnotte forcée ?',
             'Créé le'
         ];
 
@@ -242,7 +251,7 @@ export const AdminModule = {
                 b.is_family_head ? 'Oui' : (b.user_id ? 'Non (Membre famille)' : 'Non (Compte unique)'),
                 b.cagnotte_real_consumed || 0,
                 b.cagnotte_solde || 0,
-                b.benevole_or ? 'Oui' : 'Non',
+                b.cagnotte_forcee ? ('Oui (' + (b.cagnotte_forcee_type === 'journee' ? 'Jour' : 'Période') + ')') : 'Non',
                 dateStr
             ]);
         });
@@ -668,10 +677,8 @@ export const AdminModule = {
             });
             const allInscriptions = inscriptionsError ? [] : (inscriptionsData || []);
 
-            // 4. Fetch all periodes (needed for benevoles d'or)
-            const { data: periodesData } = await ApiService.fetch('periodes', { select: 'montant_credit' });
-            const totalAllPeriodes = (periodesData || []).reduce((sum, p) => sum + parseFloat(p.montant_credit || 0), 0);
-
+            // 4. Fetch all periodes (needed for forced cagnottes)
+            const { data: periodesData } = await ApiService.fetch('periodes', { select: 'id, montant_credit' });
 
             // Process Stats
             const userStats = {}; // Map user_id -> stats (Family Wallet)
@@ -700,9 +707,10 @@ export const AdminModule = {
                 if (insc.postes && insc.postes.periodes) {
                     const credit = parseFloat(insc.postes.periodes.montant_credit || 0);
 
-                    // A. Store individual credit (only for non benevole_or)
-                    const benevoleOr = (benevolesData || []).find(b => b.id === insc.benevole_id)?.benevole_or;
-                    if (!benevoleOr) {
+                    // A. Store individual credit (only for non forced cagnottes)
+                    const benevole = (benevolesData || []).find(b => b.id === insc.benevole_id);
+                    const isForced = benevole?.cagnotte_forcee;
+                    if (!isForced) {
                         benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
 
                         // B. Store family credit if user attached
@@ -715,12 +723,23 @@ export const AdminModule = {
                 }
             });
 
-            // Crédits pour les bénévoles d'or : toutes les périodes
-            (benevolesData || []).filter(b => b.benevole_or).forEach(b => {
-                benevoleCredits[b.id] = totalAllPeriodes;
+            // Crédits pour les bénévoles avec cagnotte forcée
+            (benevolesData || []).filter(b => b.cagnotte_forcee).forEach(b => {
+                let creditForced = 0;
+                if (b.cagnotte_forcee_type === 'journee') {
+                    const nbJours = Array.isArray(b.cagnotte_forcee_jours) ? b.cagnotte_forcee_jours.length : 0;
+                    creditForced = nbJours * parseFloat(this.config.tarif_cagnotte_journee || 0);
+                } else if (b.cagnotte_forcee_type === 'periode') {
+                    const periodesIds = b.cagnotte_forcee_periodes_ids || [];
+                    creditForced = (periodesData || [])
+                        .filter(p => periodesIds.includes(p.id))
+                        .reduce((sum, p) => sum + parseFloat(p.montant_credit || 0), 0);
+                }
+
+                benevoleCredits[b.id] = creditForced;
                 if (b.user_id) {
                     const stats = getUserStats(b.user_id);
-                    stats.inscriptions_credit += totalAllPeriodes;
+                    stats.inscriptions_credit += creditForced;
                 }
             });
 
@@ -861,7 +880,7 @@ export const AdminModule = {
     async loadConfig() {
         try {
             const { data, error } = await ApiService.fetch('config', {
-                in: { key: ['cagnotte_active', 'tarif_degaines_juge', 'tarif_degaines_officiel', 'tshirt_question_active'] }
+                in: { key: ['cagnotte_active', 'tarif_cagnotte_journee', 'tshirt_question_active'] }
             });
             if (error) throw error;
             
@@ -872,7 +891,8 @@ export const AdminModule = {
                 const tshirt = data.find(c => c.key === 'tshirt_question_active');
                 if (tshirt) this.config.tshirt_question_active = tshirt.value;
 
-
+                const tarifJournee = data.find(c => c.key === 'tarif_cagnotte_journee');
+                if (tarifJournee) this.config.tarif_cagnotte_journee = parseFloat(tarifJournee.value);
             }
         } catch (error) {
             console.error('Error loading config:', error);
@@ -3202,6 +3222,134 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         const date = new Date(Number(y), Number(m) - 1, Number(d));
         const formatted = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    },
+
+    async saveForcedJourneeTarif() {
+        const tarif = parseFloat(this.config.tarif_cagnotte_journee);
+        if (isNaN(tarif) || tarif < 0) {
+            this.showToast('⚠️ Veuillez saisir un tarif journalier valide supérieur ou égal à 0.', 'warning');
+            return;
+        }
+
+        this.loading = true;
+        try {
+            const { error } = await ApiService.upsert('config', {
+                key: 'tarif_cagnotte_journee',
+                value: tarif
+            });
+            if (error) throw error;
+            this.showToast('✅ Tarif journée mis à jour avec succès !', 'success');
+            await this.loadBenevolesAndStats(); // Re-calculer les soldes avec le nouveau tarif
+        } catch (err) {
+            console.error(err);
+            this.showToast('❌ Erreur lors de la sauvegarde du tarif : ' + err.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    selectBenevoleForCagnotte(benevole) {
+        this.selectedForcedBenevole = benevole;
+        this.forcedForm.cagnotte_forcee = benevole.cagnotte_forcee || false;
+        this.forcedForm.cagnotte_forcee_type = benevole.cagnotte_forcee_type || 'journee';
+        this.forcedForm.cagnotte_forcee_jours = benevole.cagnotte_forcee_jours ? [...benevole.cagnotte_forcee_jours] : [];
+        this.forcedForm.cagnotte_forcee_periodes_ids = benevole.cagnotte_forcee_periodes_ids ? [...benevole.cagnotte_forcee_periodes_ids] : [];
+    },
+
+    async saveCagnotteForcee() {
+        if (!this.selectedForcedBenevole) return;
+
+        this.loading = true;
+        try {
+            const benevoleId = this.selectedForcedBenevole.id;
+            
+            // 1. Préparation et exécution de l'update de benevoles
+            const isForced = this.forcedForm.cagnotte_forcee;
+            const type = isForced ? this.forcedForm.cagnotte_forcee_type : null;
+            const jours = (isForced && type === 'journee') ? this.forcedForm.cagnotte_forcee_jours : [];
+
+            const updatePayload = {
+                cagnotte_forcee: isForced,
+                cagnotte_forcee_type: type,
+                cagnotte_forcee_jours: jours
+            };
+
+            const { error: updateError } = await ApiService.update('benevoles', updatePayload, { id: benevoleId });
+            if (updateError) throw updateError;
+
+            // 2. Nettoyer les anciennes périodes forcées de la table de liaison
+            const { error: deleteError } = await ApiService.delete('benevole_cagnotte_periodes', { benevole_id: benevoleId });
+            if (deleteError) throw deleteError;
+
+            // 3. Insérer les nouvelles périodes forcées si requis
+            if (isForced && type === 'periode' && this.forcedForm.cagnotte_forcee_periodes_ids.length > 0) {
+                const inserts = this.forcedForm.cagnotte_forcee_periodes_ids.map(pid => ({
+                    benevole_id: benevoleId,
+                    periode_id: pid
+                }));
+                const { error: insertError } = await ApiService.insert('benevole_cagnotte_periodes', inserts);
+                if (insertError) throw insertError;
+            }
+
+            this.showToast('✅ Configuration de la cagnotte enregistrée !', 'success');
+
+            // 4. Recharger toutes les statistiques et bénévoles
+            await this.loadBenevolesAndStats();
+
+            // 5. Mettre à jour l'objet sélectionné en local pour refléter instantanément les changements à l'écran
+            const updatedBenevole = this.benevoles.find(b => b.id === benevoleId);
+            if (updatedBenevole) {
+                this.selectBenevoleForCagnotte(updatedBenevole);
+            } else {
+                this.selectedForcedBenevole = null;
+            }
+
+        } catch (err) {
+            console.error(err);
+            this.showToast('❌ Erreur lors de l\'enregistrement : ' + err.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    async revertCagnotteForcee(benevole) {
+        if (!benevole) return;
+        if (!confirm(`Voulez-vous vraiment annuler le forçage de la cagnotte pour ${benevole.prenom} ${benevole.nom} ?`)) return;
+
+        this.loading = true;
+        try {
+            const benevoleId = benevole.id;
+            
+            // 1. Désactiver le forçage sur le bénévole
+            const updatePayload = {
+                cagnotte_forcee: false,
+                cagnotte_forcee_type: null,
+                cagnotte_forcee_jours: []
+            };
+
+            const { error: updateError } = await ApiService.update('benevoles', updatePayload, { id: benevoleId });
+            if (updateError) throw updateError;
+
+            // 2. Nettoyer les périodes forcées associées
+            const { error: deleteError } = await ApiService.delete('benevole_cagnotte_periodes', { benevole_id: benevoleId });
+            if (deleteError) throw deleteError;
+
+            this.showToast('✅ Forçage de la cagnotte annulé avec succès !', 'success');
+
+            // 3. Si ce bénévole était sélectionné en haut pour édition, réinitialiser la sélection
+            if (this.selectedForcedBenevole?.id === benevoleId) {
+                this.selectedForcedBenevole = null;
+            }
+
+            // 4. Recharger toutes les données et recalculer les budgets
+            await this.loadBenevolesAndStats();
+
+        } catch (err) {
+            console.error(err);
+            this.showToast("❌ Erreur lors de l'annulation : " + err.message, 'error');
+        } finally {
+            this.loading = false;
+        }
     },
 
     // --- Helpers ---
