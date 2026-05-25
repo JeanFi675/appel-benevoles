@@ -40,13 +40,13 @@ export const AdminModule = {
     editingRepasId: null,
     editingRepasName: '',
 
-    // Mail de rappel
-    sendingRappel: false,
-    rappelResult: null,
+    // Mailing
+    mailingFilterRole: 'tous', // 'tous', 'benevole', 'referent', 'admin'
+    mailingFilterAssignation: 'tous', // 'tous', 'avec_poste', 'sans_poste', 'poste_specifique'
+    mailingPostLines: [
+        { id: 1, selectedTitle: '', selectedSlots: [] }
+    ],
 
-
-
-    // Referents Assignments
     referentAssignments: {},
     uniquePosteTitres: [],
 
@@ -1353,24 +1353,99 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         }
     },
 
-    async sendRappelAll(dryRun = false) {
-        this.sendingRappel = true;
-        this.rappelResult = null;
-        try {
-            const { data, error } = await ApiService.invoke('send-rappel-all', {
-                body: { dry_run: dryRun }
-            });
-            if (error) throw error;
-            this.rappelResult = { ...data, dry_run: dryRun };
-            const msg = dryRun
-                ? `🔍 Dry run : ${data.preview?.length ?? 0} emails prévus, ${data.skipped} ignorés`
-                : `✅ ${data.sent} emails envoyés, ${data.skipped} ignorés`;
-            this.showToast(msg, dryRun ? 'info' : 'success');
-        } catch (err) {
-            this.showToast(`❌ ${err.message}`, 'error');
-        } finally {
-            this.sendingRappel = false;
+    addMailingPostLine() {
+        this.mailingPostLines.push({
+            id: Date.now(),
+            selectedTitle: '',
+            selectedSlots: []
+        });
+    },
+
+    removeMailingPostLine(index) {
+        this.mailingPostLines.splice(index, 1);
+        if (this.mailingPostLines.length === 0) {
+            this.addMailingPostLine();
         }
+    },
+
+    getSlotsForPostTitle(title) {
+        if (!title) return [];
+        return this.postes
+            .filter(p => p.titre === title)
+            .sort((a, b) => {
+                if (a.periode_ordre !== b.periode_ordre) {
+                    return a.periode_ordre - b.periode_ordre;
+                }
+                return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
+            });
+    },
+
+    getFilteredMailingBenevoles() {
+        let list = [...this.benevoles];
+
+        // 1. Filtre par rôle
+        if (this.mailingFilterRole !== 'tous') {
+            list = list.filter(b => b.role === this.mailingFilterRole);
+        }
+
+        // 2. Filtre par assignation/poste
+        if (this.mailingFilterAssignation === 'avec_poste') {
+            list = list.filter(b => (b.nb_inscriptions || 0) > 0);
+        } else if (this.mailingFilterAssignation === 'sans_poste') {
+            list = list.filter(b => (b.nb_inscriptions || 0) === 0);
+        } else if (this.mailingFilterAssignation === 'poste_specifique') {
+            // Collect all selected slot (poste) IDs across all lines
+            const allSelectedSlotIds = new Set();
+            this.mailingPostLines.forEach(line => {
+                if (line.selectedTitle) {
+                    line.selectedSlots.forEach(slotId => {
+                        allSelectedSlotIds.add(slotId);
+                    });
+                }
+            });
+
+            if (allSelectedSlotIds.size > 0) {
+                const matchedBenevoleIds = new Set();
+                this.postes.forEach(p => {
+                    if (allSelectedSlotIds.has(p.id)) {
+                        (p.inscrits_ids || []).forEach(bId => {
+                            matchedBenevoleIds.add(bId);
+                        });
+                    }
+                });
+
+                list = list.filter(b => matchedBenevoleIds.has(b.id));
+            } else {
+                list = [];
+            }
+        }
+
+        return list;
+    },
+
+    getFilteredMailingEmails() {
+        const list = this.getFilteredMailingBenevoles();
+        return list
+            .map(b => b.email ? b.email.trim() : '')
+            .filter(email => email.length > 0);
+    },
+
+    copyMailingEmails() {
+        const emails = this.getFilteredMailingEmails();
+        if (emails.length === 0) {
+            this.showToast('⚠️ Aucun e-mail à copier.', 'warning');
+            return;
+        }
+
+        const emailString = emails.join(', ');
+        navigator.clipboard.writeText(emailString)
+            .then(() => {
+                this.showToast(`📋 ${emails.length} adresses e-mail copiées !`, 'success');
+            })
+            .catch(err => {
+                console.error('Erreur lors de la copie :', err);
+                this.showToast('❌ Impossible de copier les e-mails automatiquement.', 'error');
+            });
     },
 
     // --- Planning Interactif (Créateur Visuel) ---
