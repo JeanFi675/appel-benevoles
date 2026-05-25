@@ -71,32 +71,6 @@
         </button>
       </div>
     </div>
-
-    <!-- TARIFS DES CAGNOTTES -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t-2 border-brutal-black pt-4">
-      <!-- Config Juges -->
-      <form @submit.prevent="updateConfigJuges()" class="flex flex-col gap-2">
-        <label class="font-bold uppercase text-sm flex items-center gap-2">⚖️ Cagnotte Juges / Jour (€)</label>
-        <div class="flex gap-2">
-            <input type="number" step="0.5" x-model="config.tarif_degaines_juge" class="brutal-input w-full px-4 py-2" required />
-            <button type="submit" class="brutal-btn bg-yellow-400 py-2 px-4 shadow-brutal border-2 border-brutal-black font-black uppercase whitespace-nowrap" :disabled="savingConfig">
-                 <span x-show="!savingConfig">💾</span>
-                 <span x-show="savingConfig">⏳</span>
-            </button>
-        </div>
-      </form>
-      <!-- Config Officiels -->
-      <form @submit.prevent="updateConfigOfficiels()" class="flex flex-col gap-2">
-        <label class="font-bold uppercase text-sm flex items-center gap-2">🏅 Cagnotte Officiels / Week-end (€)</label>
-        <div class="flex gap-2">
-            <input type="number" step="0.5" x-model="config.tarif_degaines_officiel" class="brutal-input w-full px-4 py-2" required />
-            <button type="submit" class="brutal-btn bg-yellow-400 py-2 px-4 shadow-brutal border-2 border-brutal-black font-black uppercase whitespace-nowrap" :disabled="savingConfig">
-                 <span x-show="!savingConfig">💾</span>
-                 <span x-show="savingConfig">⏳</span>
-            </button>
-        </div>
-      </form>
-    </div>
   </div>
 
   <div class="grid md:grid-cols-2 gap-8">
@@ -142,26 +116,23 @@
 
       <table class="w-full text-left border-collapse">
         <tbody>
-          <tr class="border-b-2 border-brutal-black">
-            <td class="py-4 font-bold text-lg">Vendredi soir (15 mai)</td>
-            <td class="py-4 text-right">
-              <span class="font-black text-2xl" x-text="stats.repas.vendredi.total"></span>
-              <div class="text-sm text-gray-600 font-bold mt-1">
-                <span x-text="stats.repas.vendredi.normal"></span> normaux, 
-                <span class="text-green-600" x-text="stats.repas.vendredi.vege"></span> végé
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="py-4 font-bold text-lg">Samedi soir (16 mai)</td>
-            <td class="py-4 text-right">
-              <span class="font-black text-2xl" x-text="stats.repas.samedi.total"></span>
-              <div class="text-sm text-gray-600 font-bold mt-1">
-                <span x-text="stats.repas.samedi.normal"></span> normaux, 
-                <span class="text-green-600" x-text="stats.repas.samedi.vege"></span> végé
-              </div>
-            </td>
-          </tr>
+          <template x-for="(repStat, repasId) in stats.repas" :key="repasId">
+            <tr class="border-b-2 border-brutal-black last:border-b-0">
+              <td class="py-4 font-bold text-lg" x-text="repStat.nom"></td>
+              <td class="py-4 text-right">
+                <span class="font-black text-2xl" x-text="repStat.total"></span>
+                <div class="text-sm text-gray-600 font-bold mt-1">
+                  <span x-text="repStat.normal"></span> normaux, 
+                  <span class="text-green-600" x-text="repStat.vege"></span> végé
+                </div>
+              </td>
+            </tr>
+          </template>
+          <template x-if="Object.keys(stats.repas || {}).length === 0">
+            <tr>
+              <td colspan="2" class="py-4 text-center italic text-gray-500 font-bold">Aucun repas configuré.</td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>

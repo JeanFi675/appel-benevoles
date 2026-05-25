@@ -1,6 +1,6 @@
 # Appel Bénévoles — Gestion des bénévoles pour compétition d'escalade
 
-Système de gestion des bénévoles pour le **Championnat de France d'escalade de difficulté jeunes**. Permet aux bénévoles de s'inscrire sur des créneaux, aux juges de s'enregistrer, et aux administrateurs de piloter l'ensemble de l'organisation.
+Système de gestion des bénévoles pour le **Championnat de France d'escalade de difficulté jeunes**. Permet aux bénévoles de s'inscrire sur des créneaux, et aux administrateurs de piloter l'ensemble de l'organisation.
 
 ---
 
@@ -14,9 +14,6 @@ Système de gestion des bénévoles pour le **Championnat de France d'escalade d
 - Suivi du T-shirt (taille, retrait)
 - Cagnotte : solde de crédits utilisables à la buvette
 
-### Pour les juges
-- Page dédiée (`juges.html`) avec suivi de présence samedi/dimanche
-- Cagnotte calculée selon les dégainés effectués (`tarif_degaines_juge`)
 
 ### Pour les administrateurs
 - Gestion des postes, périodes, bénévoles
@@ -138,9 +135,6 @@ Secrets GitHub requis :
 |-----|-------|
 | `/` | Page principale bénévoles |
 | `/admin.html` | Administration |
-| `/juges.html` | Interface juges |
-| `/admin-juges.html` | Administration juges |
-| `/officiels.html` | Interface officiels |
 | `/debit.html` | Débit cagnotte à la buvette |
 | `/scanner-tshirt.html` | Scan distribution T-shirts |
 | `/admin-connexions.html` | Diagnostic connexions |
@@ -154,7 +148,6 @@ Paramètres stockés dans la table `config` Supabase :
 | Clé | Type | Description |
 |-----|------|-------------|
 | `cagnotte_active` | boolean | Active/désactive le système de cagnotte |
-| `tarif_degaines_juge` | decimal | Crédit par dégainé pour les juges (défaut : 10.00) |
 
 ---
 
@@ -165,9 +158,6 @@ Paramètres stockés dans la table `config` Supabase :
 | `benevole` | Page principale, inscription créneaux |
 | `referent` | Idem + vue des inscriptions de ses postes |
 | `admin` | Toutes les pages, CRUD complet |
-| `juge` | Page juges + cagnotte (calcul dégainés) |
-| `admin-juge` | Administration des juges |
-| `officiel` | Page officiels (repas, T-shirt) — sans cagnotte |
 
 ---
 

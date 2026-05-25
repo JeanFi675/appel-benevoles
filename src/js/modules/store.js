@@ -1,3 +1,4 @@
+// Force cache invalidation - 2026-05-25T03:04:00
 import Alpine from "alpinejs";
 import { AuthService } from "../services/auth.js";
 import { ApiService } from "../services/api.js";
@@ -18,10 +19,59 @@ export function initStore() {
     loading: false,
     toasts: [],
     lastAuthSuccess: 0, // Timestamp of last successful login
+    repasList: [],
+    config: {
+      tshirt_question_active: true,
+      cagnotte_active: false
+    },
 
     // Auth State
     step: 1, // 1: Email, 2: OTP
     otpCode: "",
+
+    /**
+     * Traduit un ID de repas en son libellé.
+     */
+    getRepasName(repasId) {
+      const repas = this.repasList.find(r => r.id === repasId);
+      return repas ? repas.nom : 'Repas inconnu';
+    },
+
+    /**
+     * Charge la liste complète des repas configurés.
+     */
+    async loadRepas() {
+      try {
+        const { data, error } = await ApiService.fetch('repas', {
+          order: { column: 'created_at', ascending: true }
+        });
+        if (error) throw error;
+        this.repasList = data || [];
+      } catch (err) {
+        console.error('Erreur chargement repas:', err);
+      }
+    },
+
+    /**
+     * Charge la configuration globale accessible à tous les utilisateurs.
+     */
+    async loadGlobalConfig() {
+      try {
+        const { data, error } = await ApiService.fetch('config', {
+          in: { key: ['tshirt_question_active', 'cagnotte_active'] }
+        });
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const tshirt = data.find(d => d.key === 'tshirt_question_active');
+          if (tshirt) this.config.tshirt_question_active = tshirt.value;
+          
+          const cagnotte = data.find(d => d.key === 'cagnotte_active');
+          if (cagnotte) this.config.cagnotte_active = cagnotte.value;
+        }
+      } catch (err) {
+        console.error('Erreur chargement config globale:', err);
+      }
+    },
 
     // Modal State
     confirmModal: {
@@ -255,6 +305,8 @@ export function initStore() {
         this.loadProfiles(),
         this.loadPostes(),
         this.loadUserInscriptions(),
+        this.loadRepas(),
+        this.loadGlobalConfig(),
       ]);
 
       this.reconcileLocalCounts(); // Ensure counts are consistent

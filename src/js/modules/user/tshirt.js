@@ -8,6 +8,12 @@ export const TshirtModule = {
     async renderTshirtWidget(parentElement, userId) {
         if (!parentElement) return;
 
+        // Si la question T-shirt est désactivée globalement, masquer le widget
+        if (this.config && this.config.tshirt_question_active === false) {
+            parentElement.innerHTML = "";
+            return;
+        }
+
         // Check if widget already exists to avoid loop, but we might want to refresh
         // For now simple guard
         if (isRenderingTshirt) return;

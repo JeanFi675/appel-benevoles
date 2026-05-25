@@ -11,11 +11,11 @@ Application web statique hébergée sur **GitHub Pages**, sans serveur applicati
 │                     NAVIGATEUR                          │
 │                                                         │
 │  Alpine.js + Tailwind CSS                               │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ index    │ │ admin    │ │ juges    │ │ debit    │  │
-│  │ (main.js)│ │(admin.js)│ │(juges.js)│ │(debit.js)│  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘  │
-│       └────────────┴────────────┴─────────────┘        │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐               │
+│  │ index    │ │ admin    │ │ debit    │               │
+│  │ (main.js)│ │(admin.js)│ │(debit.js)│               │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘               │
+│       └────────────┴────────────┘                     │
 │                    @supabase/supabase-js                │
 └───────────────────────────┬─────────────────────────────┘
                             │ HTTPS
@@ -62,11 +62,8 @@ appel-benevoles/
 │   │   ├── utils.js               # Formatage dates/heures
 │   │   ├── main.js                # Point d'entrée page bénévoles
 │   │   ├── admin.js               # Point d'entrée admin
-│   │   ├── juges.js               # Point d'entrée juges
 │   │   ├── debit.js               # Point d'entrée débit cagnotte
-│   │   ├── officiels.js           # Point d'entrée officiels
 │   │   ├── scanner-tshirt.js      # Point d'entrée scanner
-│   │   ├── admin-juges.js         # Point d'entrée admin juges
 │   │   ├── admin-connexions.js    # Point d'entrée diagnostic
 │   │   │
 │   │   ├── services/
@@ -95,8 +92,7 @@ appel-benevoles/
 │   │   └── sections/
 │   │       ├── index/             # Sections page bénévoles
 │   │       ├── admin/             # Tabs admin
-│   │       ├── juges/             # Formulaire juges
-│   │       └── officiels/         # Formulaire officiels
+
 │   │
 │   └── styles/
 │       └── main.css               # CSS custom (complément Tailwind)
@@ -157,8 +153,7 @@ auth.users (Supabase Auth)
     ├─── benevoles (1:1)
     │         id, email, prenom, nom, telephone
     │         taille_tshirt, role
-    │         repas_vendredi, repas_samedi, vegetarien
-    │         presence_samedi, presence_dimanche  (juges)
+    │         vegetarien
     │         t_shirt_recupere
     │
     ├─── cagnotte_transactions (1:N)
@@ -176,7 +171,7 @@ auth.users (Supabase Auth)
                                                      periode_debut, periode_fin
 
 config
-    key, value  (feature flags : cagnotte_active, tarif_degaines_juge)
+    key, value  (feature flags : cagnotte_active)
 ```
 
 ### Vues importantes

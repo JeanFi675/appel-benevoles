@@ -20,10 +20,7 @@ export const AdminModule = {
     // Stats
     stats: {
         tshirts: {},
-        repas: {
-            vendredi: { normal: 0, vege: 0, total: 0 },
-            samedi: { normal: 0, vege: 0, total: 0 }
-        },
+        repas: {}, // Rempli dynamiquement par repas_id
         cagnotte: {
             total_distribue: 0,
             total_consomme: 0,
@@ -34,10 +31,12 @@ export const AdminModule = {
     // Configuration
     config: {
         cagnotte_active: false,
-        tarif_degaines_juge: 10,
-        tarif_degaines_officiel: 15
+        tshirt_question_active: true
     },
     savingConfig: false,
+
+    repasList: [],
+    newRepasName: '',
 
     // Mail de rappel
     sendingRappel: false,
@@ -89,7 +88,7 @@ export const AdminModule = {
     formatTime,
 
     getReferents() {
-        return this.benevoles.filter(b => ['referent', 'admin', 'admin-juge'].includes(b.role));
+        return this.benevoles.filter(b => ['referent', 'admin'].includes(b.role));
     },
 
     getBenevolesStandardAvecInscriptions() {
@@ -100,13 +99,7 @@ export const AdminModule = {
         return this.benevoles.filter(b => ['admin', 'referent', 'benevole'].includes(b.role || 'benevole') && (b.nb_inscriptions || 0) === 0).length;
     },
 
-    getJugesTotal() {
-        return this.benevoles.filter(b => ['juge', 'admin-juge'].includes(b.role)).length;
-    },
 
-    getOfficielsTotal() {
-        return this.benevoles.filter(b => b.role === 'officiel').length;
-    },
 
     isReferentInscritPeriode(referentId, periodeId) {
         if (!referentId) return false;
@@ -156,9 +149,9 @@ export const AdminModule = {
                 const inscriDiff = (b.nb_inscriptions || 0) - (a.nb_inscriptions || 0);
                 return inscriDiff !== 0 ? inscriDiff : sortIdentity;
             } else if (this.benevolesSort === 'role_desc') {
-                const roleOrder = { 'admin': 1, 'referent': 2, 'admin-juge': 3, 'juge': 4, 'officiel': 5, 'benevole': 6 };
-                const roleA = roleOrder[a.role] || 7;
-                const roleB = roleOrder[b.role] || 7;
+                const roleOrder = { 'admin': 1, 'referent': 2, 'benevole': 3 };
+                const roleA = roleOrder[a.role] || 4;
+                const roleB = roleOrder[b.role] || 4;
                 const roleDiff = roleA - roleB;
                 return roleDiff !== 0 ? roleDiff : sortIdentity;
             } else {
@@ -223,9 +216,6 @@ export const AdminModule = {
         const roleTraduit = {
             'admin': '🔐 Administrateur',
             'referent': '👔 Référent',
-            'juge': '⚖️ Juge',
-            'admin-juge': '🔑 Admin-Juge',
-            'officiel': '🎖️ Officiel',
             'benevole': '👤 Bénévole'
         };
 
@@ -451,9 +441,10 @@ export const AdminModule = {
         const p2 = this.loadPostes();
         const p3 = this.loadPeriodes();
         const p4 = this.loadConfig();
+        const p5 = this.loadRepas();
         const p6 = this.loadProgramme();
 
-        await Promise.all([p1, p2, p3, p4, p6]);
+        await Promise.all([p1, p2, p3, p4, p5, p6]);
         this.initReferentAssignments();
     },
 
@@ -868,7 +859,7 @@ export const AdminModule = {
     async loadConfig() {
         try {
             const { data, error } = await ApiService.fetch('config', {
-                in: { key: ['cagnotte_active', 'tarif_degaines_juge', 'tarif_degaines_officiel'] }
+                in: { key: ['cagnotte_active', 'tarif_degaines_juge', 'tarif_degaines_officiel', 'tshirt_question_active'] }
             });
             if (error) throw error;
             
@@ -876,11 +867,10 @@ export const AdminModule = {
                 const cagnotteActive = data.find(c => c.key === 'cagnotte_active');
                 if (cagnotteActive) this.config.cagnotte_active = cagnotteActive.value;
 
-                const tarifJuge = data.find(c => c.key === 'tarif_degaines_juge');
-                if (tarifJuge) this.config.tarif_degaines_juge = parseFloat(tarifJuge.value) || 10;
+                const tshirt = data.find(c => c.key === 'tshirt_question_active');
+                if (tshirt) this.config.tshirt_question_active = tshirt.value;
 
-                const tarifOfficiel = data.find(c => c.key === 'tarif_degaines_officiel');
-                if (tarifOfficiel) this.config.tarif_degaines_officiel = parseFloat(tarifOfficiel.value) || 15;
+
             }
         } catch (error) {
             console.error('Error loading config:', error);
@@ -888,39 +878,7 @@ export const AdminModule = {
         }
     },
     
-    async updateConfigJuges() {
-        this.savingConfig = true;
-        try {
-            const { error } = await ApiService.upsert('config', {
-                key: 'tarif_degaines_juge',
-                value: this.config.tarif_degaines_juge
-            });
-            if (error) throw error;
-            this.showToast("✅ Montant de la cagnotte Juges sauvegardé !", "success");
-        } catch(err) {
-            console.error("Erreur mise à jour config juges:", err);
-            this.showToast("❌ Impossible de sauvegarder", "error");
-        } finally {
-             this.savingConfig = false;
-        }
-    },
 
-    async updateConfigOfficiels() {
-        this.savingConfig = true;
-        try {
-            const { error } = await ApiService.upsert('config', {
-                key: 'tarif_degaines_officiel',
-                value: this.config.tarif_degaines_officiel
-            });
-            if (error) throw error;
-            this.showToast("✅ Montant de la cagnotte Officiels sauvegardé !", "success");
-        } catch(err) {
-            console.error("Erreur mise à jour config officiels:", err);
-            this.showToast("❌ Impossible de sauvegarder", "error");
-        } finally {
-             this.savingConfig = false;
-        }
-    },
     
     async toggleCagnotte() {
         const newValue = !this.config.cagnotte_active;
@@ -941,6 +899,74 @@ export const AdminModule = {
             // Revert
             this.config.cagnotte_active = !newValue;
             this.showToast('❌ Erreur mise à jour : ' + error.message, 'error');
+        }
+    },
+
+    async toggleTshirtQuestion() {
+        const newValue = !this.config.tshirt_question_active;
+        this.config.tshirt_question_active = newValue;
+        
+        try {
+            const { error } = await ApiService.upsert('config', { 
+                key: 'tshirt_question_active', 
+                value: newValue 
+            });
+            
+            if (error) throw error;
+            
+            this.showToast(`✅ Question T-Shirt ${newValue ? 'ACTIVÉE' : 'DÉSACTIVÉE'}`, 'success');
+        } catch (error) {
+            this.config.tshirt_question_active = !newValue;
+            this.showToast('❌ Erreur : ' + error.message, 'error');
+        }
+    },
+
+    async loadRepas() {
+        try {
+            const { data, error } = await ApiService.fetch('repas', {
+                order: { column: 'created_at', ascending: true }
+            });
+            if (error) throw error;
+            this.repasList = data || [];
+        } catch (error) {
+            this.showToast('❌ Erreur chargement repas : ' + error.message, 'error');
+        }
+    },
+
+    async addRepas() {
+        if (!this.newRepasName || this.newRepasName.trim() === '') return;
+        this.loading = true;
+        try {
+            const { error } = await ApiService.insert('repas', {
+                nom: this.newRepasName.trim()
+            });
+            if (error) throw error;
+            
+            this.showToast('✅ Repas ajouté avec succès !', 'success');
+            this.newRepasName = '';
+            await this.loadRepas();
+            await this.loadBenevolesAndStats(); // Re-calculer les stats car il y a un nouveau repas
+        } catch (error) {
+            this.showToast('❌ Erreur ajout repas : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    async deleteRepas(id) {
+        if (!confirm('Voulez-vous vraiment supprimer ce repas ? Tous les choix des bénévoles associés à ce repas seront perdus.')) return;
+        this.loading = true;
+        try {
+            const { error } = await ApiService.delete('repas', { id });
+            if (error) throw error;
+            
+            this.showToast('✅ Repas supprimé !', 'success');
+            await this.loadRepas();
+            await this.loadBenevolesAndStats();
+        } catch (error) {
+            this.showToast('❌ Erreur suppression : ' + error.message, 'error');
+        } finally {
+            this.loading = false;
         }
     },
 
@@ -1044,7 +1070,7 @@ export const AdminModule = {
                 }
             }
 
-            const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin', 'juge': 'Juge', 'admin-juge': 'Admin-Juge', 'officiel': 'Officiel' };
+            const roleNames = { 'benevole': 'Bénévole', 'referent': 'Référent', 'admin': 'Admin' };
             this.showToast(`✅ Rôle changé en ${roleNames[newRole]}`, 'success');
             await this.loadBenevolesAndStats();
         } catch (error) {
@@ -1056,8 +1082,12 @@ export const AdminModule = {
     calculateStats() {
         const tshirts = {};
         let total_tshirts = 0;
-        let vendredi = { normal: 0, vege: 0, total: 0 };
-        let samedi = { normal: 0, vege: 0, total: 0 };
+        
+        // Initialiser la map des repas dynamiques
+        const repasStats = {};
+        this.repasList.forEach(r => {
+            repasStats[r.id] = { nom: r.nom, total: 0, normal: 0, vege: 0 };
+        });
 
         this.benevoles.forEach(b => {
             // T-Shirts: les bénévoles (rôle "benevole") sans aucune inscription n'ont pas de T-shirt
@@ -1071,21 +1101,24 @@ export const AdminModule = {
                 }
             }
 
-            // Repas
-            if (b.repas_vendredi) {
-                vendredi.total++;
-                if (b.vegetarien) vendredi.vege++; else vendredi.normal++;
-            }
-            if (b.repas_samedi) {
-                samedi.total++;
-                if (b.vegetarien) samedi.vege++; else samedi.normal++;
+            // Repas dynamiques
+            if (b.repas && Array.isArray(b.repas)) {
+                b.repas.forEach(ur => {
+                    if (!repasStats[ur.repas_id]) {
+                        repasStats[ur.repas_id] = { nom: ur.nom || 'Repas inconnu', total: 0, normal: 0, vege: 0 };
+                    }
+                    repasStats[ur.repas_id].total++;
+                    if (ur.vegetarien) {
+                        repasStats[ur.repas_id].vege++;
+                    } else {
+                        repasStats[ur.repas_id].normal++;
+                    }
+                });
             }
         });
 
         // CAGNOTTE STATS
-        // total_distribue = sum of all positive transactions (we have this aggregated in benevoles check if useful, or re-calc)
-        // Actually, we can just sum up from the this.benevoles mapped data
-        
+        // total_distribue = sum of all positive transactions
         const total_distribue = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_total || 0), 0);
         const total_restant = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_solde || 0), 0);
         
@@ -1106,10 +1139,7 @@ export const AdminModule = {
         this.stats = {
             tshirts: sortedTshirts,
             total_tshirts,
-            repas: {
-                vendredi,
-                samedi
-            },
+            repas: repasStats,
             cagnotte: {
                 total_distribue,
                 total_consomme,

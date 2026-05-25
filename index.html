@@ -79,13 +79,6 @@
               </button>
 
               <button
-                @click="toggleProfileSection()"
-                class="brutal-btn bg-brutal-white text-brutal-black px-3 py-2 text-sm shadow-brutal-sm border-2 border-brutal-black flex items-center justify-center font-bold whitespace-nowrap"
-              >
-                👤 Profils
-              </button>
-
-              <button
                 @click="logout()"
                 class="brutal-btn bg-brutal-black text-brutal-white px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold whitespace-nowrap"
               >
@@ -95,7 +88,6 @@
           </div>
         </div>
 
-        <%- include('/src/partials/sections/index/profile-list.html') %>
         <%- include('/src/partials/sections/index/planning-list.html') %>
       </section>
     </main>

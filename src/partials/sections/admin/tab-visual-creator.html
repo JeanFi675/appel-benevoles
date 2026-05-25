@@ -31,6 +31,63 @@
         </div>
     </div>
 
+
+    <!-- 0. CONFIGURATION DES FORMULAIRES (T-Shirt & Repas) -->
+    <div class="brutal-card bg-white p-8">
+        <h3 class="text-2xl font-black mb-4">⚙️ 0. Configuration des Formulaires d'Inscription</h3>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Configuration T-Shirt -->
+            <div class="space-y-4">
+                <h4 class="text-lg font-black uppercase text-gray-500">👕 Options T-Shirt</h4>
+                <div class="flex items-center justify-between p-4 bg-gray-50 border-2 border-brutal-black">
+                    <div class="pr-4">
+                        <p class="font-bold text-sm">Activer la question T-shirt</p>
+                        <p class="text-xs text-gray-500 font-bold">Si désactivée, les bénévoles ne verront pas la question sur la taille de T-shirt dans le formulaire.</p>
+                    </div>
+                    <button type="button" @click="toggleTshirtQuestion()"
+                            class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none flex-shrink-0"
+                            :class="config.tshirt_question_active ? 'bg-green-400' : 'bg-gray-300'">
+                        <span class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
+                              :class="config.tshirt_question_active ? 'translate-x-7' : 'translate-x-0.5'"></span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Configuration Repas -->
+            <div class="space-y-4">
+                <h4 class="text-lg font-black uppercase text-gray-500">🍽️ Options Repas</h4>
+                <p class="text-xs text-gray-500 font-bold">Configurez les repas proposés aux bénévoles dans le formulaire d'inscription.</p>
+                
+                <!-- Liste des repas -->
+                <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    <template x-for="repas in repasList" :key="repas.id">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 border-2 border-brutal-black">
+                            <span class="font-bold text-sm" x-text="repas.nom"></span>
+                            <button type="button" @click="deleteRepas(repas.id)" 
+                                    class="text-red-500 hover:text-red-700 font-black text-xs p-1" 
+                                    title="Supprimer ce repas">
+                                🗑️
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="repasList.length === 0">
+                        <p class="text-xs font-bold text-gray-400 italic">Aucun repas configuré. Les repas seront masqués dans le formulaire.</p>
+                    </template>
+                </div>
+                
+                <!-- Formulaire d'ajout de repas -->
+                <form @submit.prevent="addRepas()" class="flex gap-2">
+                    <input type="text" x-model="newRepasName" placeholder="Ex: Samedi midi, Buffet dimanche..." 
+                           class="brutal-input flex-1 px-3 py-2 text-sm font-bold bg-white" required />
+                    <button type="submit" class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm">
+                        ➕ Ajouter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- 1. SÉLECTEUR DE JOUR -->
     <div class="brutal-card bg-white p-8">
         <h3 class="text-2xl font-black mb-4">📅 1. Choisissez un Jour</h3>

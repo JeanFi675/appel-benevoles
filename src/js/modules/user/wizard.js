@@ -20,9 +20,7 @@ export const WizardModule = {
         nom: '',
         telephone: '',
         taille_tshirt: '',
-        repas_vendredi: false,
-        repas_samedi: false,
-        vegetarien: false
+        repas: [] // Array of { repas_id, vegetarien }
     },
 
     // Data for public view
@@ -242,9 +240,7 @@ export const WizardModule = {
             nom: profile.nom,
             telephone: profile.telephone,
             taille_tshirt: profile.taille_tshirt,
-            repas_vendredi: profile.repas_vendredi || false,
-            repas_samedi: profile.repas_samedi || false,
-            vegetarien: profile.vegetarien || false
+            repas: (profile.benevole_repas || []).map(r => ({ repas_id: r.repas_id, vegetarien: r.vegetarien }))
         };
         this.showWizardProfileForm = true;
     },
@@ -252,13 +248,13 @@ export const WizardModule = {
     cancelWizardEdit() {
         this.loading = false; // FIX: s'assurer que loading est libéré si on annule
         this.showWizardProfileForm = false;
-        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
+        this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas: [] };
     },
 
     async createProfileAndContinue() {
         if (!this.user) return;
         const f = this.wizardProfileForm;
-        if (!f.prenom || !f.nom || !f.telephone || !f.taille_tshirt) {
+        if (!f.prenom || !f.nom || !f.telephone || (this.config.tshirt_question_active && !f.taille_tshirt)) {
             this.showToast('❌ Veuillez remplir tous les champs', 'error');
             return;
         }
@@ -278,10 +274,7 @@ export const WizardModule = {
                 prenom: f.prenom,
                 nom: f.nom,
                 telephone: f.telephone,
-                taille_tshirt: f.taille_tshirt,
-                repas_vendredi: f.repas_vendredi,
-                repas_samedi: f.repas_samedi,
-                vegetarien: f.vegetarien
+                taille_tshirt: f.taille_tshirt || 'SANS'
             };
 
             if (f.id) {
@@ -292,15 +285,47 @@ export const WizardModule = {
 
             if (error) throw error;
             
+            const benevoleId = f.id || (data ? data.id : null);
+
+            if (benevoleId) {
+                // 1. Déterminer les IDs des repas actuellement actifs/affichés dans le store
+                const activeRepasIds = (this.repasList || []).map(r => r.id);
+                
+                if (activeRepasIds.length > 0) {
+                    // Supprimer uniquement les choix associés aux repas actifs
+                    const { error: deleteError } = await ApiService.delete('benevole_repas', { 
+                        benevole_id: benevoleId, 
+                        repas_id: activeRepasIds 
+                    });
+                    if (deleteError) throw deleteError;
+
+                    // 2. Insérer uniquement les choix cochés faisant partie des repas actifs
+                    if (f.repas && f.repas.length > 0) {
+                        const repasPayload = f.repas
+                            .filter(r => activeRepasIds.includes(r.repas_id))
+                            .map(r => ({
+                                benevole_id: benevoleId,
+                                repas_id: r.repas_id,
+                                vegetarien: r.vegetarien
+                            }));
+                        
+                        if (repasPayload.length > 0) {
+                            const { error: insertError } = await ApiService.insert('benevole_repas', repasPayload);
+                            if (insertError) throw insertError;
+                        }
+                    }
+                }
+            }
+            
             await this.loadProfiles();
 
-            const newId = data ? data.id : null;
+            const newId = f.id || (data ? data.id : null);
             if (newId) this.wizardSelectedProfileId = newId;
 
             if (f.id) {
                 this.showToast('✅ Profil mis à jour !', 'success');
                 this.showWizardProfileForm = false;
-                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
+                this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas: [] };
             } else {
                 this.showToast('✅ Profil créé !', 'success');
                 this.showPostCreationModal = true;
@@ -313,9 +338,6 @@ export const WizardModule = {
             this.showToast('❌ Erreur : ' + error.message, 'error');
             this.loading = false;
         } finally {
-            // FIX: toujours libérer loading ici.
-            // handlePostProfileCreation() gère l'affichage du modal post-création sans bloquer loading.
-            // Le cas showPostCreationModal n'a pas besoin de garder loading=true.
             clearTimeout(safetyTimeout);
             this.loading = false;
         }
@@ -325,11 +347,42 @@ export const WizardModule = {
         this.loading = false;
         this.showPostCreationModal = false;
         if (choice === 'add') {
-            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas_vendredi: false, repas_samedi: false, vegetarien: false };
+            this.wizardProfileForm = { id: null, prenom: '', nom: '', telephone: '', taille_tshirt: '', repas: [] };
             this.showWizardProfileForm = true;
         } else {
             this.wizardStep = 2;
             this.scrollWizardToTop();
+        }
+    },
+
+    /**
+     * Helpers pour l'édition dynamique des repas dans l'assistant.
+     */
+    isWizardRepasSelected(repasId) {
+        return this.wizardProfileForm.repas && this.wizardProfileForm.repas.some(r => r.repas_id === repasId);
+    },
+
+    isWizardRepasVege(repasId) {
+        const r = this.wizardProfileForm.repas && this.wizardProfileForm.repas.find(r => r.repas_id === repasId);
+        return r ? r.vegetarien : false;
+    },
+
+    toggleWizardRepas(repasId, checked) {
+        if (!this.wizardProfileForm.repas) this.wizardProfileForm.repas = [];
+        if (checked) {
+            if (!this.wizardProfileForm.repas.some(r => r.repas_id === repasId)) {
+                this.wizardProfileForm.repas.push({ repas_id: repasId, vegetarien: false });
+            }
+        } else {
+            this.wizardProfileForm.repas = this.wizardProfileForm.repas.filter(r => r.repas_id !== repasId);
+        }
+    },
+
+    setWizardRepasVege(repasId, vege) {
+        if (!this.wizardProfileForm.repas) this.wizardProfileForm.repas = [];
+        const r = this.wizardProfileForm.repas.find(r => r.repas_id === repasId);
+        if (r) {
+            r.vegetarien = vege;
         }
     },
 
