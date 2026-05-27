@@ -5,6 +5,7 @@
 > Cocher dans l'ordre. Ne pas sauter d'étapes — la sécurité dépend du respect de l'ordre.
 >
 > **🏠 Mode local-first** : tout le travail (Git + Supabase) se fait en local jusqu'à la Phase 8.
+>
 > - Git : la branche `refactor/production-hardening` reste locale, push différé en 8.0.
 > - Supabase : utilisation de l'instance locale via `supabase start` (Docker). Aucune écriture sur la prod avant la Phase 8.
 > - Prérequis : Docker Desktop installé et démarré sur le poste de dev.
@@ -25,7 +26,7 @@
 ### 0.2 Sauvegarde Supabase (PROD)
 
 - [x] Installer la dernière version du Supabase CLI localement (`supabase --version` ≥ 2.x). **DoD :** la commande retourne une version sans warning.
-- [x] Vérifier que Docker Desktop est installé et démarré : `docker --version` retourne une version et `docker ps` n'affiche pas d'erreur. **DoD :** les deux commandes s'exécutent sans erreur. *Note : requis par le CLI 2.x pour les dumps remote (utilise un container pg_dump à la version Postgres cible).*
+- [x] Vérifier que Docker Desktop est installé et démarré : `docker --version` retourne une version et `docker ps` n'affiche pas d'erreur. **DoD :** les deux commandes s'exécutent sans erreur. _Note : requis par le CLI 2.x pour les dumps remote (utilise un container pg_dump à la version Postgres cible)._
 - [x] Effectuer un dump complet du schéma : `supabase db dump -f backups/YYYYMMDD_schema.sql --linked` (schema-only par défaut en CLI 2.x). **DoD :** le fichier existe et contient `CREATE TABLE` pour la table `benevoles`.
 - [x] Effectuer un dump complet des données : `supabase db dump --data-only -f backups/YYYYMMDD_data.sql --linked`. **DoD :** le fichier existe et est non vide.
 - [x] Effectuer un dump des rôles et policies : `supabase db dump --role-only -f backups/YYYYMMDD_roles.sql --linked`. **DoD (révisée 2026-05-25)** : le fichier existe et contient au moins les `ALTER ROLE` des rôles applicatifs `anon` et `authenticated` (le CLI 2.x n'inclut pas les `CREATE ROLE` des rôles système Supabase recréés automatiquement à l'init d'une instance locale ; voir `audit/notes.md`).
@@ -141,7 +142,7 @@
 ### 1.10 Livrable d'audit consolidé
 
 - [x] Rédiger `audit_db.md` à la racine qui consolide toutes les anomalies, classées par criticité : **CRITIQUE** (sécurité), **HAUT** (intégrité), **MOYEN** (perf), **BAS** (cosmétique). **DoD :** le fichier existe et chaque anomalie référence le rapport détaillé d'origine. — **2026-05-26** : `audit_db.md` créé (28 anomalies : 2 CRITIQUE / 10 HAUT / 8 MOYEN / 8 BAS) avec références vers les rapports `audit/09_*.md` à `audit/17_*.md` + `audit/notes.md`. 11 décisions mainteneur consignées en bas du fichier.
-- [ ] Faire valider le rapport par le mainteneur du projet avant de passer à la Phase 2. **DoD :** un commit `docs: validation audit_db` est mergé avec sa signature.
+- [x] Faire valider le rapport par le mainteneur du projet avant de passer à la Phase 2. **DoD :** un commit `docs: validation audit_db` est mergé avec sa signature. — **2026-05-26** : 8 décisions arbitrées par le mainteneur (D1-D8 dans `audit/notes.md`), commit `afc63bc docs: validation audit_db` sur `refactor/production-hardening` (merge sur master reporté en Phase 8.1 conformément au mode local-first).
 
 ---
 
@@ -151,55 +152,55 @@
 
 ### 2.1 Plan de migration ciblé
 
-- [ ] Pour chaque anomalie de `audit_db.md`, créer un fichier de migration daté dans `supabase/migrations/`. **DoD :** chaque anomalie HAUT et CRITIQUE a une migration associée.
-- [ ] Numéroter les migrations en respectant la convention `YYYYMMDDHHMMSS_description.sql`. **DoD :** `ls supabase/migrations/` montre les nouveaux fichiers triés chronologiquement.
+- [x] Pour chaque anomalie de `audit_db.md`, créer un fichier de migration daté dans `supabase/migrations/`. **DoD :** chaque anomalie HAUT et CRITIQUE a une migration associée.
+- [x] Numéroter les migrations en respectant la convention `YYYYMMDDHHMMSS_description.sql`. **DoD :** `ls supabase/migrations/` montre les nouveaux fichiers triés chronologiquement.
 
 ### 2.2 Suppression du code mort SQL
 
-- [ ] Créer la migration `..._drop_unused_tables.sql` qui supprime les tables marquées `UNUSED` en Phase 1.3 (avec `DROP TABLE IF EXISTS ... CASCADE`). **DoD :** la migration s'applique sans erreur sur Supabase local.
-- [ ] Créer la migration `..._drop_unused_columns.sql` pour les colonnes mortes. **DoD :** la migration s'applique sur Supabase local.
-- [ ] Créer la migration `..._drop_unused_indexes.sql` pour les index inutilisés. **DoD :** la migration s'applique sur Supabase local.
+- [x] Créer la migration `..._drop_unused_tables.sql` qui supprime les tables marquées `UNUSED` en Phase 1.3 (avec `DROP TABLE IF EXISTS ... CASCADE`). **DoD :** la migration s'applique sans erreur sur Supabase local. — **2026-05-26** : `20260526120300_drop_unused_table_mentions.sql` (DROP TABLE `mentions` CASCADE + DROP des enums orphelins `mention_platform`, `mention_status`). Appliquée sur local sans erreur ; vérification : `pg_class.mentions` absent, 2 enums absents.
+- [x] Créer la migration `..._drop_unused_columns.sql` pour les colonnes mortes. **DoD :** la migration s'applique sur Supabase local. — **2026-05-26** : `20260526120200_drop_unused_columns.sql` (drop de `benevoles.presence_samedi`, `benevoles.presence_dimanche`, `config.updated_by`, `cagnotte_transactions.auteur_id`). Prérequis B01 appliqués au passage : `20260526120000_refactor_admin_views.sql` (vues admin sans colonnes UNUSED) + `20260526120100_update_debit_cagnotte_drop_auteur.sql` (fonction sans INSERT de `auteur_id`). Vérification : 4 colonnes absentes, vues OK, INSERT de la fonction sans `auteur_id`.
+- [x] Créer la migration `..._drop_unused_indexes.sql` pour les index inutilisés. **DoD :** la migration s'applique sur Supabase local. — **N/A (2026-05-26)** : `audit/14_indexes.md` §1.7.4 (snapshot prod du 2026-05-26) conclut **0 index à supprimer** (les 2 index `idx_scan = 0` sont conservés à juste titre : 1 sur FK, 1 UNIQUE). Aucune migration nécessaire.
 
 ### 2.3 Ajout des contraintes manquantes
 
-- [ ] Créer une migration qui ajoute les `NOT NULL` manquants (après backfill éventuel des nulls existants). **DoD :** la migration s'applique sur Supabase local sans violer aucune ligne.
-- [ ] Créer une migration qui ajoute les `UNIQUE` manquants (après dédoublonnage si nécessaire). **DoD :** la migration s'applique sans conflit sur Supabase local.
-- [ ] Créer une migration qui ajoute les `CHECK` métier (ex : `montant > 0`). **DoD :** la migration s'applique sans violer aucune ligne sur Supabase local.
-- [ ] Créer une migration qui ajoute les FK manquantes et corrige les politiques `ON DELETE`. **DoD :** la migration s'applique sans erreur sur Supabase local.
+- [x] Créer une migration qui ajoute les `NOT NULL` manquants (après backfill éventuel des nulls existants). **DoD :** la migration s'applique sur Supabase local sans violer aucune ligne. — **2026-05-27** : `20260526130000_backfill_telephone_inconnu.sql` (12 lignes backfillées 'INCONNU' — D2) + `20260526130100_add_not_null_constraints.sql` (17 colonnes `SET NOT NULL` : 11 audit `created_at`/`updated_at` + `t_shirt_recupere` + `cagnotte_forcee_jours` + `benevole_id`/`description` + `postes.periode_id` + `telephone`). Appliquées sans erreur sur local, 0 NULL résiduel.
+- [x] Créer une migration qui ajoute les `UNIQUE` manquants (après dédoublonnage si nécessaire). **DoD :** la migration s'applique sans conflit sur Supabase local. — **2026-05-27** : `20260526130600_add_unique_constraints.sql` (dédup préalable de 20 lignes `programme` strictement doublonnées — cf. `audit/notes.md` divergence D4 ; puis 3 UNIQUE : `benevoles_user_prenom_nom_uniq`, `repas_nom_uniq`, `programme_date_heure_uniq`) + `20260526130700_add_exclude_postes_overlap.sql` (D3 : `EXCLUDE USING gist` sur `tstzrange(periode_debut,periode_fin)` + `type_poste_id`, 0 chevauchement préalable).
+- [x] Créer une migration qui ajoute les `CHECK` métier (ex : `montant > 0`). **DoD :** la migration s'applique sans violer aucune ligne sur Supabase local. — **2026-05-27** : `20260526130500_add_check_constraints.sql` (15 CHECK = 11 simples H10 + 2 seuils D5 [`abs(montant)<=100`, `nb_max<=200`] + 2 cross-field cagnotte `consistency`/`journee_has_days`). Appliquée sans violation.
+- [x] Créer une migration qui ajoute les FK manquantes et corrige les politiques `ON DELETE`. **DoD :** la migration s'applique sans erreur sur Supabase local. — **2026-05-27** : `20260526130200_add_fk_cagnotte_user.sql` (H02 : FK `cagnotte_transactions.user_id → auth.users(id) ON DELETE CASCADE`) + `20260526130300_drop_juges_officiels.sql` (D1 prérequis : reclassement 1 user `admin-juge`→`admin`, DROP 3 policies + `is_admin_juge()` + 2 config keys, MAJ `get_family_tshirt_info_smart`, CHECK `role` réduit à 3 valeurs) + `20260526130400_alter_fk_cagnotte_benevole_cascade.sql` (D6.b : `benevole_id` FK SET NULL → CASCADE).
 
 ### 2.4 Conversion des typages
 
-- [ ] Créer une migration qui transforme les `text` métier en `enum` PostgreSQL (ex : `role_type`). **DoD :** la colonne est typée et les requêtes existantes fonctionnent toujours.
-- [ ] Créer une migration qui convertit `timestamp` → `timestamptz` (en assumant `UTC` pour les valeurs existantes). **DoD :** la migration s'applique sans changer les valeurs visibles.
-- [ ] Créer une migration qui corrige les types incohérents (ex : `varchar(n)` → `text` ou inverse selon la décision). **DoD :** la migration s'applique sur Supabase local.
+- [x] Créer une migration qui transforme les `text` métier en `enum` PostgreSQL (ex : `role_type`). **DoD :** la colonne est typée et les requêtes existantes fonctionnent toujours. — **2026-05-27** : `20260526140100_create_role_enum.sql` (CREATE TYPE `role_type` AS ENUM ('benevole','referent','admin') ; drop+recreate des 10 policies RLS dépendantes ; conversion `benevoles.role` text→`role_type` avec préservation du default) + `20260526140200_create_tshirt_cagnotte_enums.sql` (CREATE TYPE `tshirt_size` AS ENUM ('SANS','XS','S','M','L','XL','XXL') + `cagnotte_forced_type` AS ENUM ('journee','periode') ; conversion des 2 colonnes ; recréation du CHECK `benevoles_cagnotte_journee_has_days` avec cast enum). Drop+recreate de la vue `admin_benevoles` dans chaque migration. 140 lignes préservées, 3 rôles / 7 tailles / 2 types cagnotte ; `WHERE role = 'admin'` via cast implicite OK.
+- [x] Créer une migration qui convertit `timestamp` → `timestamptz` (en assumant `UTC` pour les valeurs existantes). **DoD :** la migration s'applique sans changer les valeurs visibles. — **N/A (2026-05-26)** : audit `audit/12_typing.md` Partie 1.5.2 montre **0 colonne `timestamp without time zone`** dans `public.*` (17 colonnes déjà en `timestamptz`, 3 en `date`, 1 en `time`). Aucune migration nécessaire.
+- [x] Créer une migration qui corrige les types incohérents (ex : `varchar(n)` → `text` ou inverse selon la décision). **DoD :** la migration s'applique sur Supabase local. — **2026-05-27** : aucun `varchar(n)` détecté en audit (convention Postgres moderne respectée). Le slot Phase 2.4 a été utilisé pour M08 + B06 (typage email + CHECK patterns) : `20260526140000_enable_citext_convert_email.sql` (CREATE EXTENSION citext + conversion `benevoles.email` text→citext + drop+recreate vue `admin_benevoles` ; garde-fou anti-collision case-only) + `20260526140300_add_check_email_phone_patterns.sql` (CHECK `benevoles_email_format_chk` regex email + `benevoles_telephone_format_chk` regex tél avec tolérance sentinelle 'INCONNU'). Appliquées sans erreur ; 0 violation sur les 140 lignes.
 
 ### 2.5 Index de performance
 
-- [ ] Créer une migration qui ajoute les index manquants sur FK et colonnes filtrées. **DoD :** `pg_indexes` contient les nouveaux index sur Supabase local.
+- [x] Créer une migration qui ajoute les index manquants sur FK et colonnes filtrées. **DoD :** `pg_indexes` contient les nouveaux index sur Supabase local. — **2026-05-27** : `20260526150000_add_missing_indexes.sql` (7 `CREATE INDEX IF NOT EXISTS` : 5 FK [`idx_benevole_cagnotte_periodes_periode_id`, `idx_benevole_repas_repas_id`, `idx_postes_periode_id`, `idx_postes_referent_id`, `idx_postes_type_poste_id`] + 2 colonnes filtrées [`idx_benevoles_email`, `idx_programme_date_ref`]). Appliquée sur Supabase local sans erreur ; `pg_indexes` retourne bien les 7 entrées.
 
 ### 2.6 Harmonisation du nommage
 
-- [ ] Créer une migration de renommage (`ALTER TABLE ... RENAME`) pour aligner sur la convention. **DoD :** la migration s'applique et les requêtes du front sont mises à jour en conséquence (à valider en Phase 5).
+- [x] Créer une migration de renommage (`ALTER TABLE ... RENAME`) pour aligner sur la convention. **DoD :** la migration s'applique et les requêtes du front sont mises à jour en conséquence (à valider en Phase 5). — **2026-05-27** : `20260526160000_rename_naming_conventions.sql` appliquée sur local. Renommages : table `programme→programmes` (+ index/contraintes), colonnes `benevole_repas.vegetarien→is_vegetarien` / `benevoles.t_shirt_recupere→has_recupere_tshirt` / `benevoles.cagnotte_forcee→is_cagnotte_forcee` / `orphan_relances.auth_user_id→user_id` (+ FK), vue `public_planning.inscrits_actuels→nb_inscrits_actuels`, triggers `check_role_change→trg_prevent_role_change` / `trigger_check_capacity→trg_check_capacity` / `trigger_check_time_conflict→trg_check_time_conflict`, fonction `public_debit_cagnotte→debit_cagnotte_public`. 6 fonctions et 2 vues recréées en miroir. Incident : `CREATE OR REPLACE FUNCTION` impossible quand un OUT param est renommé → `DROP FUNCTION IF EXISTS` ajouté pour les 3 fonctions concernées (migration re-jouable). 140 benevoles / 309 inscriptions / 58 postes intacts. Mise à jour front reportée Phase 5.
 
 ### 2.7 Validation 3NF et séparation des domaines
 
-- [ ] Vérifier que chaque table a une clé primaire et que toutes les colonnes non-clés dépendent uniquement de la clé. **DoD :** un paragraphe dans `audit_db.md` confirme la conformité 3NF table par table.
-- [ ] Vérifier l'absence de duplication de données (ex : `nom_benevole` dupliqué dans `inscriptions`). **DoD :** aucune dénormalisation injustifiée n'existe (justifications documentées sinon).
+- [x] Vérifier que chaque table a une clé primaire et que toutes les colonnes non-clés dépendent uniquement de la clé. **DoD :** un paragraphe dans `audit_db.md` confirme la conformité 3NF table par table. — **2026-05-27** : section "Validation 3NF et séparation des domaines (Phase 2.7)" ajoutée dans `audit_db.md`. **13/13 tables ont une PK** (vérifié via `pg_constraint`), **12/13 strictement 3NF**, 1/13 (`cagnotte_transactions`) avec dénormalisation `user_id` explicitement documentée (D-1 : RLS perf + sémantique famille). Aucune migration corrective requise.
+- [x] Vérifier l'absence de duplication de données (ex : `nom_benevole` dupliqué dans `inscriptions`). **DoD :** aucune dénormalisation injustifiée n'existe (justifications documentées sinon). — **2026-05-27** : 4 dénormalisations détectées et toutes justifiées (D-1 `cagnotte_transactions.user_id`, D-2 `orphan_relances.telephone`, D-3 `benevoles.cagnotte_forcee_jours` ARRAY, D-4 vues `admin_*`/`public_planning`). Vérifications explicites menées : **aucun** `postes.titre`/`postes.description` redondant, **aucun** `inscriptions.nom_benevole`, **aucun** compteur pré-calculé sur table physique. Cf. tableau "Vérifications explicites menées" dans `audit_db.md`.
 
 ### 2.8 Consolidation en script `init.sql`
 
-- [ ] Générer un dump propre du schéma local final : `pg_dump --schema-only "postgresql://postgres:postgres@127.0.0.1:54322/postgres" > supabase/migrations/00000000000000_init.sql`. **DoD :** le fichier existe et est lisible. *Note (2026-05-25)* : la source de vérité est le dump prod (`backups/...`) + les migrations atomiques de la Phase 2, **PAS** un replay des migrations historiques archivées (cassées — bug `user_id` documenté dans `audit/notes.md`).
-- [ ] Nettoyer le dump (supprimer les commentaires Supabase auto-générés non pertinents, organiser par section : extensions → types → tables → vues → fonctions → triggers → policies). **DoD :** le fichier est sectionné par des commentaires `-- ============ SECTION ============`.
-- [ ] Rendre le script idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, `DROP POLICY IF EXISTS` avant `CREATE POLICY`). **DoD :** réexécuter le script deux fois de suite n'engendre aucune erreur.
-- [ ] Archiver les anciennes migrations dans `supabase/migrations/_archive/` (les conserver pour traçabilité historique mais hors du chemin actif). **DoD :** `supabase/migrations/` contient uniquement `00000000000000_init.sql` à la racine.
-- [ ] Documenter en tête de `init.sql` la date de consolidation et l'origine. **DoD :** un bloc de commentaire d'en-tête est présent.
+- [x] Générer un dump propre du schéma local final : `pg_dump --schema-only "postgresql://postgres:postgres@127.0.0.1:54322/postgres" > supabase/migrations/00000000000000_init.sql`. **DoD :** le fichier existe et est lisible. _Note (2026-05-25)_ : la source de vérité est le dump prod (`backups/...`) + les migrations atomiques de la Phase 2, **PAS** un replay des migrations historiques archivées (cassées — bug `user_id` documenté dans `audit/notes.md`). — **2026-05-27** : dump via `docker exec supabase_db_appel-benevoles pg_dump --schema-only --no-owner --no-privileges --schema=public -U postgres -d postgres` (container pour aligner version client/serveur 17.6). Fichier généré : 2421 lignes.
+- [x] Nettoyer le dump (supprimer les commentaires Supabase auto-générés non pertinents, organiser par section : extensions → types → tables → vues → fonctions → triggers → policies). **DoD :** le fichier est sectionné par des commentaires `-- ============ SECTION ============`. — **2026-05-27** : preamble pg_dump strippé (`SET ...`, `\restrict`, `CREATE SCHEMA public`), 11 sections injectées (1.EXTENSIONS, 2.TYPES, 3.FONCTIONS, 4.TABLES & VUES, 5.CONTRAINTES, 6.INDEX, 7.RÈGLES de VUES, 8.TRIGGERS, 9.FK, 10.POLICIES, 11.RLS).
+- [x] Rendre le script idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, `DROP POLICY IF EXISTS` avant `CREATE POLICY`). **DoD :** réexécuter le script deux fois de suite n'engendre aucune erreur. — **2026-05-27** : transformations appliquées : `CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION/VIEW`, `CREATE INDEX IF NOT EXISTS`, `CREATE EXTENSION IF NOT EXISTS`, `DROP TRIGGER/POLICY IF EXISTS` prefixés, wrappers DO blocks IF NOT EXISTS pour 24 contraintes + 3 enums, `SET check_function_bodies = false` pour permettre la création des fonctions avant les tables. **Test 2 runs sur DB jetable (auth.users + auth.uid() stub)** : EXIT1=0, EXIT2=0, 0 erreur, schéma résultant identique à la source (13 tables / 4 vues / 35 index / 44 policies / 3 triggers / 256 fonctions / 3 enums / 54 contraintes).
+- [x] Archiver les anciennes migrations dans `supabase/migrations/_archive/` (les conserver pour traçabilité historique mais hors du chemin actif). **DoD :** `supabase/migrations/` contient uniquement `00000000000000_init.sql` à la racine. — **2026-05-27** : 20 migrations (Phase 2.2 → 3.3) + `PLAN.md` déplacés vers `supabase/migrations/_archive/` ; `README.md` ajouté listant l'ordre chronologique. `ls supabase/migrations/` retourne `00000000000000_init.sql` + `_archive/` uniquement.
+- [x] Documenter en tête de `init.sql` la date de consolidation et l'origine. **DoD :** un bloc de commentaire d'en-tête est présent. — **2026-05-27** : bloc d'en-tête (lignes 1-23) avec date de consolidation (2026-05-27), origine (`pg_dump --schema-only` instance Supabase locale), phase (2.8), caractéristiques (idempotence, schéma public uniquement, extensions, `check_function_bodies = false`).
 
 ### 2.9 Validation du script consolidé
 
-- [ ] Réinitialiser l'instance Supabase locale sur une base vierge : `supabase db reset --no-seed`. **DoD :** `psql ... -c "\dt public.*"` ne retourne aucune table avant exécution du script.
-- [ ] Exécuter le script `00000000000000_init.sql` sur cette instance vierge. **DoD :** l'exécution se termine sans erreur et toutes les tables/policies sont créées.
-- [ ] Comparer le schéma résultant avec le schéma de référence (avant reset) via un diff (`pg_dump --schema-only`). **DoD :** le diff est vide (ou ne contient que des différences sans impact fonctionnel documentées dans `audit/23_init_diff.md`).
-- [ ] Restaurer l'instance locale dans son état pré-validation (réimport du dump). **DoD :** `select count(*) from benevoles` retourne le compte attendu.
+- [x] Réinitialiser l'instance Supabase locale sur une base vierge : `supabase db reset --no-seed`. **DoD :** `psql ... -c "\dt public.*"` ne retourne aucune table avant exécution du script. — **2026-05-27** : déviation méthodologique justifiée — `supabase db reset --no-seed` rejouerait automatiquement `00000000000000_init.sql` (désormais présent dans `supabase/migrations/`), produisant l'opposé de la DoD. Remplacé par `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` (préserve `auth.users` pour la restauration en 2.9.4). Vérification : `\dt public.*` retourne `Did not find any relation named "public.*"`. Cf. `audit/23_init_diff.md` §5.
+- [x] Exécuter le script `00000000000000_init.sql` sur cette instance vierge. **DoD :** l'exécution se termine sans erreur et toutes les tables/policies sont créées. — **2026-05-27** : `psql -v ON_ERROR_STOP=1 < supabase/migrations/00000000000000_init.sql` → EXIT=0, 0 erreur. Comptes vérifiés : 13 tables / 44 policies / 4 vues / 256 fonctions (identiques au comptage de référence Phase 2.8).
+- [x] Comparer le schéma résultant avec le schéma de référence (avant reset) via un diff (`pg_dump --schema-only`). **DoD :** le diff est vide (ou ne contient que des différences sans impact fonctionnel documentées dans `audit/23_init_diff.md`). — **2026-05-27** : diff post-normalisation CRLF→LF = **3 différences sans impact fonctionnel** (tokens aléatoires `\restrict`/`\unrestrict` de session pg_dump psql 17 + `COMMENT ON SCHEMA public IS 'standard public schema'` ajouté par Supabase à l'initialisation). Détail dans `audit/23_init_diff.md`. Recommandation `.gitattributes` (Phase 4/5) pour éliminer la divergence CRLF cosmétique.
+- [x] Restaurer l'instance locale dans son état pré-validation (réimport du dump). **DoD :** `select count(*) from benevoles` retourne le compte attendu. — **2026-05-27** : réimport de `reference_data.sql` (dump `--data-only --schema=public` capturé avant le DROP). EXIT=0, aucune erreur. Comptes restaurés : benevoles=140, inscriptions=309, postes=58, periodes=10, cagnotte_transactions=189 (identiques au pré-validation).
 
 ---
 
@@ -209,13 +210,13 @@
 
 ### 3.1 Activation RLS universelle
 
-- [ ] Pour chaque table du schéma `public`, exécuter `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`. **DoD :** la requête `SELECT relname FROM pg_class WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace AND relrowsecurity = false;` ne retourne aucune ligne.
-- [ ] Pour chaque table, exécuter `ALTER TABLE ... FORCE ROW LEVEL SECURITY;` pour appliquer RLS même au propriétaire de la table. **DoD :** `relforcerowsecurity = true` pour toutes les tables publiques.
+- [x] Pour chaque table du schéma `public`, exécuter `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`. **DoD :** la requête `SELECT relname FROM pg_class WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace AND relrowsecurity = false;` ne retourne aucune ligne. — **2026-05-27** : migration `20260527100000_enable_force_rls.sql` (boucle DO idempotente sur `pg_class`) appliquée sur Supabase local. Requête de vérification retourne 0 ligne sur 13 tables `public`.
+- [x] Pour chaque table, exécuter `ALTER TABLE ... FORCE ROW LEVEL SECURITY;` pour appliquer RLS même au propriétaire de la table. **DoD :** `relforcerowsecurity = true` pour toutes les tables publiques. — **2026-05-27** : même migration. `SELECT relname FROM pg_class WHERE relkind='r' AND relnamespace='public'::regnamespace AND relforcerowsecurity=false` retourne 0 ligne ; 13/13 tables affichent `rls=t, force_rls=t`.
 
 ### 3.2 Matrice des policies
 
-- [ ] Rédiger `security/rls_matrix.md` : un tableau Table × Opération × Rôle → policy à appliquer. **DoD :** chaque cellule a une décision explicite (`ALLOW`, `DENY`, `OWN_ROW_ONLY`, `ROLE_BASED`).
-- [ ] Faire valider la matrice par le mainteneur avant codage. **DoD :** un commit `docs: validation rls_matrix` est présent.
+- [x] Rédiger `security/rls_matrix.md` : un tableau Table × Opération × Rôle → policy à appliquer. **DoD :** chaque cellule a une décision explicite (`ALLOW`, `DENY`, `OWN_ROW_ONLY`, `ROLE_BASED`). — **2026-05-27** : fichier créé (265 lignes), 13 tables × 4 opérations × 4 rôles = 208 cellules toutes décidées. Helpers cibles documentés (`auth_has_role`, `is_referent_for_poste` à créer en 3.3, `check_referent_access` à supprimer).
+- [x] Faire valider la matrice par le mainteneur avant codage. **DoD :** un commit `docs: validation rls_matrix` est présent. — **2026-05-27** : 5 points arbitrés par le mainteneur (cf. §6 du fichier) → matrice amendée puis commit `docs: validation rls_matrix`.
 
 ### 3.3 Implémentation des policies
 
@@ -357,7 +358,7 @@
 ### 6.3 Tests de charge minimaux (si pertinent)
 
 - [ ] Identifier les pages critiques (planning, admin). **DoD :** la liste est dans `tests/load.md`.
-- [ ] Lancer `k6` ou `autocannon` simulant 50 utilisateurs concurrents sur ces pages contre Supabase local. **DoD :** les temps de réponse P95 sont < 1s. *Note : mesures indicatives — Supabase local n'a pas les mêmes caractéristiques que la prod managée.*
+- [ ] Lancer `k6` ou `autocannon` simulant 50 utilisateurs concurrents sur ces pages contre Supabase local. **DoD :** les temps de réponse P95 sont < 1s. _Note : mesures indicatives — Supabase local n'a pas les mêmes caractéristiques que la prod managée._
 
 ### 6.4 Tests des Edge Functions (en local via `supabase functions serve`)
 
