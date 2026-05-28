@@ -334,9 +334,9 @@
 - [x] **5.0.6 — Renommage colonne vue `public_planning.inscrits_actuels` → `nb_inscrits_actuels`**.
   Auditer : `grep -rn "inscrits_actuels" src/` (attention à ne pas toucher les `inscrits_actuels` qui ne viennent pas de la vue `public_planning` mais d'un calcul JS local : ex. `shift.inscrits_actuels`, `poste.inscrits_actuels` calculé dans `loadPostes`).
   **DoD :** seules les lectures de `public_planning` utilisent `nb_inscrits_actuels` ; page publique planning OK. — **2026-05-28** : 1 ligne modifiée (`user/planning.js:242` — ajout `select: '*, inscrits_actuels:nb_inscrits_actuels'` aliasing PostgREST). `admin-timeline.js:425` n'a pas besoin de modification (son `select` explicite n'inclut pas la colonne). Les ~20 calculs JS locaux préservés. Build OK.
-- [ ] **5.0.7 — Renommage fonction `public_debit_cagnotte` → `debit_cagnotte_public`**.
+- [x] **5.0.7 — Renommage fonction `public_debit_cagnotte` → `debit_cagnotte_public`**.
   Auditer : `grep -rn "public_debit_cagnotte" src/`. Remplacer.
-  **DoD :** 0 occurrence ; débit cagnotte via QR fonctionne (parcours debit.html).
+  **DoD :** 0 occurrence ; débit cagnotte via QR fonctionne (parcours debit.html). — **2026-05-28** : 1 ligne modifiée (`debit.js:89`). Signature de la RPC inchangée (init.sql l.172). Smoke test parcours `debit.html` différé en 5.0.8. Build OK.
 - [ ] **5.0.8 — Validation finale et garde-fou CI**.
   Exécuter le smoke test complet des 7 zones impactées en local (Supabase local doit être à jour avec `init.sql`). Documenter `PASS/FAIL` dans `audit/25_phase_2_6_propagation.md`.
   Ajouter au plus tard avant Phase 8 un check `grep` automatisé qui détecte tout usage d'un nom obsolète.

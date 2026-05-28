@@ -86,7 +86,7 @@ Alpine.data('debitApp', () => ({
             const amount = parseFloat(this.currentAmount);
             this.loading = true;
 
-            const { data, error } = await supabase.rpc('public_debit_cagnotte', {
+            const { data, error } = await supabase.rpc('debit_cagnotte_public', {
                 target_benevole_id: this.benevole.id,
                 montant_input: amount,
                 description_input: 'Debit QR Code Public'
