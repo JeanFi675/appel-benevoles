@@ -1,5 +1,12 @@
 import { ApiService } from '../../services/api.js';
 import { formatDateTime, formatDateTimeForInput, formatTime } from '../../utils.js';
+import {
+    getLocalDateKey,
+    formatDecimalHour,
+    formatHourMin,
+    formatDay,
+    formatDecimalToISO
+} from '../../utils/admin-time.js';
 
 /**
  * Module for managing admin operations (Postes, Periodes, Benevoles).
@@ -86,10 +93,12 @@ export const AdminModule = {
 
 
 
-    // Expose utils
+    // Expose utils (consommés par les templates HTML)
     formatDateTime,
     formatDateTimeForInput,
     formatTime,
+    formatDecimalHour,
+    formatDay,
 
     getReferents() {
         return this.benevoles.filter(b => ['referent', 'admin'].includes(b.role));
@@ -1327,15 +1336,6 @@ export const AdminModule = {
     lineDragTimer: null,
     lineDragState: null, // { lineIndex: -1, startY: 0, currentY: 0 }
 
-    getLocalDateKey(isoStr) {
-        if (!isoStr) return '';
-        const d = new Date(isoStr);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    },
-
     async initVisualCreator() {
         // Enregistrer la sécurité anti-fermeture
         if (!window._beforeUnloadHandlerRegistered) {
@@ -1355,7 +1355,7 @@ export const AdminModule = {
         // 1. Extraire les jours des postes existants en utilisant getLocalDateKey
         this.postes.forEach(p => {
             if (p.periode_debut) {
-                days.add(this.getLocalDateKey(p.periode_debut));
+                days.add(getLocalDateKey(p.periode_debut));
             }
         });
         
@@ -1440,7 +1440,7 @@ export const AdminModule = {
         }
 
         // 2. Filtrer les postes de ce jour en utilisant getLocalDateKey
-        const dayPostes = this.postes.filter(p => p.periode_debut && this.getLocalDateKey(p.periode_debut) === day);
+        const dayPostes = this.postes.filter(p => p.periode_debut && getLocalDateKey(p.periode_debut) === day);
 
         // 3. Filtrer les périodes de ce jour
         const d = new Date(day + 'T00:00:00');
@@ -1593,7 +1593,7 @@ export const AdminModule = {
     async deleteVisualDay(day) {
         if (!day) return;
         
-        const formattedDayStr = this.formatDay(day);
+        const formattedDayStr = formatDay(day);
         if (!confirm(`⚠️ Attention : Êtes-vous sûr de vouloir supprimer le jour "${formattedDayStr}" ?\n\nCette action supprimera DÉFINITIVEMENT :\n- Tous les postes et créneaux associés à ce jour\n- Toutes les périodes définies pour ce jour\n- Toutes les inscriptions de bénévoles sur ces postes\n- Tous les événements de programme de ce jour\n\nCette action est irréversible et modifiera directement la base de production. Voulez-vous continuer ?`)) {
             return;
         }
@@ -1928,12 +1928,6 @@ export const AdminModule = {
         const dayPrefix = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
         const dayPrefixNoYear = dayPrefix.split(' 202')[0];
 
-        const formatHourMin = (dec) => {
-            const h = Math.floor(dec);
-            const m = Math.round((dec - h) * 60);
-            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-        };
-
         this.visualPeriods.forEach(per => {
             per.nom = `${dayPrefixNoYear} - ${formatHourMin(per.debut)} / ${formatHourMin(per.fin)}`;
         });
@@ -1979,12 +1973,6 @@ export const AdminModule = {
         });
 
         // 3. Détecter les conflits de chevauchement pour des créneaux de même titre
-        const formatDecimalHour = (dec) => {
-            const h = Math.floor(dec);
-            const m = Math.round((dec - h) * 60);
-            return `${String(h).padStart(2,'0')}h${String(m).padStart(2,'0')}`;
-        };
-
         for (let i = 0; i < allShifts.length; i++) {
             const s1 = allShifts[i];
             for (let j = i + 1; j < allShifts.length; j++) {
@@ -2370,12 +2358,7 @@ export const AdminModule = {
             if (upsertJourError) throw upsertJourError;
 
             // 7. Sauvegarder tous les créneaux (postes) en une seule fois !
-            const formatDecimalToISO = (dec) => {
-                const h = Math.floor(dec);
-                const m = Math.round((dec - h) * 60);
-                const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
-                return new Date(`${this.visualDaySelected}T${timeStr}`).toISOString();
-            };
+            const dayStr = this.visualDaySelected;
 
             // 1. Supprimer les types de postes marqués pour suppression (avec cascade sur postes)
             const deletedTypeTitres = this.visualDeletedTypePosteTitres || [];
@@ -2419,8 +2402,8 @@ export const AdminModule = {
                     postesToUpsert.push({
                         id: shift.id,
                         type_poste_id: typePosteId,
-                        periode_debut: formatDecimalToISO(shift.debut),
-                        periode_fin: formatDecimalToISO(shift.fin),
+                        periode_debut: formatDecimalToISO(shift.debut, dayStr),
+                        periode_fin: formatDecimalToISO(shift.fin, dayStr),
                         nb_min: parseInt(shift.nb_min),
                         nb_max: parseInt(shift.nb_max),
                         referent_id: shift.referent_id || null,
@@ -2917,20 +2900,6 @@ export const AdminModule = {
         this.lineDragState = null;
         this.saveLinesOrder();
         this.triggerAutoSave();
-    },
-
-    formatDecimalHour(dec) {
-        const h = Math.floor(dec);
-        const m = Math.round((dec - h) * 60);
-        return `${String(h).padStart(2,'0')}h${String(m).padStart(2,'0')}`;
-    },
-
-    formatDay(dayKey) {
-        if (!dayKey) return '';
-        const [y, m, d] = dayKey.split('-');
-        const date = new Date(Number(y), Number(m) - 1, Number(d));
-        const formatted = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-        return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     },
 
     async saveForcedJourneeTarif() {
