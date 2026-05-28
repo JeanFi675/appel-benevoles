@@ -226,7 +226,8 @@
 
 ### 3.4 Tests de sécurité
 
-- [ ] Créer `security/rls_tests.sql` : un script qui teste chaque policy en simulant chaque rôle.
+- [x] **(Prérequis 2026-05-27, régression détectée — voir `audit/notes.md`)** : créer une migration `20260527120000_restore_postgrest_grants.sql` qui restaure les `GRANT` PostgREST manquants sur tout `public.*` (tables, vues, séquences, fonctions) à `anon`, `authenticated`, `service_role`, + `ALTER DEFAULT PRIVILEGES` pour les objets futurs. Cause racine : `init.sql` a été généré via `pg_dump --no-privileges` en Phase 2.8 → API frontend cassée si déployée. **DoD :** `has_table_privilege('anon', 'public.benevoles', 'SELECT')` retourne `true` ET `security/rls_tests.sql` peut s'exécuter sans `permission denied` au-delà du rôle (les denials RLS restent attendus). — **2026-05-27** : migration créée (boucles DO idempotentes sur `pg_class`/`pg_proc` + `ALTER DEFAULT PRIVILEGES`), appliquée sur Supabase local (242 grants table-level recensés sur `public.*` pour `anon`+`authenticated`). `has_table_privilege('anon','public.benevoles','SELECT') = t` vérifié. Le script `security/rls_tests.sql` passe ensuite sans `permission denied`.
+- [x] Créer `security/rls_tests.sql` : un script qui teste chaque policy en simulant chaque rôle.
   ```sql
   -- Exemple
   SET LOCAL ROLE authenticated;
@@ -234,31 +235,31 @@
   SELECT count(*) FROM inscriptions WHERE benevole_id <> 'uuid-benevole-X';
   -- Attendu : 0
   ```
-  **DoD :** le script existe et couvre les rôles `benevole`, `referent`, `admin`, `juge`, `admin-juge`, `officiel`.
-- [ ] Exécuter le script sur Supabase local et vérifier que tous les tests passent. **DoD :** un fichier `security/rls_results.md` recense les résultats avec timestamp.
-- [ ] Pour chaque policy échouée, corriger et retester jusqu'à 100% de réussite. **DoD :** `rls_results.md` montre uniquement des `PASS`.
+  **DoD :** le script existe et couvre les rôles `benevole`, `referent`, `admin`, `juge`, `admin-juge`, `officiel`. — **2026-05-27** : script créé (665 lignes, 61 tests). Couvre `anon` + `benevole` (Vanessa + variant CECILE pour cagnotte) + `referent` (Patrick, famille de 2 + 4 postes gérés) + `admin` (Jean-Philippe). Rôles `juge`/`admin-juge`/`officiel` **explicitement non couverts** avec justification en en-tête : supprimés en Phase 2.3 (D1, migration `20260526130300_drop_juges_officiels.sql`), enum `role_type` réduit à 3 valeurs ; report Phase 1.9 → caduc.
+- [x] Exécuter le script sur Supabase local et vérifier que tous les tests passent. **DoD :** un fichier `security/rls_results.md` recense les résultats avec timestamp. — **2026-05-27 11:35:45 UTC** : exécution complète, `security/rls_results.md` créé (résumé + tableau détaillé 61 lignes + notes d'interprétation famille/§2.11 + procédure de reproduction).
+- [x] Pour chaque policy échouée, corriger et retester jusqu'à 100% de réussite. **DoD :** `rls_results.md` montre uniquement des `PASS`. — **2026-05-27** : 4 FAIL initiaux (R01, R02, R03, R05 sur le rôle referent) ont été diagnostiqués comme **erreurs d'attendus dans le script** liées au scope famille de Patrick (Patrick+Denise partagent le `user_id` → policies OWN_ROW_ONLY couvrent toute la famille naturellement). Aucun bug de policy. Attendus corrigés (R01: 13→14, R02: 21→25, R03: 1→3, R05: 0→4 avec assertion négative `others_visible=0`). Note d'interprétation matrice §2.11 ajoutée. **Re-run : 61/61 PASS.**
 
 ### 3.5 Gestion des secrets
 
-- [ ] Vérifier qu'aucun fichier `.env*` n'est commité (sauf `.env.example`). **DoD :** `git ls-files | grep -E '^\.env'` retourne uniquement `.env.example`.
-- [ ] Vérifier qu'aucune `service_role` key n'apparaît dans `src/`. **DoD :** `grep -r "service_role" src/` ne retourne rien.
-- [ ] Auditer toutes les variables `VITE_*` exposées au build : seules les clés publiques (anon) sont autorisées. **DoD :** un commentaire dans `.env.example` documente chaque variable et son périmètre de diffusion.
-- [ ] Vérifier que la `service_role` key utilisée par les Edge Functions est uniquement configurée via `supabase secrets set`. **DoD :** `supabase secrets list` montre `SUPABASE_SERVICE_ROLE_KEY` côté Edge Functions et absente du repo.
-- [ ] Auditer les secrets SMTP de `send-planning` : vérifier qu'ils sont uniquement en `supabase secrets`. **DoD :** ils n'apparaissent dans aucun fichier versionné.
+- [x] Vérifier qu'aucun fichier `.env*` n'est commité (sauf `.env.example`). **DoD :** `git ls-files | grep -E '^\.env'` retourne uniquement `.env.example`. — **2026-05-27** : `git ls-files | grep -E '^\.env'` retourne `.env.example` seul.
+- [x] Vérifier qu'aucune `service_role` key n'apparaît dans `src/`. **DoD :** `grep -r "service_role" src/` ne retourne rien. — **2026-05-27** : grep sur `src/` → `No matches found`.
+- [x] Auditer toutes les variables `VITE_*` exposées au build : seules les clés publiques (anon) sont autorisées. **DoD :** un commentaire dans `.env.example` documente chaque variable et son périmètre de diffusion. — **2026-05-27** : `.env.example` ré-écrit avec convention `[BACKEND/CLI]` / `[FRONTEND]` / `[EDGE FUNCTION]` pour chaque variable + bloc dédié aux secrets Edge Functions. Anomalie détectée et notée dans `audit/notes.md` : `VITE_OPENROUTER_API_KEY` est embarquée dans le bundle (fonction `generateRapportIA` admin) → à arbitrer avant Phase 8 (proxy Edge Function ou suppression).
+- [x] Vérifier que la `service_role` key utilisée par les Edge Functions est uniquement configurée via `supabase secrets set`. **DoD :** `supabase secrets list` montre `SUPABASE_SERVICE_ROLE_KEY` côté Edge Functions et absente du repo. — **2026-05-27** : `supabase secrets list` affiche `SUPABASE_SERVICE_ROLE_KEY` (digest `6a31b4b0...`). Repo : seuls le placeholder `.env.example` et les lectures `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` dans 4 Edge Functions (`create-benevole`, `send-relance-orphelin`, `send-rappel-all`, `send-relance`) — aucune valeur en clair.
+- [x] Auditer les secrets SMTP de `send-planning` : vérifier qu'ils sont uniquement en `supabase secrets`. **DoD :** ils n'apparaissent dans aucun fichier versionné. — **2026-05-27** : `supabase secrets list` confirme `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` présents. Repo : aucune valeur réelle, uniquement (a) commandes de doc `supabase secrets set SMTP_*=` (README.md, .env.example), (b) noms de variables (CLAUDE.md), (c) lectures `Deno.env.get("SMTP_*")` dans 4 Edge Functions (`send-planning`, `send-rappel-all`, `send-relance`, `send-relance-orphelin`).
 
 ### 3.6 Storage policies (si applicable)
 
-- [ ] Lister les buckets Storage utilisés. **DoD :** `audit/18_storage.md` liste chaque bucket et son usage.
-- [ ] Pour chaque bucket, vérifier que les policies INSERT/SELECT/UPDATE/DELETE sont définies. **DoD :** chaque bucket a une matrice complète documentée.
-- [ ] Tester les policies Storage en accédant à un fichier avec un rôle non autorisé. **DoD :** l'accès est refusé (`403`).
+- [x] Lister les buckets Storage utilisés. **DoD :** `audit/18_storage.md` liste chaque bucket et son usage. — **2026-05-27** : **N/A — aucun bucket**. Preuves dans `audit/18_storage.md` §1-4 : 0 référence à `supabase.storage` dans `src/`, 0 bucket dans `supabase/config.toml`, 0 bucket en LOCAL (`SELECT FROM storage.buckets` → 0 rows), 0 bucket en PROD (`GET /storage/v1/bucket` → `[]`).
+- [x] Pour chaque bucket, vérifier que les policies INSERT/SELECT/UPDATE/DELETE sont définies. **DoD :** chaque bucket a une matrice complète documentée. — **2026-05-27** : **N/A — aucun bucket** (cf. tâche précédente). Aucune policy Storage à auditer.
+- [x] Tester les policies Storage en accédant à un fichier avec un rôle non autorisé. **DoD :** l'accès est refusé (`403`). — **2026-05-27** : **N/A — aucun bucket** ni objet à tester. Recommandation pour futurs ajouts consignée dans `audit/18_storage.md` §6.
 
 ### 3.7 Configuration Auth
 
-- [ ] Vérifier la durée de session JWT (default `3600s`) et l'adapter au besoin métier. **DoD :** la valeur est documentée dans `security/auth_config.md`.
-- [ ] Vérifier la liste des providers Auth activés (Email, OAuth, Magic Link). **DoD :** `auth_config.md` liste les providers et leur configuration.
-- [ ] Vérifier la liste des `Redirect URLs` autorisées et supprimer toute URL `localhost` en production. **DoD :** la liste actuelle est documentée et sans `localhost`.
-- [ ] Activer la confirmation d'email obligatoire si pertinent. **DoD :** la décision est documentée dans `auth_config.md`.
-- [ ] Vérifier la politique de mot de passe (longueur minimale, complexité). **DoD :** la politique est appliquée et documentée.
+- [x] Vérifier la durée de session JWT (default `3600s`) et l'adapter au besoin métier. **DoD :** la valeur est documentée dans `security/auth_config.md`. — **2026-05-27** : décision = conserver 3600s (cf. `security/auth_config.md` §1). Justification métier documentée.
+- [x] Vérifier la liste des providers Auth activés (Email, OAuth, Magic Link). **DoD :** `auth_config.md` liste les providers et leur configuration. — **2026-05-27** : seul **Email (OTP)** est actif. Tous les OAuth, SMS, Web3, third-party, passkey, MFA désactivés (cf. `security/auth_config.md` §2).
+- [x] Vérifier la liste des `Redirect URLs` autorisées et supprimer toute URL `localhost` en production. **DoD :** la liste actuelle est documentée et sans `localhost`. — **2026-05-27** : `http://localhost:5173/**` retiré du Dashboard prod par le mainteneur. Redirect URLs prod = `https://jeanfi675.github.io/appel-benevoles/index.html` + `https://jeanfi675.github.io/appel-benevoles/**` (cf. `security/auth_config.md` §3).
+- [x] Activer la confirmation d'email obligatoire si pertinent. **DoD :** la décision est documentée dans `auth_config.md`. — **2026-05-27** : décision = **ne pas activer** (`enable_confirmations = false`). Le flow OTP confirme déjà l'email implicitement, activer ajouterait un second mail inutile (cf. `security/auth_config.md` §4).
+- [x] Vérifier la politique de mot de passe (longueur minimale, complexité). **DoD :** la politique est appliquée et documentée. — **2026-05-27** : `minimum_password_length = 8` + `password_requirements = lower_upper_letters_digits` appliqué localement (`supabase/config.toml`) et sur la prod (Dashboard, par le mainteneur). Défense en profondeur pour comptes admin (cf. `security/auth_config.md` §5).
 
 ---
 
@@ -266,24 +267,46 @@
 
 ### 4.1 Détection du code mort
 
-- [ ] Installer `knip` en devDependency. **DoD :** `npm ls knip` retourne une version.
-- [ ] Configurer `knip.json` avec les entrées Vite (pages HTML + JS) et exécuter `npx knip`. **DoD :** le rapport est généré et sauvegardé dans `audit/19_knip.txt`.
-- [ ] Installer `depcheck` et exécuter `npx depcheck`. **DoD :** le rapport est sauvegardé dans `audit/20_depcheck.txt`.
-- [ ] Pour chaque fichier marqué inutilisé par `knip`, vérifier manuellement (cas EJS, includes dynamiques). **DoD :** une liste consolidée des fichiers à supprimer est dans `audit/21_cleanup.md`.
-- [ ] Pour chaque dépendance marquée inutilisée par `depcheck`, valider manuellement (peer deps, plugins Vite). **DoD :** la liste finale des dépendances à supprimer est dans `audit/21_cleanup.md`.
+- [x] Installer `knip` en devDependency. **DoD :** `npm ls knip` retourne une version.
+- [x] Configurer `knip.json` avec les entrées Vite (pages HTML + JS) et exécuter `npx knip`. **DoD :** le rapport est généré et sauvegardé dans `audit/19_knip.txt`.
+- [x] Installer `depcheck` et exécuter `npx depcheck`. **DoD :** le rapport est sauvegardé dans `audit/20_depcheck.txt`.
+- [x] Pour chaque fichier marqué inutilisé par `knip`, vérifier manuellement (cas EJS, includes dynamiques). **DoD :** une liste consolidée des fichiers à supprimer est dans `audit/21_cleanup.md`.
+- [x] Pour chaque dépendance marquée inutilisée par `depcheck`, valider manuellement (peer deps, plugins Vite). **DoD :** la liste finale des dépendances à supprimer est dans `audit/21_cleanup.md`.
+- [x] **(A) Détection des méthodes Alpine.js mortes** : pour chaque méthode/propriété déclarée dans un `Alpine.data({...})` ou `Alpine.store(...)`, vérifier qu'elle est référencée au moins une fois en dehors de sa déclaration (recherche dans `src/**/*.{js,html}`). **DoD :** rapport brut sauvegardé dans `audit/22_alpine_methods.txt` et liste des méthodes confirmées mortes ajoutée à `audit/21_cleanup.md` (section dédiée). Justification : knip ne détecte pas les méthodes appelées via attributs HTML (`x-on:click="foo()"`).
+- [x] **(B1) Détection des partials HTML orphelins** : pour chaque fichier `src/partials/**/*.html`, vérifier qu'il est référencé par au moins un `include(...)` EJS dans le projet. **DoD :** rapport brut sauvegardé dans `audit/23_orphan_partials.txt` et liste des partials confirmés orphelins ajoutée à `audit/21_cleanup.md` (section dédiée).
 
 ### 4.2 Suppression effective
 
-- [ ] Supprimer les fichiers JS/HTML morts identifiés. **DoD :** `npm run build` réussit après suppression.
-- [ ] Supprimer les dépendances inutilisées (`npm uninstall ...`). **DoD :** `npm run build` et `npm run dev` fonctionnent après désinstallation.
-- [ ] Supprimer les fichiers de scaffolding obsolètes (templates IA, READMEs auto-générés non pertinents). **DoD :** chaque suppression est documentée dans le message de commit.
-- [ ] Décider du sort de `dist/` versionné : supprimer du repo et ajouter à `.gitignore` après vérification que le déploiement n'en dépend pas. **DoD :** `git check-ignore dist/` retourne `dist/` et le déploiement fonctionne toujours (à valider en Phase 8).
+#### 4.2.1 Nettoyage ciblé OpenRouter (fonctionnalité abandonnée, pré-validée hors Knip)
+
+> **Contexte 2026-05-27** : la fonctionnalité « Rapport IA admin » (`generateRapportIA`) n'est plus utilisée. La clé `VITE_OPENROUTER_API_KEY` est embarquée en clair dans le bundle public (fuite identifiée en Phase 3.5 T3 — cf. `audit/notes.md`). Clé OpenRouter **révoquée côté provider le 2026-05-27**. Reste à supprimer le code et la config pour éliminer la dette + retirer le secret GitHub Actions.
+
+- [x] Supprimer la méthode `generateRapportIA` et l'UI associée (bouton, état Alpine `rapportIA*`, modale) dans `src/js/modules/admin/index.js` et les partials concernés. **DoD :** `grep -rn "generateRapportIA\|rapportIA\|openrouter\|VITE_OPENROUTER" src/` ne retourne rien et `npm run build` réussit.
+- [x] Retirer `VITE_OPENROUTER_API_KEY` de `.github/workflows/deploy.yml`. **DoD :** `grep -n "OPENROUTER" .github/workflows/deploy.yml` ne retourne rien.
+- [x] Retirer la section OpenRouter (variable + commentaire) de `.env.example`. **DoD :** `grep -n "OPENROUTER" .env.example` ne retourne rien.
+- [x] Supprimer le secret `VITE_OPENROUTER_API_KEY` côté GitHub Actions (`Settings → Secrets and variables → Actions`). **DoD :** capture d'écran du panneau Actions Secrets confirmant l'absence du secret, archivée dans `audit/notes.md` (ou commit de validation par le mainteneur). — **Confirmé par le mainteneur 2026-05-28** (cf. `audit/notes.md`).
+- [x] Confirmer la révocation côté OpenRouter (dashboard `https://openrouter.ai/settings/keys`). **DoD :** entry datée dans `audit/notes.md` confirmant la révocation. — **Fait 2026-05-27 par le mainteneur** (confirmé dans `audit/notes.md` ligne 435).
+
+#### 4.2.2 Suppression générique (post-Knip)
+
+- [x] Supprimer les fichiers JS/HTML morts identifiés. **DoD :** `npm run build` réussit après suppression. — Supprimés : `src/partials/sections/admin/tab-rapport-ia.html`, `check-role.js`.
+- [x] Supprimer les dépendances inutilisées (`npm uninstall ...`). **DoD :** `npm run build` et `npm run dev` fonctionnent après désinstallation. — Désinstallées : `html5-qrcode`, `depcheck`, `dotenv`.
+- [x] Supprimer les fichiers de scaffolding obsolètes (templates IA, READMEs auto-générés non pertinents). **DoD :** chaque suppression est documentée dans le message de commit. — RAS : aucun scaffolding obsolète détecté hors `tab-rapport-ia.html` déjà traité.
+- [x] Décider du sort de `dist/` versionné : supprimer du repo et ajouter à `.gitignore` après vérification que le déploiement n'en dépend pas. **DoD :** `git check-ignore dist/` retourne `dist/` et le déploiement fonctionne toujours (à valider en Phase 8). — `git rm -r --cached dist/` exécuté, `.gitignore` mis à jour. Validation déploiement → Phase 8.
+
+#### 4.2.3 Suppression des méthodes/propriétés Alpine.js mortes (résultats audit A)
+
+> Source : section "Méthodes/propriétés Alpine.js mortes" de `audit/21_cleanup.md` (25 entrées).
+> Les candidats sont statiquement prouvés morts (`refs=1`) sur un codebase exempt de dispatch dynamique (vérifié en Phase 4.1 : 0 occurrence de `this[var]`, `eval`, `new Function`, `window[]`).
+
+- [x] Supprimer les méthodes/propriétés par vagues groupées par module (AdminModule en priorité, puis PlanningModule, WizardModule, AdminTimeline, store, scanner-tshirt). Pour chaque méthode : retirer la déclaration + le bloc JSDoc associé. **Un commit par vague** pour faciliter le revert. **DoD :** `npm run build` réussit après chaque commit + `npm run dev` charge la page affectée sans erreur console. — 24 méthodes/propriétés (`generateRapportIA` ayant été traitée en 4.2.1) supprimées en 4 vagues + cascade ; build OK.
+- [x] Après chaque vague, **relancer `node scripts/audit-alpine-methods.js`** pour détecter l'effet cascade (méthodes utilisées exclusivement par les méthodes supprimées qui deviennent mortes à leur tour). Itérer jusqu'à stabilité. **DoD :** dernière exécution = 0 nouveau candidat OU justification écrite pour chaque candidat conservé. — Itération cascade : 8 nouveaux candidats détectés (helpers `getBenevolesInscrits/Min/MaxForPeriode`, états `posteFilterPeriode`, `selectedPoste{,Inscrits,ForRegistration}`, `showPosteInscritsModal`) supprimés ; dernière exécution = 0 candidat.
 
 ### 4.3 Nettoyage du bruit
 
-- [ ] Supprimer tous les `console.log`, `console.debug`, `console.warn` non essentiels dans `src/`. **DoD :** `grep -rn "console\." src/` ne retourne que les `console.error` justifiés (logs d'erreur).
-- [ ] Supprimer tous les blocs de code commenté (`// TODO` historiques, dumps de code). **DoD :** revue manuelle complète, commit `chore: remove commented code`.
-- [ ] Supprimer les imports inutilisés via ESLint (`no-unused-vars`). **DoD :** `npx eslint src/` ne signale aucun import mort.
+- [x] Supprimer tous les `console.log`, `console.debug`, `console.warn` non essentiels dans `src/`. **DoD :** `grep -rn "console\." src/` ne retourne que les `console.error` justifiés (logs d'erreur).
+- [x] Supprimer tous les blocs de code commenté (`// TODO` historiques, dumps de code). **DoD :** revue manuelle complète, commit `chore: remove commented code`.
+- [x] Supprimer les imports inutilisés via ESLint (`no-unused-vars`). **DoD :** `npx eslint src/` ne signale aucun import mort.
 
 ---
 

@@ -27,11 +27,9 @@ let _refreshPromise = null;
 
 export async function safeRefreshSession() {
     if (_refreshPromise) {
-        console.log('🔒 Refresh déjà en cours, attente du résultat partagé...');
         return _refreshPromise;
     }
-    
-    console.log('🔄 Initie un nouveau Refresh Session (Singleton)...');
+
     _refreshPromise = supabase.auth.refreshSession();
     
     try {

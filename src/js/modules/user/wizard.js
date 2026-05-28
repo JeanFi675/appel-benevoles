@@ -199,18 +199,6 @@ export const WizardModule = {
         this.cancelWizardEdit();
     },
 
-    toggleWizardProfile(profileId) {
-        this.wizardSelectedProfileId = profileId;
-    },
-
-    validateStep1() {
-        if (!this.wizardSelectedProfileId) {
-            this.showToast('Veuillez sélectionner un profil.', 'error');
-            return false;
-        }
-        return true;
-    },
-
     /**
      * Scrolls the wizard content area to the top.
      */
@@ -441,7 +429,6 @@ export const WizardModule = {
             }
 
             targetPoste.inscrits_actuels++;
-            console.log('✅ Registered (Wizard Array)', key);
 
         } catch (error) {
             console.error(error);
@@ -488,13 +475,6 @@ export const WizardModule = {
     },
 
     async submitWizard() {
-        console.log('🚀 submitWizard START (Transaction Mode)');
-        
-        // Mark wizard as completed (removed localStorage storage to ensure it opens when needed, relying on inscriptions check instead)
-        // if (this.user) {
-        //     localStorage.setItem('wizard_completed_' + this.user.id, 'true');
-        // }
-
         if (this.wizardSelections.length === 0 && this.wizardRemovals.length === 0) {
             this.showToast('Aucune modification à enregistrer.', 'info');
             this.closeWizard(); // Ensure we close even if no changes
@@ -507,47 +487,39 @@ export const WizardModule = {
         const SAFETY_TIMEOUT_MS = 60000;
         const safetyTimeout = setTimeout(() => {
             if (this.loading) {
-                console.error('⏰ Safety Timeout Triggered');
+                console.error('Safety Timeout Triggered');
                 this.loading = false;
                 this.showToast('❌ Le serveur met du temps à répondre (Timeout 60s).', 'error');
             }
         }, SAFETY_TIMEOUT_MS);
 
         try {
-            console.log('💾 Preparing Transaction...', {
-                add: this.wizardSelections.length,
-                remove: this.wizardRemovals.length
-            });
-
             // 2. FORCE REFRESH SESSION (Security)
             // Critical: If user stayed on page for >5min, token might be expired or invalid/concurrently refreshed.
             // We force a refresh to ensure we have a valid access_token before sending data.
-            console.log('🔄 Refreshing session before submit...');
-            
+
             // SECURITY: Refresh obligatoire avec retry (10s timeout, 2 tentatives)
             let sessionValid = false;
-            
+
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
-                    console.log(`🔄 Refresh session tentative ${attempt}/2...`);
                     const refreshResult = await Promise.race([
                         ApiService.refreshSession(),
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout (10s)')), 10000))
                     ]); // 10s is generous but safe
-                    
+
                     if (!refreshResult.error && refreshResult.data?.session) {
-                        console.log('✅ Session refreshed.');
                         sessionValid = true;
                         break;
                     }
-                    console.warn(`⚠️ Refresh tentative ${attempt} échouée:`, refreshResult.error);
+                    console.error(`Refresh tentative ${attempt} échouée:`, refreshResult.error);
                 } catch (e) {
-                    console.warn(`⚠️ Refresh tentative ${attempt} exception:`, e.message);
+                    console.error(`Refresh tentative ${attempt} exception:`, e.message);
                 }
             }
 
             if (!sessionValid) {
-                console.error('❌ Session refresh failed after retries.');
+                console.error('Session refresh failed after retries.');
                 this.loading = false;
                 clearTimeout(safetyTimeout);
                 this.showToast('⚠️ Session expirée. Veuillez recharger la page.', 'error');
@@ -578,21 +550,16 @@ export const WizardModule = {
             }
 
             // 4. Call RPC (Single Transaction)
-            console.log('📡 Sending RPC manage_inscriptions_transaction...', modifications);
-            
             const { data, error } = await ApiService.rpc('manage_inscriptions_transaction', {
                 target_user_id: this.user.id, // Optional, checked by RLS/Security Definer anyway
                 modifications: modifications
             });
 
             if (error) {
-                console.error('❌ Transaction Error:', error);
+                console.error('Transaction Error:', error);
                 throw error;
             }
 
-            console.log('✅ Transaction Success:', data);
-
-            // 5. Success Handling
             // 5. Success Handling
             this.showToast('🎉 Inscriptions mises à jour avec succès !', 'success');
 
@@ -601,20 +568,17 @@ export const WizardModule = {
             this.closeWizard();
             this.loading = false;
 
-            console.log('🔄 Reloading data (background)...');
-            await this.loadInitialData(); 
-            
+            await this.loadInitialData();
+
             // Refund/Payment made -> Update Cagnotte Widget
             // Since WizardModule and CagnotteModule are mixed into the same Alpine store,
             // we can access refreshWidget directly via 'this' if it exists.
             if (typeof this.refreshWidget === 'function') {
                 this.refreshWidget();
             }
-            
-            console.log('✅ Data reloaded');
-            
+
         } catch (error) {
-            console.error('💥 Submit Error Caught:', error);
+            console.error('Submit Error Caught:', error);
             let msg = error.message || error;
             
             // User-friendly error mapping
@@ -626,7 +590,6 @@ export const WizardModule = {
         } finally {
             clearTimeout(safetyTimeout);
             this.loading = false;
-            console.log('🏁 submitWizard FINALLY');
         }
     },
 
@@ -639,7 +602,6 @@ export const WizardModule = {
         // CRITICAL: Do not auto-open (and reset step!) if already open.
         // This prevents the polling from interrupting the user's flow.
         if (this.wizardOpen) {
-            console.log('✅ Wizard not auto-opened (Already open)', { wizardOpen: this.wizardOpen });
             return;
         }
 
@@ -659,10 +621,7 @@ export const WizardModule = {
         // But respect the session dismissal if the user clicked the close button (X/Annuler)
         
         if (!hasDismissedInSession && (!hasProfiles || !hasInscriptions)) {
-            console.log('🪄 Wizard auto-opening (First time, incomplete profile or zero inscriptions)...');
             this.openWizard();
-        } else {
-            console.log('✅ Wizard not auto-opened', { hasDismissedInSession, hasProfiles, hasInscriptions });
         }
     }
 };

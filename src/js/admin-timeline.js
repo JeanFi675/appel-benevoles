@@ -332,8 +332,6 @@ export function initAdminTimelineApp() {
         this.selectedDay = day;
       }
     },
-    resetDay() { this.selectedDay = null; },
-
     formatDay(dayKey) {
       if (!dayKey) return '';
       const [y, m, d] = dayKey.split('-');
@@ -396,7 +394,7 @@ export function initAdminTimelineApp() {
           this.dbProgramme = null;
         }
       } catch (err) {
-        console.warn('Erreur chargement programme de la DB :', err.message);
+        console.error('Erreur chargement programme de la DB :', err.message);
         this.dbProgramme = null;
       }
     },

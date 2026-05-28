@@ -190,11 +190,10 @@ export const CagnotteModule = {
    */
     async refreshWidget() {
         if (this.lastParentElement && this.lastBenevoleId) {
-            console.log('🔄 Refreshing Cagnotte Widget...');
             try {
                 await this.renderWidget(this.lastParentElement, this.lastBenevoleId);
             } catch (e) {
-                console.warn('⚠️ Cagnotte refresh skipped (background update):', e.message);
+                console.error('Cagnotte refresh skipped (background update):', e.message);
             }
         }
     }

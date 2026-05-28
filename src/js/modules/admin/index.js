@@ -34,7 +34,6 @@ export const AdminModule = {
         tshirt_question_active: true,
         tarif_cagnotte_journee: 15.00
     },
-    savingConfig: false,
 
     repasList: [],
     newRepasName: '',
@@ -64,18 +63,12 @@ export const AdminModule = {
     // Search & Modal
     searchQuery: '',
     benevolesSort: 'name_asc', // 'name_asc', 'date_desc', 'inscriptions_desc'
-    posteFilterPeriode: '',
     selectedBenevoleInscriptions: [],
     showDetailsModal: false, // Read-only modal
     showEditModal: false,    // Edit/Add modal
     selectedBenevoleName: '',
     currentBenevole: null,
     currentUser: null,
-
-    // Poste Inscrits Modal
-    showPosteInscritsModal: false,
-    selectedPoste: null,
-    selectedPosteInscrits: [],
 
     // Add Benevole Modal
     showAddBenevoleModal: false,
@@ -111,27 +104,6 @@ export const AdminModule = {
     },
 
 
-
-    isReferentInscritPeriode(referentId, periodeId) {
-        if (!referentId) return false;
-        return this.postes.some(p => p.periode_id === periodeId && (p.inscrits_ids || []).includes(referentId));
-    },
-
-    getFilteredPostes() {
-        if (!this.posteFilterPeriode) return this.postes;
-        return this.postes.filter(p => String(p.periode_id) === String(this.posteFilterPeriode));
-    },
-
-    async updatePosteReferent(posteId, referentId) {
-        try {
-            const { error } = await ApiService.update('postes', { referent_id: referentId || null }, { id: posteId });
-            if (error) throw error;
-            this.showToast('✅ Référent mis à jour', 'success');
-            await this.loadPostes();
-        } catch (error) {
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        }
-    },
 
     getFilteredBenevoles() {
         let filtered = [...this.benevoles];
@@ -414,36 +386,6 @@ export const AdminModule = {
         this.currentBenevole = null;
     },
 
-    async viewPosteInscrits(poste) {
-        this.selectedPoste = poste;
-        this.selectedPosteInscrits = [];
-        this.showPosteInscritsModal = true;
-
-        try {
-            const { data, error } = await ApiService.fetch('inscriptions', {
-                select: '*, benevoles(prenom, nom, email, taille_tshirt)',
-                eq: { poste_id: poste.id }
-            });
-            if (error) throw error;
-
-            this.selectedPosteInscrits = (data || []).map(i => ({
-                id: i.id,
-                prenom: i.benevoles?.prenom || '?',
-                nom: i.benevoles?.nom || '?',
-                email: i.benevoles?.email || '',
-                taille_tshirt: i.benevoles?.taille_tshirt || ''
-            })).sort((a, b) => a.nom.localeCompare(b.nom));
-        } catch (error) {
-            this.showToast('❌ Erreur chargement inscrits : ' + error.message, 'error');
-        }
-    },
-
-    closePosteInscritsModal() {
-        this.showPosteInscritsModal = false;
-        this.selectedPoste = null;
-        this.selectedPosteInscrits = [];
-    },
-
     /**
      * Loads all admin data.
      */
@@ -682,9 +624,6 @@ export const AdminModule = {
                  select: '*'
             });
             const transactions = transactionsError ? [] : (transactionsData || []);
-            if (transactions.length > 0) {
-                 // console.log('DEBUG: Transaction 0 sample:', ... );
-            }
 
             // 3. Fetch All Inscriptions (for Credits)
             // We need to link Inscription -> Poste -> Periode -> Credit
@@ -837,11 +776,6 @@ export const AdminModule = {
         }
     },
 
-    // Alias for compatibility
-    async loadBenevoles() {
-        return this.loadBenevolesAndStats();
-    },
-
     async loadPeriodes() {
         try {
             const { data, error } = await ApiService.fetch('periodes', {
@@ -888,7 +822,7 @@ export const AdminModule = {
                 this.dbProgramme = null;
             }
         } catch (err) {
-            console.warn('Erreur chargement programme de la DB :', err.message);
+            console.error('Erreur chargement programme de la DB :', err.message);
             this.dbProgramme = null;
         }
     },
@@ -1038,36 +972,6 @@ export const AdminModule = {
         } finally {
             this.loading = false;
         }
-    },
-
-    // --- Actions ---
-    // (Les méthodes manuelles savePoste, deletePoste, editPoste, createPeriode, etc. ont été supprimées car la gestion se fait désormais exclusivement via le Planning Interactif)
-
-    getPostesCountForPeriode(periodeId) {
-        return this.postes.filter(p => p.periode_id === periodeId).length;
-    },
-
-    getBenevolesMinForPeriode(periodeId) {
-        return this.postes.filter(p => p.periode_id === periodeId).reduce((sum, p) => sum + parseInt(p.nb_min || 0), 0);
-    },
-
-    getBenevolesMaxForPeriode(periodeId) {
-        return this.postes.filter(p => p.periode_id === periodeId).reduce((sum, p) => sum + parseInt(p.nb_max || 0), 0);
-    },
-
-    getBenevolesInscritsForPeriode(periodeId) {
-        return this.postes.filter(p => p.periode_id === periodeId).reduce((sum, p) => sum + parseInt(p.inscrits_actuels || 0), 0);
-    },
-
-    getPeriodeInscritsColor(periodeId) {
-        const inscrits = this.getBenevolesInscritsForPeriode(periodeId);
-        const min = this.getBenevolesMinForPeriode(periodeId);
-        const max = this.getBenevolesMaxForPeriode(periodeId);
-        
-        if (max === 0 && min === 0) return 'text-gray-600'; // Cas spécial : pas de besoins définis
-        if (inscrits < min) return 'text-red-600 font-black';
-        if (inscrits >= max) return 'text-green-600 font-black';
-        return 'text-yellow-600 font-black'; // Mini atteint
     },
 
     // --- Add Benevole ---
@@ -1258,135 +1162,6 @@ export const AdminModule = {
             min: Math.round(periodes.reduce((s, p) => s + p.totalHeuresMin, 0) * 10) / 10,
             max: Math.round(periodes.reduce((s, p) => s + p.totalHeuresMax, 0) * 10) / 10,
         };
-    },
-
-    // --- Analyse des inscriptions ---
-
-    getPeriodesCritiques() {
-        return this.periodes.map(periode => {
-            const inscrits = this.getBenevolesInscritsForPeriode(periode.id);
-            const min = this.getBenevolesMinForPeriode(periode.id);
-            const max = this.getBenevolesMaxForPeriode(periode.id);
-            const taux = min > 0 ? Math.round((inscrits / min) * 100) : 100;
-            return { nom: periode.nom, inscrits, min, max, taux, manquantsMin: Math.max(0, min - inscrits), manquantsMax: Math.max(0, max - inscrits) };
-        }).sort((a, b) => a.taux - b.taux);
-    },
-
-    getPostesCritiques() {
-        const groups = {};
-        this.postes.forEach(p => {
-            const key = p.titre.trim().toLowerCase();
-            if (!groups[key]) groups[key] = { titre: p.titre, inscrits: 0, min: 0, max: 0, nbPeriodes: 0 };
-            groups[key].inscrits += p.inscrits_actuels || 0;
-            groups[key].min += p.nb_min || 0;
-            groups[key].max += p.nb_max || 0;
-            groups[key].nbPeriodes++;
-        });
-        return Object.values(groups)
-            .filter(g => g.min > 0 && g.inscrits < g.min)
-            .map(g => ({ ...g, taux: Math.round((g.inscrits / g.min) * 100), manquantsMin: g.min - g.inscrits, manquantsMax: Math.max(0, g.max - g.inscrits) }))
-            .sort((a, b) => a.taux - b.taux);
-    },
-
-    getTauxCouleur(taux) {
-        if (taux < 50) return { bar: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' };
-        if (taux < 80) return { bar: 'bg-orange-400', text: 'text-orange-700', bg: 'bg-orange-50' };
-        if (taux < 100) return { bar: 'bg-yellow-400', text: 'text-yellow-700', bg: 'bg-yellow-50' };
-        return { bar: 'bg-green-500', text: 'text-green-700', bg: 'bg-green-50' };
-    },
-
-    async generateRapportIA() {
-        const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-        if (!apiKey) {
-            this.rapportIAError = '❌ Clé API OpenRouter manquante. Ajoutez VITE_OPENROUTER_API_KEY dans votre fichier .env.';
-            return;
-        }
-
-        this.rapportIALoading = true;
-        this.rapportIAError = '';
-        this.rapportIA = '';
-
-        try {
-            // Construire les données structurées par période
-            const periodesData = this.periodes.map(periode => {
-                const postesDesPeriode = this.postes.filter(p => p.periode_id === periode.id);
-                const totalInscrits = postesDesPeriode.reduce((sum, p) => sum + (p.inscrits_actuels || 0), 0);
-                const totalMin = postesDesPeriode.reduce((sum, p) => sum + (p.nb_min || 0), 0);
-                const totalMax = postesDesPeriode.reduce((sum, p) => sum + (p.nb_max || 0), 0);
-
-                return {
-                    nom: periode.nom,
-                    totalInscrits,
-                    totalMin,
-                    totalMax,
-                    postes: postesDesPeriode.map(p => ({
-                        titre: p.titre,
-                        inscrits: p.inscrits_actuels || 0,
-                        min: p.nb_min,
-                        max: p.nb_max,
-                        statut: (p.inscrits_actuels || 0) < p.nb_min ? 'INSUFFISANT' :
-                                (p.inscrits_actuels || 0) >= p.nb_max ? 'COMPLET' : 'EN COURS'
-                    }))
-                };
-            });
-
-            const totalGeneralInscrits = this.postes.reduce((sum, p) => sum + (p.inscrits_actuels || 0), 0);
-            const totalGeneralMin = this.postes.reduce((sum, p) => sum + (p.nb_min || 0), 0);
-            const totalGeneralMax = this.postes.reduce((sum, p) => sum + (p.nb_max || 0), 0);
-
-            const prompt = `Tu es un assistant pour le Championnat de France d'escalade de difficulté jeunes.
-Voici les données d'avancement des inscriptions bénévoles en temps réel.
-
-=== RÉSUMÉ GLOBAL ===
-Total inscrits : ${totalGeneralInscrits}
-Objectif minimum : ${totalGeneralMin}
-Objectif maximum : ${totalGeneralMax}
-Taux de remplissage (vs min) : ${totalGeneralMin > 0 ? Math.round((totalGeneralInscrits / totalGeneralMin) * 100) : 0}%
-
-=== DÉTAIL PAR PÉRIODE ===
-${periodesData.map(p => `
---- ${p.nom} ---
-Inscrits : ${p.totalInscrits} / Min ${p.totalMin} / Max ${p.totalMax}
-Postes :
-${p.postes.map(poste => `  - ${poste.titre} : ${poste.inscrits} inscrits (min ${poste.min} / max ${poste.max}) [${poste.statut}]`).join('\n')}`).join('\n')}
-
-=== INSTRUCTIONS ===
-Génère un rapport d'avancement concis et pratique en français. Structure-le ainsi :
-1. **Bilan global** : une phrase sur l'état général
-2. **Points positifs** : postes bien remplis ou complets
-3. **Points d'attention** : postes insuffisants ou critiques (inscrits < min), triés par urgence
-4. **Recommandation** : une action concrète à faire en priorité
-
-Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. Maximum 300 mots.`;
-
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': window.location.origin,
-                    'X-Title': 'Appel Bénévoles Admin'
-                },
-                body: JSON.stringify({
-                    model: 'google/gemini-2.0-flash-001',
-                    messages: [{ role: 'user', content: prompt }],
-                    max_tokens: 600
-                })
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                throw new Error(err?.error?.message || `Erreur HTTP ${response.status}`);
-            }
-
-            const result = await response.json();
-            this.rapportIA = result.choices?.[0]?.message?.content || '(Aucune réponse reçue)';
-            this.rapportIADate = new Date().toLocaleString('fr-FR');
-        } catch (error) {
-            this.rapportIAError = '❌ Erreur lors de la génération : ' + error.message;
-        } finally {
-            this.rapportIALoading = false;
-        }
     },
 
     addMailingPostLine() {
@@ -1833,7 +1608,7 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
             // Programme du jour (pas en cascade, à supprimer manuellement)
             const { error: progError } = await ApiService.delete('programme', { date_ref: day });
             if (progError) {
-                console.warn("Erreur lors de la suppression du programme :", progError);
+                console.error("Erreur lors de la suppression du programme :", progError);
             }
 
             // Supprimer le jour — la cascade PostgreSQL nettoie type_postes, postes, inscriptions
@@ -1865,17 +1640,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         }
     },
 
-    addVisualLine(titre = '', description = '') {
-        const index = this.visualLines.length;
-        this.visualLines.push({
-            titre: titre || 'Nouveau type de poste',
-            description: description || '',
-            shifts: [],
-            lineIndex: index
-        });
-        this.triggerAutoSave();
-    },
-
     deleteVisualLine(lineIndex) {
         if (!confirm("Voulez-vous supprimer cette ligne de postes et tous ses créneaux ?")) return;
         const line = this.visualLines[lineIndex];
@@ -1893,58 +1657,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         }
         this.visualLines.splice(lineIndex, 1);
         this.visualLines.forEach((l, idx) => l.lineIndex = idx);
-        this.validateAndAutoAssignPeriods();
-        this.triggerAutoSave();
-    },
-
-    addVisualShift(lineIndex) {
-        const line = this.visualLines[lineIndex];
-        if (!line) return;
-
-        let debut = 8;
-        let fin = 12;
-        
-        let hasOverlap = true;
-        while (hasOverlap && fin <= this.hoursRange.end) {
-            hasOverlap = line.shifts.some(s => (debut < s.fin && fin > s.debut));
-            if (hasOverlap) {
-                debut += 1;
-                fin += 1;
-            }
-        }
-
-        if (hasOverlap) {
-            debut = this.hoursRange.start;
-            fin = debut + 2;
-        }
-
-        const tempId = crypto.randomUUID();
-        line.shifts.push({
-            id: tempId,
-            isNew: true,
-            debut,
-            fin,
-            nb_min: 1,
-            nb_max: 5,
-            referent_id: '',
-            inscrits_actuels: 0,
-            periode_id: null,
-            error: null
-        });
-
-        line.shifts.sort((a, b) => a.debut - b.debut);
-        this.validateAndAutoAssignPeriods();
-        this.triggerAutoSave();
-    },
-
-    deleteVisualShift(lineIndex, shiftIndex) {
-        const line = this.visualLines[lineIndex];
-        if (!line) return;
-        const shift = line.shifts[shiftIndex];
-        if (shift.id && !shift.isNew) {
-            this.visualDeletedPosteIds.push(shift.id);
-        }
-        line.shifts.splice(shiftIndex, 1);
         this.validateAndAutoAssignPeriods();
         this.triggerAutoSave();
     },
@@ -2080,45 +1792,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
         this.visualLines.forEach(line => {
             line.shifts.sort((a, b) => a.debut - b.debut);
         });
-        this.validateAndAutoAssignPeriods();
-        this.triggerAutoSave();
-    },
-
-    addVisualPeriod() {
-        // Ajouter une période avec heures par défaut
-        const ordre = this.visualPeriods.length + 1;
-        let debut = 8;
-        let fin = 12;
-        
-        if (this.visualPeriods.length > 0) {
-            const last = this.visualPeriods[this.visualPeriods.length - 1];
-            debut = last.fin;
-            fin = Math.min(this.hoursRange.end, debut + 4);
-        }
-
-        const tempPerId = crypto.randomUUID();
-        this.visualPeriods.push({
-            id: tempPerId,
-            nom: '', // Sera défini par validateAndAutoAssignPeriods()
-            ordre,
-            montant_credit: 10.00,
-            debut,
-            fin,
-            isNew: true
-        });
-
-        this.validateAndAutoAssignPeriods();
-        this.triggerAutoSave();
-    },
-
-    deleteVisualPeriod(index) {
-        if (!confirm("Voulez-vous supprimer cette période ? Les postes associés seront automatiquement réassignés.")) return;
-        const per = this.visualPeriods[index];
-        if (per && per.id && !per.isNew) {
-            this.visualDeletedPeriodIds.push(per.id);
-        }
-        this.visualPeriods.splice(index, 1);
-        this.visualPeriods.forEach((p, idx) => p.ordre = idx + 1);
         this.validateAndAutoAssignPeriods();
         this.triggerAutoSave();
     },
@@ -2544,7 +2217,6 @@ Sois direct et actionnable. Utilise des emojis pour rendre le rapport lisible. M
 
     async saveVisualCreator(isSilent = false) {
         if (this.isSavingVisual) {
-            console.log("Sauvegarde déjà en cours, report de l'enregistrement...");
             this.hasPendingChanges = true;
             return;
         }

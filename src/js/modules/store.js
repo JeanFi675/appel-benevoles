@@ -30,14 +30,6 @@ export function initStore() {
     otpCode: "",
 
     /**
-     * Traduit un ID de repas en son libellé.
-     */
-    getRepasName(repasId) {
-      const repas = this.repasList.find(r => r.id === repasId);
-      return repas ? repas.nom : 'Repas inconnu';
-    },
-
-    /**
      * Charge la liste complète des repas configurés.
      */
     async loadRepas() {
@@ -158,22 +150,16 @@ export function initStore() {
           }
         }
 
-        // Check session safely
-        console.log("🔄 Init - Checking session...");
-
         // STANDARD FLOW: Just check persistence, don't force refresh (avoids Race Condition with Magic Link)
         let { user: initialUser } = await AuthService.getSession();
 
         if (initialUser) {
-          console.log("✅ Found persisted session.");
           this.user = initialUser;
           await this.loadInitialData();
         }
 
         // Listen for auth changes
         AuthService.onAuthStateChange(async (event, session) => {
-          console.log("🔔 Auth Event:", event);
-
           this.user = session?.user || null;
 
           if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
@@ -182,7 +168,6 @@ export function initStore() {
 
             // Clean URL hash
             if (isAuthRedirect) {
-              console.log("🧹 Cleaning URL auth params...");
               window.history.replaceState(null, "", window.location.pathname);
 
               // Only load data here if we are handling a redirect (Magic Link)
@@ -200,7 +185,7 @@ export function initStore() {
           }
         });
       } catch (error) {
-        console.error("🚨 Error during app initialization:", error);
+        console.error("Error during app initialization:", error);
         this.showToast("Erreur d'initialisation: " + error.message, "error");
       } finally {
         this.initPlanningResponsive();
@@ -212,8 +197,6 @@ export function initStore() {
           if (document.hidden) {
             this.stopPolling();
           } else {
-            console.log("👀 Tab visible - Refreshing data...");
-            
             // Si on n'est pas encore connecté (ex: en pleine saisie d'OTP), on ne fait rien
             if (!this.user) return;
 
@@ -227,9 +210,6 @@ export function initStore() {
               this.lastAuthSuccess &&
               Date.now() - this.lastAuthSuccess < 15000
             ) {
-              console.log(
-                "️🛡️ Skipping visibility session check (Grace Period active)",
-              );
               this.startPolling();
               return; // Skip the aggressive check
             }
@@ -239,9 +219,7 @@ export function initStore() {
                 this.loadInitialData(); // Safe refresh with valid token
                 this.startPolling();
               } else {
-                console.warn(
-                  "⚠️ Session perdue pendant inactivité (ou race condition)",
-                );
+                console.error("Session perdue pendant inactivité (ou race condition)");
                 // SOFT LOGOUT: Don't force logout immediately if it might be a network glitch
                 // Only logout if we are SURE. Use a toast to warn user.
                 if (navigator.onLine) {
@@ -261,7 +239,6 @@ export function initStore() {
      */
     async startPolling() {
       if (this.pollingInterval) return;
-      console.log("⏰ Starting secure data polling (60s)...");
 
       // Use an async wrapper for the interval action
       this.pollingInterval = setInterval(async () => {
@@ -274,9 +251,7 @@ export function initStore() {
             // Token is valid/refreshed, proceed to fetch
             this.loadInitialData(true);
           } else {
-            console.warn(
-              "⚠️ Polling skipped: No active session. Stopping polling.",
-            );
+            console.error("Polling skipped: No active session. Stopping polling.");
             this.stopPolling();
             this.logout(false); // Force logout if session is dead
           }
@@ -289,7 +264,6 @@ export function initStore() {
      */
     stopPolling() {
       if (this.pollingInterval) {
-        console.log("🛑 Stopping data polling...");
         clearInterval(/** @type {any} */ (this.pollingInterval));
         this.pollingInterval = null;
       }
@@ -430,7 +404,6 @@ export function initStore() {
         // Supabase uses keys like 'sb-<project-ref>-auth-token'
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith("sb-") || key.includes("supabase")) {
-            console.log("🧹 Removing localStorage key:", key);
             localStorage.removeItem(key);
           }
         });

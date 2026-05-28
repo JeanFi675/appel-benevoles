@@ -11,8 +11,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     }
 });
 
-// Register component directly
-console.log('Registering debitApp...');
 Alpine.data('debitApp', () => ({
     loading: true,
     error: null,
@@ -24,12 +22,9 @@ Alpine.data('debitApp', () => ({
     debitedAmount: 0,
 
     async init() {
-        console.log('debitApp init started');
         try {
-            // Get ID from URL
             const urlParams = new URLSearchParams(window.location.search);
             const benevoleId = urlParams.get('id');
-            console.log('Benevole ID:', benevoleId);
 
             if (!benevoleId) {
                 this.error = "Aucun bénévole identifié. Veuillez scanner un QR Code valide.";
@@ -38,16 +33,13 @@ Alpine.data('debitApp', () => ({
             }
 
             // Fetch Benevole Public Info with Timeout
-            console.log('Calling get_public_benevole_info...');
             const rpcPromise = supabase.rpc('get_public_benevole_info', { target_id: benevoleId });
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("RPC Timeout (10s)")), 10000));
-            
+
             const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
-            console.log('RPC Response:', { data, error });
-            
+
             if (error) throw error;
-            
-            // RPC returns set of rows, usually 1
+
             if (!data || data.length === 0) {
                 this.error = "Bénévole introuvable.";
                 this.loading = false;
@@ -61,13 +53,11 @@ Alpine.data('debitApp', () => ({
                 nom: info.nom,
                 solde: info.solde
             };
-            console.log('Benevole loaded:', this.benevole);
         } catch (e) {
             console.error("Init Error:", e);
             this.error = "Erreur de chargement: " + (e.message || "Inconnue");
         } finally {
             this.loading = false;
-            console.log('Loading state set to false');
         }
     },
 
@@ -132,6 +122,5 @@ Alpine.data('debitApp', () => ({
 }));
 
 window.Alpine = Alpine;
-console.log('Starting Alpine...');
-window.supabase = supabase; // Verify this points to local const
+window.supabase = supabase;
 Alpine.start();

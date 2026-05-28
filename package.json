@@ -5,18 +5,25 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-env": "node scripts/check-env.js",
+    "db:push": "node scripts/check-env.js && supabase db push",
+    "prepare": "husky"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "alpinejs": "^3.13.3",
-    "dotenv": "^17.2.3",
-    "html5-qrcode": "^2.3.8",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "autoprefixer": "^10.4.16",
+    "eslint": "^10.4.0",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "knip": "^6.14.2",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
     "vite": "^7.3.0",

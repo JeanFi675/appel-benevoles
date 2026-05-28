@@ -12,7 +12,6 @@ export const PlanningModule = {
     showMyInscriptions: true,
     showOnlyAvailable: false,
     selectedVolunteerId: '', // For filtering in "Mes inscriptions" view
-    selectedPosteForRegistration: null,
 
     // Referent View State
     showReferentView: false,
@@ -77,12 +76,6 @@ export const PlanningModule = {
     getCalendarHeight() {
         const totalHours = this.END_HOUR - this.START_HOUR;
         return (totalHours * this.PIXELS_PER_HOUR) + 'px';
-    },
-
-    toggleView() {
-        this.viewMode = this.viewMode === 'list' ? 'week' : 'list';
-        this.calendarPage = 0;
-        this.showReferentView = false; // Reset referent view when toggling calendar
     },
 
     toggleReferentView() {
@@ -281,7 +274,6 @@ export const PlanningModule = {
 
             // Ensure numeric comparison
             if (Number(poste.inscrits_actuels) < myCount) {
-                console.warn(`⚠️ Fixing stale count for "${poste.titre}": ${poste.inscrits_actuels} -> ${myCount}`);
                 poste.inscrits_actuels = myCount;
             }
         });
@@ -450,21 +442,6 @@ export const PlanningModule = {
                     postes: sortedPostes
                 };
             });
-    },
-
-    /**
-     * Opens the registration modal for a specific poste.
-     * @param {object} poste - The poste to register for.
-     */
-    openRegistrationModal(poste) {
-        this.selectedPosteForRegistration = poste;
-    },
-
-    /**
-     * Closes the registration modal.
-     */
-    closeRegistrationModal() {
-        this.selectedPosteForRegistration = null;
     },
 
     /**
@@ -761,8 +738,6 @@ export const PlanningModule = {
             if (!token) {
                 throw new Error("Impossible de récupérer votre session. Merci de recharger la page.");
             }
-
-            console.log("Envoi du planning avec token (masked):", token.substring(0, 10) + "...");
 
             const path = window.location.pathname;
             const baseDir = path.substring(0, path.lastIndexOf('/') + 1);

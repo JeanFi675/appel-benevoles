@@ -22,10 +22,8 @@ Alpine.data('tshirtScanner', () => ({
     volunteers: [],
 
     async init() {
-        console.log('🏁 Scanner Init Started');
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
-        console.log('🆔 ID from URL:', id);
 
         if (!id) {
             this.error = "QR Code invalide (ID manquant).";
@@ -36,16 +34,14 @@ Alpine.data('tshirtScanner', () => ({
         // Failsafe timeout
         const timeoutId = setTimeout(() => {
             if (this.loading) {
-                console.error('⏰ Init timed out');
+                console.error('Init timed out');
                 this.error = "Délai d'attente dépassé. Vérifiez votre connexion.";
                 this.loading = false;
             }
         }, 5000);
 
         try {
-            console.log('📡 Calling get_family_tshirt_info_smart...');
             const { data, error } = await supabase.rpc('get_family_tshirt_info_smart', { scan_id: id });
-            console.log('✅ RPC Result:', { data, error });
 
             if (error) throw error;
 
@@ -55,18 +51,15 @@ Alpine.data('tshirtScanner', () => ({
                 selected: v.has_registrations && !v.t_shirt_recupere // Auto-select if eligible and needed
             }));
 
-            console.log('👥 Volunteers loaded:', this.volunteers.length);
-
             if (this.volunteers.length === 0) {
                 this.error = "Aucun bénévole trouvé pour ce code.";
             }
 
         } catch (e) {
-            console.error('💥 Init Error:', e);
+            console.error('Init Error:', e);
             this.error = "Erreur chargement: " + e.message;
         } finally {
             clearTimeout(timeoutId);
-            console.log('🛑 Finally block - setting loading false');
             this.loading = false;
         }
     },

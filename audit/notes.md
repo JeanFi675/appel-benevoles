@@ -336,3 +336,151 @@ Modèle adapté à l'usage-unique de l'application (un événement = un déploie
 
 Les migrations atomiques de la Phase 2 (utiles pour valider chaque changement sur le local) restent dans le repo mais ne sont **pas rejouées en prod** — leur effet cumulé est capturé par `prod_migration.sql`.
 
+---
+
+## 2026-05-26 — Divergence D4 vs réalité : `programme.(date_ref, heure)` n'est **pas** « 0 violation »
+
+**Contexte** : la décision mainteneur D4 (ajout d'un UNIQUE sur `programme.(date_ref, heure)`) reposait sur l'affirmation « 0 violation en base » dans `audit_db.md`. Vérification effectuée en Phase 2.3 :
+
+```sql
+SELECT count(*) FROM programme;                                    -- 40
+SELECT count(DISTINCT (date_ref, heure)) FROM programme;           -- 20
+```
+
+→ **20 paires de doublons exactement identiques** (même `description`, même `created_at` à la microseconde près, seul `id` diffère). Le backup `backups/20260525_data.sql` contient déjà ces 40 lignes (ligne 3877) — la prod est donc également affectée.
+
+**Diagnostic** : duplication probable au moment d'un import initial (script de seed exécuté deux fois). Aucune des deux occurrences n'a de sens fonctionnel à part — il s'agit clairement de doublons à éliminer.
+
+**Décision prise (sans escalade, action sûre)** : la migration `20260526130600_add_unique_constraints.sql` intègre un bloc `DELETE` préalable qui supprime les doublons (`WHERE id NOT IN (SELECT MIN(id::text)::uuid FROM programme GROUP BY date_ref, heure)`). Ce bloc est :
+- **idempotent** : si exécuté plusieurs fois, ne supprime rien après le premier passage ;
+- **traçable** : `RAISE NOTICE` du nombre de lignes supprimées ;
+- **safe en prod** (Phase 8.1) : le dump prod du 2026-05-25 montre le même état doublonné, le DELETE remettra prod et local en cohérence.
+
+**Conséquence sur l'audit** : `audit_db.md` ligne D4 (« 0 violation en base ») et `audit/13_constraints.md` Partie 1.6.2 #10 (« À vérifier ») doivent être amendés au prochain refresh d'audit.
+
+---
+
+## 2026-05-27 — Recommandation `.gitattributes` post-Phase 2.9
+
+**Contexte** : la validation Phase 2.9 (cf. `audit/23_init_diff.md`) a révélé une divergence cosmétique entre le dump de référence et le dump post-application de `00000000000000_init.sql` due aux fins de ligne :
+
+- `init.sql` est checkouté sur le poste de dev Windows avec CRLF.
+- Les corps de fonctions PL/pgSQL préservent textuellement leur encodage lors de l'ingestion par Postgres.
+- Conséquence : `pg_dump` ressort les fonctions avec CRLF après une application Windows, alors qu'une application via la séquence de migrations atomiques originale produit du LF pur.
+
+**Impact fonctionnel** : nul (Postgres ignore les fins de ligne dans le bytecode PL/pgSQL).
+
+**Recommandation** (à intégrer en Phase 4 ou 5, **pas maintenant**) : ajouter à la racine du repo un fichier `.gitattributes` contenant au minimum :
+
+```gitattributes
+*.sql text eol=lf
+```
+
+Bénéfices :
+
+- garantit que tout `*.sql` du repo (init.sql, migrations futures, fixtures) reste en LF quel que soit le poste de checkout (Windows/macOS/Linux) ;
+- rend `pg_dump --schema-only` déterministe entre postes — les futures validations Phase 2.9 (ou équivalentes lors d'un nouveau cycle de refacto) auront un diff strictement vide ;
+- empêche que d'éventuels triggers/fonctions futurs aient des fins de ligne hétérogènes selon qui les a écrits.
+
+Optionnellement, étendre à `*.md`, `*.js`, `*.json` selon la convention du projet — décision à prendre en Phase 5.5 (mise en place ESLint/Prettier).
+
+**À retirer/intégrer** au moment du traitement de la tâche Phase 4.x ou 5.x correspondante.
+
+---
+
+## 2026-05-27 — Privilèges PostgREST manquants dans `init.sql` (Phase 3.4)
+
+**Contexte** : pendant la rédaction de `security/rls_tests.sql` (Phase 3.4 #1), la première exécution échoue avec `permission denied for table benevoles` sur **toutes** les tables, pour `anon` comme `authenticated`. Diagnostic :
+
+- `information_schema.role_table_grants WHERE grantee IN ('anon','authenticated')` retourne **0 ligne** sur tout `public.*` ;
+- l'usage du schéma est correct (`USAGE` accordé) ;
+- le dump prod d'origine (`backups/20260525_schema.sql`) contient **135 statements `GRANT`** dont `GRANT ALL ON TABLE public.<t> TO anon|authenticated|service_role` pour chaque table ;
+- `supabase/migrations/00000000000000_init.sql` (généré en Phase 2.8 via `pg_dump --no-privileges`) ne contient **aucun GRANT**.
+
+**Impact réel** : ce n'est pas qu'un problème de tests RLS. **PostgREST sert anon/authenticated** ; sans GRANT table-level, toute requête frontend échouerait avec `permission denied` **avant même l'évaluation des policies RLS**. Si init.sql était re-déployé tel quel sur une instance vierge, l'API entière serait morte.
+
+**Cause racine** : Phase 2.8 a strippé les privilèges avec `--no-privileges` pour simplifier le diff ; la validation Phase 2.9 ne vérifie que la structure (tables/vues/fonctions/policies), pas les privilèges. Le test de réimport sur DB vierge n'a pas levé l'erreur parce qu'il ne fait pas tourner PostgREST.
+
+**Action immédiate (Phase 3.4)** : créer une migration `20260527120000_restore_postgrest_grants.sql` qui :
+- `GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role` ;
+- pour chaque table de `public.*` : `GRANT ALL ON TABLE ... TO anon, authenticated, service_role` (RLS filtre ensuite) ;
+- pour chaque vue : `GRANT SELECT` à `anon, authenticated`, `GRANT ALL` à `service_role` ;
+- pour chaque sequence : `GRANT USAGE, SELECT, UPDATE` à `anon, authenticated, service_role` ;
+- pour chaque fonction : `GRANT EXECUTE` à `anon, authenticated, service_role` ;
+- `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ...` pour que les futurs objets héritent.
+
+Migration idempotente via DO blocks. Cf. nouvelle case **3.4.0** ajoutée au `plan_refactoring.md`.
+
+**Action différée (à intégrer ultérieurement)** : lors de la prochaine régénération d'`init.sql`, **NE PAS** utiliser `--no-privileges` ; ou bien post-traiter le dump pour réintégrer les GRANTs. À noter dans le futur "post-mortem Phase 2.8" si jamais on rejoue cette phase.
+
+---
+
+## 2026-05-27 — Clé OpenRouter exposée côté client (T3 / Phase 3.5)
+
+**Contexte** : `VITE_OPENROUTER_API_KEY` est lue dans [src/js/modules/admin/index.js:1299](src/js/modules/admin/index.js#L1299) via `import.meta.env.VITE_OPENROUTER_API_KEY`. Le préfixe `VITE_` la fait embarquer en clair dans le bundle JS public (`dist/assets/admin-*.js`).
+
+**Problème** : la clé est extractible par n'importe quel visiteur du site (la page admin est cachée par RLS, mais le bundle JS lui est servi à tous). Risque : abus du quota OpenRouter, facturation imprévue.
+
+**Vérifié** : `.github/workflows/deploy.yml:39` injecte bien `VITE_OPENROUTER_API_KEY` depuis les secrets GitHub Actions → le bundle prod contient la vraie clé.
+
+**Options à arbitrer avec le mainteneur** :
+1. **Proxy via Edge Function** : créer une Edge Function `openrouter-proxy` qui vérifie le rôle `admin` (cf. pattern `create-benevole`) et relaie la requête à OpenRouter avec un secret `OPENROUTER_API_KEY` côté serveur. La clé n'est plus exposée. **Recommandé**.
+2. **Restriction de la clé OpenRouter** : si OpenRouter supporte des restrictions par origin/IP/quota strict, configurer la clé pour qu'elle ne soit utilisable que depuis l'URL de prod, avec un plafond bas. **Atténuation partielle**.
+3. **Désactiver la fonctionnalité** en prod si elle n'est pas critique.
+
+**Hors scope T3 Phase 3.5** : la T3 vise uniquement la documentation du périmètre dans `.env.example` (faite). Le fix applicatif est à ajouter au plan (nouvelle case en Phase 3.5 ou Phase 5).
+
+**À traiter avant** : Phase 8 (mise en prod).
+
+**Mise à jour 2026-05-27** : clé OpenRouter **révoquée par le mainteneur** sur le dashboard OpenRouter (`https://openrouter.ai/settings/keys`). Le bundle prod déployé actuellement contient toujours la clé (désormais inopérante). Le retrait du code et du secret GH Actions est tracé en **Phase 4.2.1** du plan (5 cases atomiques).
+
+**Mise à jour 2026-05-28 (Phase 4.2 exécutée)** :
+- Code `generateRapportIA` supprimé de `src/js/modules/admin/index.js`.
+- Variable `VITE_OPENROUTER_API_KEY` retirée de `.github/workflows/deploy.yml` et `.env.example`.
+- Partial orphelin `src/partials/sections/admin/tab-rapport-ia.html` supprimé.
+- **Action mainteneur restante** : retirer le secret `VITE_OPENROUTER_API_KEY` côté GitHub Actions (`Settings → Secrets and variables → Actions`). Au prochain build, le bundle déployé ne contiendra plus la clé même si le secret est encore présent (plus aucune référence applicative).
+- **Mise à jour 2026-05-28** : secret `VITE_OPENROUTER_API_KEY` **supprimé côté GitHub Actions par le mainteneur**. Phase 4.2.1 entièrement terminée (5/5 cases cochées).
+
+---
+
+## 2026-05-28 — Phase 4.2 — Récap suppressions code mort
+
+**Fichiers supprimés** : `check-role.js` (script debug à corps vide), `src/partials/sections/admin/tab-rapport-ia.html` (partial orphelin OpenRouter).
+
+**Dépendances désinstallées** : `html5-qrcode` (jamais importée), `depcheck` (outil d'audit ponctuel, relançable via `npx`), `dotenv` (utilisée uniquement par `check-role.js`).
+
+**`dist/` versionné** : retiré du suivi git via `git rm -r --cached dist/` + `.gitignore` mis à jour (`dist/` ignoré). La validation déploiement GitHub Pages reste à confirmer en Phase 8.
+
+**Méthodes / propriétés Alpine mortes supprimées (25 + 8 cascade = 33 entrées)** :
+- Vague A — AdminModule : `generateRapportIA`, `isReferentInscritPeriode`, `getFilteredPostes`, `updatePosteReferent`, `viewPosteInscrits`, `closePosteInscritsModal`, `loadBenevoles` (alias), `getPostesCountForPeriode`, `getPeriodeInscritsColor`, `getPeriodesCritiques`, `getPostesCritiques`, `getTauxCouleur`, `addVisualLine`, `addVisualShift`, `deleteVisualShift`, `addVisualPeriod`, `deleteVisualPeriod`, `savingConfig`.
+- Vague B — PlanningModule : `toggleView`, `openRegistrationModal`, `closeRegistrationModal`.
+- Vague C — WizardModule : `toggleWizardProfile`, `validateStep1`.
+- Vague D — store.js / admin-timeline.js : `getRepasName`, `resetDay`.
+- Cascade : helpers AdminModule `getBenevolesInscritsForPeriode`, `getBenevolesMinForPeriode`, `getBenevolesMaxForPeriode` ; états `posteFilterPeriode`, `selectedPoste`, `selectedPosteInscrits`, `showPosteInscritsModal`, `selectedPosteForRegistration` (PlanningModule).
+
+**DoD finale** : `node scripts/audit-alpine-methods.js` → 0 candidat ; `npm run build` → OK.
+
+---
+
+## 2026-05-28 — Phase 4.3.3 — Variables locales non utilisées détectées par ESLint
+
+**Contexte** : exécution de `npx eslint src/` (ESLint 10 + `no-unused-vars`) en Phase 4.3.3. La DoD du plan demande explicitement *« aucun import mort »* — **strictement satisfaite** (zéro import inutilisé signalé).
+
+En revanche, la règle `no-unused-vars` détecte 10 **variables locales** non utilisées qui sortent du périmètre atomique de la tâche 4.3.3 (atomicity first). À traiter dans une tâche future (probablement Phase 5.5 quand ESLint sera configuré durablement avec husky/lint-staged) :
+
+| Fichier | Ligne | Variable | Type |
+|---|---|---|---|
+| `src/js/admin-timeline.js` | 141 | `padB` | local var |
+| `src/js/modules/admin/index.js` | 343 | `poste` | local var |
+| `src/js/modules/admin/index.js` | 733 | `dispo` | useless-assignment |
+| `src/js/modules/admin/index.js` | 734 | `total_consomme` | useless-assignment |
+| `src/js/modules/admin/index.js` | 1855 | `hasShifts` | local var |
+| `src/js/modules/admin/index.js` | 2250 | `e` | catch param |
+| `src/js/modules/admin/index.js` | 2457 | `err` | catch param |
+| `src/js/modules/admin/index.js` | 2801 | `rect` | local var |
+| `src/js/modules/user/planning.js` | 746 | `data` | destructuring partiel |
+| `src/js/modules/user/wizard.js` | 553 | `data` | destructuring partiel |
+
+**Action recommandée** : nettoyage groupé en Phase 5.5 (mise en place définitive d'ESLint + Prettier).
+
+**Note technique** : `eslint.config.js` installé en racine (config minimale flat ESM ciblée `src/**/*.js`), packages `eslint`, `@eslint/js`, `globals` ajoutés en `devDependencies`. Cette config est volontairement minimaliste — elle sera remplacée par la config complète de la Phase 5.5.
