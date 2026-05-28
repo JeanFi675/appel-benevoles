@@ -1,3 +1,4 @@
+import Alpine from 'alpinejs';
 import { ApiService } from '../../services/api.js';
 import { formatDateTime, formatDateTimeForInput, formatTime } from '../../utils.js';
 import {
@@ -14,40 +15,25 @@ import {
 } from '../../utils/admin-shift-validation.js';
 
 /**
- * Module for managing admin operations (Postes, Periodes, Benevoles).
- * @namespace AdminModule
+ * God object historique de la page admin.
+ *
+ * État de la migration (Phase 5.2.5) :
+ *  - Le state partagé (postes, benevoles, periodes, dbProgramme, dbJours, repasList,
+ *    config, stats, currentUser, loading, toasts, isAdmin) vit dans `Alpine.store('admin')`.
+ *    AdminModule l'expose ici via des getters/setters installés en bas de fichier — ainsi
+ *    `this.postes` lit/écrit `Alpine.store('admin').postes` de manière transparente pour
+ *    les templates HTML et les méthodes legacy de l'onglet.
+ *  - Les loaders et helpers partagés sont des stubs qui délèguent au store.
+ *  - Les onglets seront extraits un par un dans `Alpine.data('admin<X>Tab', ...)` (Phase C),
+ *    et consommeront alors `$store.admin.X` directement.
+ *  - AdminModule sera supprimé en Phase E une fois tous les onglets migrés.
+ *
+ * IMPORTANT : `admin.js` instancie cet objet via `Object.create(AdminModule)` (et non
+ * un spread `...AdminModule`) pour préserver les getters du prototype.
  */
 export const AdminModule = {
-    isAdmin: false,
-    loading: true,
     activeTab: 'visual-creator',
-    toasts: [],
 
-    // Data
-    postes: [],
-    benevoles: [],
-    periodes: [],
-    dbProgramme: null,
-    
-    // Stats
-    stats: {
-        tshirts: {},
-        repas: {}, // Rempli dynamiquement par repas_id
-        cagnotte: {
-            total_distribue: 0,
-            total_consomme: 0,
-            total_restant: 0
-        }
-    },
-
-    // Configuration
-    config: {
-        cagnotte_active: false,
-        tshirt_question_active: true,
-        tarif_cagnotte_journee: 15.00
-    },
-
-    repasList: [],
     newRepasName: '',
     editingRepasId: null,
     editingRepasName: '',
@@ -80,7 +66,6 @@ export const AdminModule = {
     showEditModal: false,    // Edit/Add modal
     selectedBenevoleName: '',
     currentBenevole: null,
-    currentUser: null,
 
     // Add Benevole Modal
     showAddBenevoleModal: false,
@@ -106,7 +91,7 @@ export const AdminModule = {
     formatDay,
 
     getReferents() {
-        return this.benevoles.filter(b => ['referent', 'admin'].includes(b.role));
+        return Alpine.store('admin').getReferents();
     },
 
     getBenevolesStandardAvecInscriptions() {
@@ -404,28 +389,12 @@ export const AdminModule = {
      * Loads all admin data.
      */
     async loadData() {
-        const p1 = this.loadBenevolesAndStats();
-        const p2 = this.loadPostes();
-        const p3 = this.loadPeriodes();
-        const p4 = this.loadConfig();
-        const p5 = this.loadRepas();
-        const p6 = this.loadProgramme();
-        const p7 = this.loadJours();
-
-        await Promise.all([p1, p2, p3, p4, p5, p6, p7]);
+        await Alpine.store('admin').loadData();
         this.initReferentAssignments();
     },
 
     async loadJours() {
-        try {
-            const { data, error } = await ApiService.fetch('jours', {
-                order: { column: 'date_ref', ascending: true }
-            });
-            if (error) throw error;
-            this.dbJours = (data || []).map(j => j.date_ref);
-        } catch (error) {
-            console.error("Erreur chargement jours:", error);
-        }
+        return Alpine.store('admin').loadJours();
     },
 
     initReferentAssignments() {
@@ -560,308 +529,24 @@ export const AdminModule = {
 
 
 
-    /**
-     * Loads postes with inscription counts.
-     */
     async loadPostes() {
-        try {
-            const { data, error } = await ApiService.fetch('postes', {
-                select: '*, type_postes(titre, description, ordre), periodes(nom, ordre), benevoles(prenom, nom)'
-            });
-
-            if (error) throw error;
-
-            const postesWithCounts = await Promise.all(
-                (data || []).map(async (poste) => {
-                    const { data: inscriptions } = await ApiService.fetch('inscriptions', {
-                        select: '*, benevoles(prenom, nom)',
-                        eq: { poste_id: poste.id }
-                    });
-                    const count = inscriptions ? inscriptions.length : 0;
-                    const inscrits_ids = (inscriptions || []).map(i => i.benevole_id);
-                    const inscrits_noms = (inscriptions || [])
-                        .map(i => i.benevoles ? `${i.benevoles.prenom} ${i.benevoles.nom}` : '')
-                        .filter(Boolean);
-
-                    let referentIdentite = '-';
-                    if (poste.benevoles) {
-                        referentIdentite = `${poste.benevoles.prenom} ${poste.benevoles.nom}`;
-                    }
-
-                    return {
-                        ...poste,
-                        titre: poste.type_postes?.titre || '',
-                        description: poste.type_postes?.description || '',
-                        ordre: poste.type_postes?.ordre || 0,
-                        periode_nom: poste.periodes?.nom || '-',
-                        periode_ordre: poste.periodes?.ordre || 999,
-                        inscrits_actuels: count,
-                        inscrits_ids,
-                        inscrits_noms,
-                        referent_identite: referentIdentite
-                    };
-                })
-            );
-
-            this.postes = postesWithCounts.sort((a, b) => {
-                if (a.periode_ordre !== b.periode_ordre) {
-                    return a.periode_ordre - b.periode_ordre;
-                }
-                return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
-            });
-        } catch (error) {
-            this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
-        }
+        return Alpine.store('admin').loadPostes();
     },
 
-    // Unified loader for benevoles + cagnotte stats
     async loadBenevolesAndStats() {
-        try {
-            // 1. Fetch Benevoles
-            // 1. Fetch Benevoles (Sorted by Email to group families, then Name)
-            const { data: benevoleRaw, error: benevolesError } = await ApiService.fetch('admin_benevoles', {
-                order: { column: 'email', ascending: true }
-            });
-            // Secondary sort in JS to be safe (if Supabase only supports one order param effectively here, or simply to refine)
-            const benevolesData = (benevoleRaw || []).sort((a, b) => {
-                const mailA = (a.email || '').toLowerCase();
-                const mailB = (b.email || '').toLowerCase();
-                if (mailA < mailB) return -1;
-                if (mailA > mailB) return 1;
-                // If same email, sort by First Name (or Name)
-                return (a.prenom || '').localeCompare(b.prenom || '');
-            });
-            if (benevolesError) throw benevolesError;
-            
-            // 2. Fetch Transactions (Debits/Manual Adjustments)
-            const { data: transactionsData, error: transactionsError } = await ApiService.fetch('cagnotte_transactions', {
-                 select: '*'
-            });
-            const transactions = transactionsError ? [] : (transactionsData || []);
-
-            // 3. Fetch All Inscriptions (for Credits)
-            // We need to link Inscription -> Poste -> Periode -> Credit
-            const { data: inscriptionsData, error: inscriptionsError } = await ApiService.fetch('inscriptions', {
-                select: 'benevole_id, poste_id, postes(periode_id, periodes(montant_credit))'
-            });
-            const allInscriptions = inscriptionsError ? [] : (inscriptionsData || []);
-
-            // 4. Fetch all periodes (needed for forced cagnottes)
-            const { data: periodesData } = await ApiService.fetch('periodes', { select: 'id, montant_credit' });
-
-            // Process Stats
-            const userStats = {}; // Map user_id -> stats (Family Wallet)
-            const benevoleCredits = {}; // Map benevole_id -> credit (Individual contribution)
-
-            // Helper to get user stats object
-            const getUserStats = (userId) => {
-                if (!userId) return null;
-                if (!userStats[userId]) {
-                    userStats[userId] = {
-                        inscriptions_credit: 0,
-                        transactions_solde: 0, // Sum of ALL transactions (positive and negative)
-                        transaction_debit_abs: 0 // Sum of ABS(negative transactions)
-                    };
-                }
-                return userStats[userId];
-            };
-
-            // Calculate Credits from Inscriptions
-            // We need to map benevole_id to user_id (if exists).
-            const benevoleMap = {}; // benevole_id -> user_id
-            (benevolesData || []).forEach(b => { benevoleMap[b.id] = b.user_id; });
-
-            allInscriptions.forEach(insc => {
-                // 1. Calculate Credit for this inscription
-                if (insc.postes && insc.postes.periodes) {
-                    const credit = parseFloat(insc.postes.periodes.montant_credit || 0);
-
-                    // A. Store individual credit (only for non forced cagnottes)
-                    const benevole = (benevolesData || []).find(b => b.id === insc.benevole_id);
-                    const isForced = benevole?.is_cagnotte_forcee;
-                    if (!isForced) {
-                        benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
-
-                        // B. Store family credit if user attached
-                        const userId = benevoleMap[insc.benevole_id];
-                        if (userId) {
-                            const stats = getUserStats(userId);
-                            stats.inscriptions_credit += credit;
-                        }
-                    }
-                }
-            });
-
-            // Crédits pour les bénévoles avec cagnotte forcée
-            (benevolesData || []).filter(b => b.is_cagnotte_forcee).forEach(b => {
-                let creditForced = 0;
-                if (b.cagnotte_forcee_type === 'journee') {
-                    const nbJours = Array.isArray(b.cagnotte_forcee_jours) ? b.cagnotte_forcee_jours.length : 0;
-                    creditForced = nbJours * parseFloat(this.config.tarif_cagnotte_journee || 0);
-                } else if (b.cagnotte_forcee_type === 'periode') {
-                    const periodesIds = b.cagnotte_forcee_periodes_ids || [];
-                    creditForced = (periodesData || [])
-                        .filter(p => periodesIds.includes(p.id))
-                        .reduce((sum, p) => sum + parseFloat(p.montant_credit || 0), 0);
-                }
-
-                benevoleCredits[b.id] = creditForced;
-                if (b.user_id) {
-                    const stats = getUserStats(b.user_id);
-                    stats.inscriptions_credit += creditForced;
-                }
-            });
-
-            // Calculate Debits/Adjustments from Transactions (Only applicable if user_id exists)
-            transactions.forEach(t => {
-                const stats = getUserStats(t.user_id);
-                if (stats) {
-                    const amount = parseFloat(t.montant); // FIX: amount -> montant
-                    stats.transactions_solde += amount;
-                    if (amount < 0) {
-                        stats.transaction_debit_abs += Math.abs(amount);
-                    } else {
-                        // Positive transaction = Bonus credit
-                        stats.inscriptions_credit += amount;
-                    }
-                }
-            });
-            // NEW LOGIC: Identify which benevole is the "Primary" for display purposes
-            // We want to show the specific earned credits for EVERYONE
-            // But show the Consumed/Restant ONLY on the first member of the family
-            const familyHeadMap = {}; // userId -> benevoleId (first one encountered)
-            
-            // Assuming benevolesData is sorted enough or random, we just pick the first one we see per userId
-            (benevolesData || []).forEach(b => {
-                if (b.user_id && !familyHeadMap[b.user_id]) {
-                    familyHeadMap[b.user_id] = b.id;
-                }
-            });
-
-            this.benevoles = (benevolesData || []).map(b => {
-                const userId = b.user_id;
-
-                // 1. Total Matériel (Earned) is ALWAYS individual contribution
-                const earned_individuel = benevoleCredits[b.id] || 0;
-
-                let dispo = 0;
-                let total_consomme = 0;
-                let is_family_head = false;
-                let has_family = !!userId;
-
-                if (userId && userStats[userId]) {
-                    // It is a specific account
-                    const stats = userStats[userId];
-                    
-                    // Logic: Only the "Head" of family displays the consumption/balance
-                    if (familyHeadMap[userId] === b.id) {
-                        is_family_head = true;
-                        // Consumed = Family Total Consumed
-                        total_consomme = stats.transaction_debit_abs;
-                        // Balance = Family Total Credit - Family Total Consumed
-                        const family_total_credit = stats.inscriptions_credit;
-                        const balance = family_total_credit - total_consomme;
-                        dispo = Math.max(0, balance);
-                    } else {
-                        // Secondary member: Does not show consumption/balance repetition
-                        total_consomme = 0; // Or handle as null in UI
-                        dispo = 0; 
-                    }
-                } else {
-                    // Orphan
-                    total_consomme = 0;
-                    dispo = 0;
-                }
-                
-                return {
-                    ...b,
-                    cagnotte_total: earned_individuel, // DISPLAY: "Gagné" (Individual)
-                    cagnotte_solde: dispo,             // DISPLAY: "Restant Global" (Only on head)
-                    cagnotte_real_consumed: total_consomme, // DISPLAY: "Consommé Global" (Only on head)
-                    is_family_head: is_family_head,
-                    has_family: has_family
-                };
-            });
-
-            this.calculateStats();
-        } catch (error) {
-            console.error(error);
-            this.showToast('❌ Erreur chargement bénévoles/cagnotte : ' + error.message, 'error');
-        }
+        return Alpine.store('admin').loadBenevolesAndStats();
     },
 
     async loadPeriodes() {
-        try {
-            const { data, error } = await ApiService.fetch('periodes', {
-                order: { column: 'ordre', ascending: true }
-            });
-            if (error) throw error;
-            this.periodes = data || [];
-        } catch (error) {
-            this.showToast('❌ Erreur chargement périodes : ' + error.message, 'error');
-        }
+        return Alpine.store('admin').loadPeriodes();
     },
 
     async loadProgramme() {
-        try {
-            const { data, error } = await ApiService.fetch('programmes', {
-                order: { column: 'heure', ascending: true }
-            });
-            if (error) throw error;
-            if (data && data.length > 0) {
-                const days = {};
-                data.forEach(item => {
-                    const dateKey = item.date_ref; // format YYYY-MM-DD
-                    if (!days[dateKey]) {
-                        const d = new Date(dateKey + 'T00:00:00');
-                        const label = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-                        days[dateKey] = { label, events: [] };
-                    }
-                    
-                    // Convert time '07:00:00' to hStart decimal and timeLabel
-                    const [h, m] = item.heure.split(':');
-                    const hStart = parseInt(h) + parseInt(m) / 60;
-                    const timeLabel = `${h}h${m}`;
-                    
-                    days[dateKey].events.push({
-                        num: days[dateKey].events.length + 1,
-                        timeLabel,
-                        hStart,
-                        description: item.description,
-                        id: item.id
-                    });
-                });
-                this.dbProgramme = { meta: [], days };
-            } else {
-                this.dbProgramme = null;
-            }
-        } catch (err) {
-            console.error('Erreur chargement programme de la DB :', err.message);
-            this.dbProgramme = null;
-        }
+        return Alpine.store('admin').loadProgramme();
     },
 
     async loadConfig() {
-        try {
-            const { data, error } = await ApiService.fetch('config', {
-                in: { key: ['cagnotte_active', 'tarif_cagnotte_journee', 'tshirt_question_active'] }
-            });
-            if (error) throw error;
-            
-            if (data && data.length > 0) {
-                const cagnotteActive = data.find(c => c.key === 'cagnotte_active');
-                if (cagnotteActive) this.config.cagnotte_active = cagnotteActive.value;
-
-                const tshirt = data.find(c => c.key === 'tshirt_question_active');
-                if (tshirt) this.config.tshirt_question_active = tshirt.value;
-
-                const tarifJournee = data.find(c => c.key === 'tarif_cagnotte_journee');
-                if (tarifJournee) this.config.tarif_cagnotte_journee = parseFloat(tarifJournee.value);
-            }
-        } catch (error) {
-            console.error('Error loading config:', error);
-            this.showToast('⚠️ Erreur chargement configuration', 'warning');
-        }
+        return Alpine.store('admin').loadConfig();
     },
     
 
@@ -908,15 +593,7 @@ export const AdminModule = {
     },
 
     async loadRepas() {
-        try {
-            const { data, error } = await ApiService.fetch('repas', {
-                order: { column: 'created_at', ascending: true }
-            });
-            if (error) throw error;
-            this.repasList = data || [];
-        } catch (error) {
-            this.showToast('❌ Erreur chargement repas : ' + error.message, 'error');
-        }
+        return Alpine.store('admin').loadRepas();
     },
 
     async addRepas() {
@@ -1068,72 +745,7 @@ export const AdminModule = {
     },
 
     calculateStats() {
-        const tshirts = {};
-        let total_tshirts = 0;
-        
-        // Initialiser la map des repas dynamiques
-        const repasStats = {};
-        this.repasList.forEach(r => {
-            repasStats[r.id] = { nom: r.nom, total: 0, normal: 0, vege: 0 };
-        });
-
-        this.benevoles.forEach(b => {
-            // T-Shirts: les bénévoles (rôle "benevole") sans aucune inscription n'ont pas de T-shirt
-            const skipTshirt = b.role === 'benevole' && (b.nb_inscriptions || 0) === 0;
-            if (!skipTshirt) {
-                const size = b.taille_tshirt || 'Non défini';
-                tshirts[size] = (tshirts[size] || 0) + 1;
-                // Le total exclut SANS et Non défini (pas de T-shirt réel à commander)
-                if (size !== 'SANS' && size !== 'Non défini') {
-                    total_tshirts++;
-                }
-            }
-
-            // Repas dynamiques
-            if (b.repas && Array.isArray(b.repas)) {
-                b.repas.forEach(ur => {
-                    if (!repasStats[ur.repas_id]) {
-                        repasStats[ur.repas_id] = { nom: ur.nom || 'Repas inconnu', total: 0, normal: 0, vege: 0 };
-                    }
-                    repasStats[ur.repas_id].total++;
-                    if (ur.is_vegetarien) {
-                        repasStats[ur.repas_id].vege++;
-                    } else {
-                        repasStats[ur.repas_id].normal++;
-                    }
-                });
-            }
-        });
-
-        // CAGNOTTE STATS
-        // total_distribue = sum of all positive transactions
-        const total_distribue = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_total || 0), 0);
-        const total_restant = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_solde || 0), 0);
-        
-        // Total consumed = Sum of REAL consumption
-        const total_consomme = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_real_consumed || 0), 0);
-
-        // Sort sizes specifically
-        const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Non défini'];
-        const sortedTshirts = {};
-        sizeOrder.forEach(size => {
-            if (tshirts[size]) sortedTshirts[size] = tshirts[size];
-        });
-        // Add any others not in order
-        Object.keys(tshirts).forEach(size => {
-            if (!sortedTshirts[size]) sortedTshirts[size] = tshirts[size];
-        });
-
-        this.stats = {
-            tshirts: sortedTshirts,
-            total_tshirts,
-            repas: repasStats,
-            cagnotte: {
-                total_distribue,
-                total_consomme,
-                total_restant
-            }
-        };
+        return Alpine.store('admin').calculateStats();
     },
 
     // --- Heures de bénévolat ---
@@ -1276,7 +888,6 @@ export const AdminModule = {
     // --- Planning Interactif (Créateur Visuel) ---
     visualDaySelected: '',
     visualDays: [],
-    dbJours: [],
     visualProgramEvents: [],
     visualPeriods: [],
     visualLines: [],
@@ -2951,10 +2562,24 @@ export const AdminModule = {
     // --- Helpers ---
 
     showToast(message, type = 'success') {
-        const id = Date.now();
-        this.toasts.push({ id, message, type });
-        setTimeout(() => {
-            this.toasts = this.toasts.filter(t => t.id !== id);
-        }, 5000);
+        return Alpine.store('admin').showToast(message, type);
     }
 };
+
+// --- Délégation du state partagé vers `Alpine.store('admin')` ---
+// Installé sur le prototype après la définition du littéral. `admin.js` instancie
+// AdminModule via `Object.create(AdminModule)` pour préserver ces getters/setters.
+const SHARED_STATE_FIELDS = [
+    'isAdmin', 'loading', 'currentUser', 'toasts',
+    'postes', 'benevoles', 'periodes', 'dbProgramme', 'dbJours', 'repasList',
+    'stats', 'config'
+];
+
+SHARED_STATE_FIELDS.forEach(field => {
+    Object.defineProperty(AdminModule, field, {
+        get() { return Alpine.store('admin')[field]; },
+        set(v) { Alpine.store('admin')[field] = v; },
+        enumerable: true,
+        configurable: true
+    });
+});

@@ -1,0 +1,422 @@
+/**
+ * Alpine.store('admin') — source de vérité du state partagé admin.
+ *
+ * Architecture cible (Phase 5.2.5) :
+ *  - Détient le state transverse aux onglets : postes, benevoles, periodes, config, etc.
+ *  - Détient les loaders cross-onglets et les helpers globaux (toast, getReferents, calculateStats).
+ *  - `adminApp()` (god object encore présent) délègue ici via getters/setters et stubs ;
+ *    les onglets Phase C consommeront `$store.admin.X` directement.
+ *
+ * Notes :
+ *  - `loadX()` mute `this.X` (state du store) — l'AdminModule lit via getter de prototype.
+ *  - Les mutations passent par les setters → propagation réactive automatique.
+ */
+
+import { ApiService } from '../services/api.js';
+
+export function createAdminStore() {
+    return {
+        // --- State partagé ---
+        isAdmin: false,
+        loading: true,
+        currentUser: null,
+        toasts: [],
+
+        postes: [],
+        benevoles: [],
+        periodes: [],
+        dbProgramme: null,
+        dbJours: [],
+        repasList: [],
+
+        stats: {
+            tshirts: {},
+            repas: {},
+            cagnotte: {
+                total_distribue: 0,
+                total_consomme: 0,
+                total_restant: 0
+            }
+        },
+
+        config: {
+            cagnotte_active: false,
+            tshirt_question_active: true,
+            tarif_cagnotte_journee: 15.00
+        },
+
+        // --- Helpers globaux ---
+
+        showToast(message, type = 'success') {
+            const id = Date.now();
+            this.toasts.push({ id, message, type });
+            setTimeout(() => {
+                this.toasts = this.toasts.filter(t => t.id !== id);
+            }, 5000);
+        },
+
+        getReferents() {
+            return this.benevoles.filter(b => ['referent', 'admin'].includes(b.role));
+        },
+
+        calculateStats() {
+            const tshirts = {};
+            let total_tshirts = 0;
+
+            const repasStats = {};
+            this.repasList.forEach(r => {
+                repasStats[r.id] = { nom: r.nom, total: 0, normal: 0, vege: 0 };
+            });
+
+            this.benevoles.forEach(b => {
+                // T-Shirts : les bénévoles sans inscription n'ont pas de T-shirt.
+                const skipTshirt = b.role === 'benevole' && (b.nb_inscriptions || 0) === 0;
+                if (!skipTshirt) {
+                    const size = b.taille_tshirt || 'Non défini';
+                    tshirts[size] = (tshirts[size] || 0) + 1;
+                    if (size !== 'SANS' && size !== 'Non défini') {
+                        total_tshirts++;
+                    }
+                }
+
+                if (b.repas && Array.isArray(b.repas)) {
+                    b.repas.forEach(ur => {
+                        if (!repasStats[ur.repas_id]) {
+                            repasStats[ur.repas_id] = { nom: ur.nom || 'Repas inconnu', total: 0, normal: 0, vege: 0 };
+                        }
+                        repasStats[ur.repas_id].total++;
+                        if (ur.is_vegetarien) {
+                            repasStats[ur.repas_id].vege++;
+                        } else {
+                            repasStats[ur.repas_id].normal++;
+                        }
+                    });
+                }
+            });
+
+            const total_distribue = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_total || 0), 0);
+            const total_restant = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_solde || 0), 0);
+            const total_consomme = this.benevoles.reduce((sum, b) => sum + (b.cagnotte_real_consumed || 0), 0);
+
+            const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Non défini'];
+            const sortedTshirts = {};
+            sizeOrder.forEach(size => {
+                if (tshirts[size]) sortedTshirts[size] = tshirts[size];
+            });
+            Object.keys(tshirts).forEach(size => {
+                if (!sortedTshirts[size]) sortedTshirts[size] = tshirts[size];
+            });
+
+            this.stats = {
+                tshirts: sortedTshirts,
+                total_tshirts,
+                repas: repasStats,
+                cagnotte: {
+                    total_distribue,
+                    total_consomme,
+                    total_restant
+                }
+            };
+        },
+
+        // --- Loaders transverses ---
+
+        async loadData() {
+            await Promise.all([
+                this.loadBenevolesAndStats(),
+                this.loadPostes(),
+                this.loadPeriodes(),
+                this.loadConfig(),
+                this.loadRepas(),
+                this.loadProgramme(),
+                this.loadJours()
+            ]);
+        },
+
+        async loadJours() {
+            try {
+                const { data, error } = await ApiService.fetch('jours', {
+                    order: { column: 'date_ref', ascending: true }
+                });
+                if (error) throw error;
+                this.dbJours = (data || []).map(j => j.date_ref);
+            } catch (error) {
+                console.error('Erreur chargement jours:', error);
+            }
+        },
+
+        async loadPostes() {
+            try {
+                const { data, error } = await ApiService.fetch('postes', {
+                    select: '*, type_postes(titre, description, ordre), periodes(nom, ordre), benevoles(prenom, nom)'
+                });
+
+                if (error) throw error;
+
+                const postesWithCounts = await Promise.all(
+                    (data || []).map(async (poste) => {
+                        const { data: inscriptions } = await ApiService.fetch('inscriptions', {
+                            select: '*, benevoles(prenom, nom)',
+                            eq: { poste_id: poste.id }
+                        });
+                        const count = inscriptions ? inscriptions.length : 0;
+                        const inscrits_ids = (inscriptions || []).map(i => i.benevole_id);
+                        const inscrits_noms = (inscriptions || [])
+                            .map(i => i.benevoles ? `${i.benevoles.prenom} ${i.benevoles.nom}` : '')
+                            .filter(Boolean);
+
+                        let referentIdentite = '-';
+                        if (poste.benevoles) {
+                            referentIdentite = `${poste.benevoles.prenom} ${poste.benevoles.nom}`;
+                        }
+
+                        return {
+                            ...poste,
+                            titre: poste.type_postes?.titre || '',
+                            description: poste.type_postes?.description || '',
+                            ordre: poste.type_postes?.ordre || 0,
+                            periode_nom: poste.periodes?.nom || '-',
+                            periode_ordre: poste.periodes?.ordre || 999,
+                            inscrits_actuels: count,
+                            inscrits_ids,
+                            inscrits_noms,
+                            referent_identite: referentIdentite
+                        };
+                    })
+                );
+
+                this.postes = postesWithCounts.sort((a, b) => {
+                    if (a.periode_ordre !== b.periode_ordre) {
+                        return a.periode_ordre - b.periode_ordre;
+                    }
+                    return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
+                });
+            } catch (error) {
+                this.showToast('❌ Erreur chargement postes : ' + error.message, 'error');
+            }
+        },
+
+        async loadBenevolesAndStats() {
+            try {
+                const { data: benevoleRaw, error: benevolesError } = await ApiService.fetch('admin_benevoles', {
+                    order: { column: 'email', ascending: true }
+                });
+                const benevolesData = (benevoleRaw || []).sort((a, b) => {
+                    const mailA = (a.email || '').toLowerCase();
+                    const mailB = (b.email || '').toLowerCase();
+                    if (mailA < mailB) return -1;
+                    if (mailA > mailB) return 1;
+                    return (a.prenom || '').localeCompare(b.prenom || '');
+                });
+                if (benevolesError) throw benevolesError;
+
+                const { data: transactionsData, error: transactionsError } = await ApiService.fetch('cagnotte_transactions', {
+                    select: '*'
+                });
+                const transactions = transactionsError ? [] : (transactionsData || []);
+
+                const { data: inscriptionsData, error: inscriptionsError } = await ApiService.fetch('inscriptions', {
+                    select: 'benevole_id, poste_id, postes(periode_id, periodes(montant_credit))'
+                });
+                const allInscriptions = inscriptionsError ? [] : (inscriptionsData || []);
+
+                const { data: periodesData } = await ApiService.fetch('periodes', { select: 'id, montant_credit' });
+
+                const userStats = {};
+                const benevoleCredits = {};
+
+                const getUserStats = (userId) => {
+                    if (!userId) return null;
+                    if (!userStats[userId]) {
+                        userStats[userId] = {
+                            inscriptions_credit: 0,
+                            transactions_solde: 0,
+                            transaction_debit_abs: 0
+                        };
+                    }
+                    return userStats[userId];
+                };
+
+                const benevoleMap = {};
+                (benevolesData || []).forEach(b => { benevoleMap[b.id] = b.user_id; });
+
+                allInscriptions.forEach(insc => {
+                    if (insc.postes && insc.postes.periodes) {
+                        const credit = parseFloat(insc.postes.periodes.montant_credit || 0);
+                        const benevole = (benevolesData || []).find(b => b.id === insc.benevole_id);
+                        const isForced = benevole?.is_cagnotte_forcee;
+                        if (!isForced) {
+                            benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
+                            const userId = benevoleMap[insc.benevole_id];
+                            if (userId) {
+                                const stats = getUserStats(userId);
+                                stats.inscriptions_credit += credit;
+                            }
+                        }
+                    }
+                });
+
+                // Crédits pour les bénévoles avec cagnotte forcée.
+                (benevolesData || []).filter(b => b.is_cagnotte_forcee).forEach(b => {
+                    let creditForced = 0;
+                    if (b.cagnotte_forcee_type === 'journee') {
+                        const nbJours = Array.isArray(b.cagnotte_forcee_jours) ? b.cagnotte_forcee_jours.length : 0;
+                        creditForced = nbJours * parseFloat(this.config.tarif_cagnotte_journee || 0);
+                    } else if (b.cagnotte_forcee_type === 'periode') {
+                        const periodesIds = b.cagnotte_forcee_periodes_ids || [];
+                        creditForced = (periodesData || [])
+                            .filter(p => periodesIds.includes(p.id))
+                            .reduce((sum, p) => sum + parseFloat(p.montant_credit || 0), 0);
+                    }
+
+                    benevoleCredits[b.id] = creditForced;
+                    if (b.user_id) {
+                        const stats = getUserStats(b.user_id);
+                        stats.inscriptions_credit += creditForced;
+                    }
+                });
+
+                transactions.forEach(t => {
+                    const stats = getUserStats(t.user_id);
+                    if (stats) {
+                        const amount = parseFloat(t.montant);
+                        stats.transactions_solde += amount;
+                        if (amount < 0) {
+                            stats.transaction_debit_abs += Math.abs(amount);
+                        } else {
+                            stats.inscriptions_credit += amount;
+                        }
+                    }
+                });
+
+                // Head of family pour affichage Consommé/Restant (un seul porteur par user_id).
+                const familyHeadMap = {};
+                (benevolesData || []).forEach(b => {
+                    if (b.user_id && !familyHeadMap[b.user_id]) {
+                        familyHeadMap[b.user_id] = b.id;
+                    }
+                });
+
+                this.benevoles = (benevolesData || []).map(b => {
+                    const userId = b.user_id;
+                    const earned_individuel = benevoleCredits[b.id] || 0;
+
+                    let dispo = 0;
+                    let total_consomme = 0;
+                    let is_family_head = false;
+                    const has_family = !!userId;
+
+                    if (userId && userStats[userId]) {
+                        const stats = userStats[userId];
+                        if (familyHeadMap[userId] === b.id) {
+                            is_family_head = true;
+                            total_consomme = stats.transaction_debit_abs;
+                            const family_total_credit = stats.inscriptions_credit;
+                            const balance = family_total_credit - total_consomme;
+                            dispo = Math.max(0, balance);
+                        }
+                    }
+
+                    return {
+                        ...b,
+                        cagnotte_total: earned_individuel,
+                        cagnotte_solde: dispo,
+                        cagnotte_real_consumed: total_consomme,
+                        is_family_head,
+                        has_family
+                    };
+                });
+
+                this.calculateStats();
+            } catch (error) {
+                console.error(error);
+                this.showToast('❌ Erreur chargement bénévoles/cagnotte : ' + error.message, 'error');
+            }
+        },
+
+        async loadPeriodes() {
+            try {
+                const { data, error } = await ApiService.fetch('periodes', {
+                    order: { column: 'ordre', ascending: true }
+                });
+                if (error) throw error;
+                this.periodes = data || [];
+            } catch (error) {
+                this.showToast('❌ Erreur chargement périodes : ' + error.message, 'error');
+            }
+        },
+
+        async loadProgramme() {
+            try {
+                const { data, error } = await ApiService.fetch('programmes', {
+                    order: { column: 'heure', ascending: true }
+                });
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    const days = {};
+                    data.forEach(item => {
+                        const dateKey = item.date_ref;
+                        if (!days[dateKey]) {
+                            const d = new Date(dateKey + 'T00:00:00');
+                            const label = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                            days[dateKey] = { label, events: [] };
+                        }
+
+                        const [h, m] = item.heure.split(':');
+                        const hStart = parseInt(h) + parseInt(m) / 60;
+                        const timeLabel = `${h}h${m}`;
+
+                        days[dateKey].events.push({
+                            num: days[dateKey].events.length + 1,
+                            timeLabel,
+                            hStart,
+                            description: item.description,
+                            id: item.id
+                        });
+                    });
+                    this.dbProgramme = { meta: [], days };
+                } else {
+                    this.dbProgramme = null;
+                }
+            } catch (err) {
+                console.error('Erreur chargement programme de la DB :', err.message);
+                this.dbProgramme = null;
+            }
+        },
+
+        async loadConfig() {
+            try {
+                const { data, error } = await ApiService.fetch('config', {
+                    in: { key: ['cagnotte_active', 'tarif_cagnotte_journee', 'tshirt_question_active'] }
+                });
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const cagnotteActive = data.find(c => c.key === 'cagnotte_active');
+                    if (cagnotteActive) this.config.cagnotte_active = cagnotteActive.value;
+
+                    const tshirt = data.find(c => c.key === 'tshirt_question_active');
+                    if (tshirt) this.config.tshirt_question_active = tshirt.value;
+
+                    const tarifJournee = data.find(c => c.key === 'tarif_cagnotte_journee');
+                    if (tarifJournee) this.config.tarif_cagnotte_journee = parseFloat(tarifJournee.value);
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+                this.showToast('⚠️ Erreur chargement configuration', 'warning');
+            }
+        },
+
+        async loadRepas() {
+            try {
+                const { data, error } = await ApiService.fetch('repas', {
+                    order: { column: 'created_at', ascending: true }
+                });
+                if (error) throw error;
+                this.repasList = data || [];
+            } catch (error) {
+                this.showToast('❌ Erreur chargement repas : ' + error.message, 'error');
+            }
+        }
+    };
+}
