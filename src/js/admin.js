@@ -4,10 +4,12 @@ import { ApiService } from "./services/api.js";
 import { AdminModule } from "./modules/admin/index.js";
 import { createAdminStore } from "./stores/admin-store.js";
 import { adminHeuresTab } from "./components/admin/admin-heures-tab.js";
+import { adminMailingTab } from "./components/admin/admin-mailing-tab.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.store("admin", createAdminStore());
   Alpine.data("adminHeuresTab", adminHeuresTab);
+  Alpine.data("adminMailingTab", adminMailingTab);
 
   // `Object.create(AdminModule)` (au lieu du spread `...AdminModule`) préserve les
   // getters/setters de prototype installés sur AdminModule, qui délèguent le state

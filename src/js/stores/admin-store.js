@@ -45,6 +45,15 @@ export function createAdminStore() {
             tarif_cagnotte_journee: 15.00
         },
 
+        // --- Dérivés réactifs ---
+
+        // Titres uniques de postes (triés). Recalculé à chaque lecture par Alpine ;
+        // consommé par les onglets mailing (`adminMailingTab`) et referents
+        // (`tab-referents.html` via proxy AdminModule jusqu'à la migration C3).
+        get uniquePosteTitres() {
+            return [...new Set(this.postes.map(p => p.titre).filter(Boolean))].sort();
+        },
+
         // --- Helpers globaux ---
 
         showToast(message, type = 'success') {

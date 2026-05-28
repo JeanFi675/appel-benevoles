@@ -38,15 +38,12 @@ export const AdminModule = {
     editingRepasId: null,
     editingRepasName: '',
 
-    // Mailing
-    mailingFilterRole: 'tous', // 'tous', 'benevole', 'referent', 'admin'
-    mailingFilterAssignation: 'tous', // 'tous', 'avec_poste', 'sans_poste', 'poste_specifique'
-    mailingPostLines: [
-        { id: 1, selectedTitle: '', selectedSlots: [] }
-    ],
+    // Mailing → migré vers Alpine.data('adminMailingTab') (Phase 5.2.5 / C2)
 
     referentAssignments: {},
-    uniquePosteTitres: [],
+    // `uniquePosteTitres` est désormais un getter dérivé du store admin
+    // (cf. SHARED_DERIVED_FIELDS en fin de fichier). Consommé par tab-mailing.html
+    // (via composant local) et tab-referents.html (via proxy AdminModule).
 
     // Cagnotte forcée
     forcedSearchQuery: '',
@@ -398,12 +395,8 @@ export const AdminModule = {
     },
 
     initReferentAssignments() {
-        const uniqueTitres = new Set();
-        this.postes.forEach(p => {
-            if (p.titre) uniqueTitres.add(p.titre);
-        });
-        this.uniquePosteTitres = Array.from(uniqueTitres).sort();
-
+        // `uniquePosteTitres` est désormais un getter dérivé sur le store admin —
+        // plus besoin de l'initialiser ici.
         const assignments = {};
         this.getReferents().forEach(ref => {
             // Find all postes where this referent is assigned
@@ -751,100 +744,8 @@ export const AdminModule = {
     // Onglet "Heures de bénévolat" → migré vers Alpine.data('adminHeuresTab')
     // (src/js/components/admin/admin-heures-tab.js). Phase 5.2.5 / C1.
 
-    addMailingPostLine() {
-        this.mailingPostLines.push({
-            id: Date.now(),
-            selectedTitle: '',
-            selectedSlots: []
-        });
-    },
-
-    removeMailingPostLine(index) {
-        this.mailingPostLines.splice(index, 1);
-        if (this.mailingPostLines.length === 0) {
-            this.addMailingPostLine();
-        }
-    },
-
-    getSlotsForPostTitle(title) {
-        if (!title) return [];
-        return this.postes
-            .filter(p => p.titre === title)
-            .sort((a, b) => {
-                if (a.periode_ordre !== b.periode_ordre) {
-                    return a.periode_ordre - b.periode_ordre;
-                }
-                return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
-            });
-    },
-
-    getFilteredMailingBenevoles() {
-        let list = [...this.benevoles];
-
-        // 1. Filtre par rôle
-        if (this.mailingFilterRole !== 'tous') {
-            list = list.filter(b => b.role === this.mailingFilterRole);
-        }
-
-        // 2. Filtre par assignation/poste
-        if (this.mailingFilterAssignation === 'avec_poste') {
-            list = list.filter(b => (b.nb_inscriptions || 0) > 0);
-        } else if (this.mailingFilterAssignation === 'sans_poste') {
-            list = list.filter(b => (b.nb_inscriptions || 0) === 0);
-        } else if (this.mailingFilterAssignation === 'poste_specifique') {
-            // Collect all selected slot (poste) IDs across all lines
-            const allSelectedSlotIds = new Set();
-            this.mailingPostLines.forEach(line => {
-                if (line.selectedTitle) {
-                    line.selectedSlots.forEach(slotId => {
-                        allSelectedSlotIds.add(slotId);
-                    });
-                }
-            });
-
-            if (allSelectedSlotIds.size > 0) {
-                const matchedBenevoleIds = new Set();
-                this.postes.forEach(p => {
-                    if (allSelectedSlotIds.has(p.id)) {
-                        (p.inscrits_ids || []).forEach(bId => {
-                            matchedBenevoleIds.add(bId);
-                        });
-                    }
-                });
-
-                list = list.filter(b => matchedBenevoleIds.has(b.id));
-            } else {
-                list = [];
-            }
-        }
-
-        return list;
-    },
-
-    getFilteredMailingEmails() {
-        const list = this.getFilteredMailingBenevoles();
-        return list
-            .map(b => b.email ? b.email.trim() : '')
-            .filter(email => email.length > 0);
-    },
-
-    copyMailingEmails() {
-        const emails = this.getFilteredMailingEmails();
-        if (emails.length === 0) {
-            this.showToast('⚠️ Aucun e-mail à copier.', 'warning');
-            return;
-        }
-
-        const emailString = emails.join(', ');
-        navigator.clipboard.writeText(emailString)
-            .then(() => {
-                this.showToast(`📋 ${emails.length} adresses e-mail copiées !`, 'success');
-            })
-            .catch(err => {
-                console.error('Erreur lors de la copie :', err);
-                this.showToast('❌ Impossible de copier les e-mails automatiquement.', 'error');
-            });
-    },
+    // Méthodes mailing → migrées vers Alpine.data('adminMailingTab')
+    // (src/js/components/admin/admin-mailing-tab.js). Phase 5.2.5 / C2.
 
     // --- Planning Interactif (Créateur Visuel) ---
     visualDaySelected: '',
@@ -2540,6 +2441,18 @@ SHARED_STATE_FIELDS.forEach(field => {
     Object.defineProperty(AdminModule, field, {
         get() { return Alpine.store('admin')[field]; },
         set(v) { Alpine.store('admin')[field] = v; },
+        enumerable: true,
+        configurable: true
+    });
+});
+
+// Champs dérivés (read-only) du store admin. Exposés sur AdminModule pour que
+// les partials encore couplés au god object (ex: tab-referents.html jusqu'à C3)
+// puissent les résoudre via le scope hérité.
+const SHARED_DERIVED_FIELDS = ['uniquePosteTitres'];
+SHARED_DERIVED_FIELDS.forEach(field => {
+    Object.defineProperty(AdminModule, field, {
+        get() { return Alpine.store('admin')[field]; },
         enumerable: true,
         configurable: true
     });
