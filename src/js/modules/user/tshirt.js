@@ -40,7 +40,7 @@ export const TshirtModule = {
             }
 
             // Check if ALL are collected
-            const allCollected = eligibles.every(v => v.t_shirt_recupere);
+            const allCollected = eligibles.every(v => v.has_recupere_tshirt);
             if (allCollected) {
                 parentElement.innerHTML = ""; // Hide if all collected
                 return;
@@ -51,7 +51,7 @@ export const TshirtModule = {
             const widget = document.createElement("div");
             widget.className = "bg-white rounded-lg shadow-sm p-2 md:p-4 border border-blue-100 tshirt-widget-content";
 
-            const countToCollect = eligibles.filter(v => !v.t_shirt_recupere).length;
+            const countToCollect = eligibles.filter(v => !v.has_recupere_tshirt).length;
 
             widget.innerHTML = `
             <div class="flex items-center justify-between">

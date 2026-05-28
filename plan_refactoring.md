@@ -322,9 +322,9 @@
 - [x] **5.0.2 — Renommage colonne `benevole_repas.vegetarien` → `is_vegetarien`**.
   Auditer toutes les références JS/HTML : `grep -rn "vegetarien" src/` puis remplacer les usages relevant de `benevole_repas` uniquement (laisser intact `benevoles.vegetarien` si toujours présent).
   **DoD :** aucun usage de `.vegetarien` sur un objet `benevole_repas` ; tests manuels page bénévole (cochage repas + vegetarien) OK. — **2026-05-28** : 7 occurrences renommées (admin/index.js:1094 récap stats + wizard.js:23,231,297,355,362,373 shape repas E2E). Vérification init.sql : aucune colonne `benevoles.vegetarien` (false positive du plan), seule `benevole_repas.is_vegetarien` existe. `grep "\bvegetarien\b" src/` = 0 ; build OK.
-- [ ] **5.0.3 — Renommage colonne `benevoles.t_shirt_recupere` → `has_recupere_tshirt`**.
+- [x] **5.0.3 — Renommage colonne `benevoles.t_shirt_recupere` → `has_recupere_tshirt`**.
   Auditer : `grep -rn "t_shirt_recupere" src/`. Remplacer.
-  **DoD :** `grep -rn "t_shirt_recupere" src/` retourne 0 résultat ; scanner-tshirt fonctionne (marquage et déduction OK).
+  **DoD :** `grep -rn "t_shirt_recupere" src/` retourne 0 résultat ; scanner-tshirt fonctionne (marquage et déduction OK). — **2026-05-28** : 7 remplacements (scanner-tshirt.js: JSDoc + 4 lectures/écriture, user/tshirt.js: 2 lectures). RPC `get_family_tshirt_info_smart` retourne le nouveau nom (init.sql l.381). Build OK.
 - [ ] **5.0.4 — Renommage colonne `benevoles.cagnotte_forcee` → `is_cagnotte_forcee`**.
   Auditer : `grep -rn "cagnotte_forcee\b" src/` (attention aux variantes `cagnotte_forcee_type`, `cagnotte_forcee_jours`, `cagnotte_forcee_periodes_ids` qui restent inchangées). Remplacer uniquement le booléen.
   **DoD :** la colonne booléenne renommée n'a plus aucun usage `cagnotte_forcee` orphelin ; onglet cagnotte-forcee admin OK ; widget cagnotte côté bénévole OK.

@@ -10,7 +10,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  * @property {string} prenom
  * @property {string} nom
  * @property {string} taille_tshirt
- * @property {boolean} t_shirt_recupere
+ * @property {boolean} has_recupere_tshirt
  * @property {boolean} has_registrations
  * @property {boolean} [selected]
  */
@@ -48,7 +48,7 @@ Alpine.data('tshirtScanner', () => ({
             // @ts-ignore
             this.volunteers = (data || []).map(v => ({
                 ...v,
-                selected: v.has_registrations && !v.t_shirt_recupere // Auto-select if eligible and needed
+                selected: v.has_registrations && !v.has_recupere_tshirt // Auto-select if eligible and needed
             }));
 
             if (this.volunteers.length === 0) {
@@ -65,11 +65,11 @@ Alpine.data('tshirtScanner', () => ({
     },
 
     get anySelected() {
-        return this.volunteers.some(v => v.selected && !v.t_shirt_recupere);
+        return this.volunteers.some(v => v.selected && !v.has_recupere_tshirt);
     },
 
     async validateSelected() {
-        const toValidate = this.volunteers.filter(v => v.selected && !v.t_shirt_recupere);
+        const toValidate = this.volunteers.filter(v => v.selected && !v.has_recupere_tshirt);
 
         if (toValidate.length === 0) return;
 
@@ -96,7 +96,7 @@ Alpine.data('tshirtScanner', () => ({
                     mark_collected: true
                 });
                 if (error) throw error;
-                v.t_shirt_recupere = true;
+                v.has_recupere_tshirt = true;
                 v.selected = false;
             });
 
