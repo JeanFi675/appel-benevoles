@@ -1091,7 +1091,7 @@ export const AdminModule = {
                         repasStats[ur.repas_id] = { nom: ur.nom || 'Repas inconnu', total: 0, normal: 0, vege: 0 };
                     }
                     repasStats[ur.repas_id].total++;
-                    if (ur.vegetarien) {
+                    if (ur.is_vegetarien) {
                         repasStats[ur.repas_id].vege++;
                     } else {
                         repasStats[ur.repas_id].normal++;

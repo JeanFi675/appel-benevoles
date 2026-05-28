@@ -319,9 +319,9 @@
 - [x] **5.0.1 — Renommage table `programme` → `programmes`**.
   Cible : 6 occurrences dans `src/js/modules/admin/index.js` (lignes ~802, 1609, 2237, 2439, 2443) et `src/js/admin-timeline.js` (ligne ~365). Remplacer `ApiService.fetch/delete/upsertMany('programme', ...)` par `ApiService.fetch/delete/upsertMany('programmes', ...)`.
   **DoD :** `grep -rn "'programme'" src/js/` retourne 0 résultat ; build OK ; visual-creator charge sans 404 sur `/rest/v1/programmes`. — **2026-05-28** : 6 chaînes remplacées, grep = 0, `npm run build` OK (163 modules). Audit ligne par ligne dans `audit/25_phase_2_6_propagation.md` §5.0.1.
-- [ ] **5.0.2 — Renommage colonne `benevole_repas.vegetarien` → `is_vegetarien`**.
+- [x] **5.0.2 — Renommage colonne `benevole_repas.vegetarien` → `is_vegetarien`**.
   Auditer toutes les références JS/HTML : `grep -rn "vegetarien" src/` puis remplacer les usages relevant de `benevole_repas` uniquement (laisser intact `benevoles.vegetarien` si toujours présent).
-  **DoD :** aucun usage de `.vegetarien` sur un objet `benevole_repas` ; tests manuels page bénévole (cochage repas + vegetarien) OK.
+  **DoD :** aucun usage de `.vegetarien` sur un objet `benevole_repas` ; tests manuels page bénévole (cochage repas + vegetarien) OK. — **2026-05-28** : 7 occurrences renommées (admin/index.js:1094 récap stats + wizard.js:23,231,297,355,362,373 shape repas E2E). Vérification init.sql : aucune colonne `benevoles.vegetarien` (false positive du plan), seule `benevole_repas.is_vegetarien` existe. `grep "\bvegetarien\b" src/` = 0 ; build OK.
 - [ ] **5.0.3 — Renommage colonne `benevoles.t_shirt_recupere` → `has_recupere_tshirt`**.
   Auditer : `grep -rn "t_shirt_recupere" src/`. Remplacer.
   **DoD :** `grep -rn "t_shirt_recupere" src/` retourne 0 résultat ; scanner-tshirt fonctionne (marquage et déduction OK).

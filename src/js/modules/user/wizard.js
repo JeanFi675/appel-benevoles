@@ -20,7 +20,7 @@ export const WizardModule = {
         nom: '',
         telephone: '',
         taille_tshirt: '',
-        repas: [] // Array of { repas_id, vegetarien }
+        repas: [] // Array of { repas_id, is_vegetarien }
     },
 
     // Data for public view
@@ -228,7 +228,7 @@ export const WizardModule = {
             nom: profile.nom,
             telephone: profile.telephone,
             taille_tshirt: profile.taille_tshirt,
-            repas: (profile.benevole_repas || []).map(r => ({ repas_id: r.repas_id, vegetarien: r.vegetarien }))
+            repas: (profile.benevole_repas || []).map(r => ({ repas_id: r.repas_id, is_vegetarien: r.is_vegetarien }))
         };
         this.showWizardProfileForm = true;
     },
@@ -294,7 +294,7 @@ export const WizardModule = {
                             .map(r => ({
                                 benevole_id: benevoleId,
                                 repas_id: r.repas_id,
-                                vegetarien: r.vegetarien
+                                is_vegetarien: r.is_vegetarien
                             }));
                         
                         if (repasPayload.length > 0) {
@@ -352,14 +352,14 @@ export const WizardModule = {
 
     isWizardRepasVege(repasId) {
         const r = this.wizardProfileForm.repas && this.wizardProfileForm.repas.find(r => r.repas_id === repasId);
-        return r ? r.vegetarien : false;
+        return r ? r.is_vegetarien : false;
     },
 
     toggleWizardRepas(repasId, checked) {
         if (!this.wizardProfileForm.repas) this.wizardProfileForm.repas = [];
         if (checked) {
             if (!this.wizardProfileForm.repas.some(r => r.repas_id === repasId)) {
-                this.wizardProfileForm.repas.push({ repas_id: repasId, vegetarien: false });
+                this.wizardProfileForm.repas.push({ repas_id: repasId, is_vegetarien: false });
             }
         } else {
             this.wizardProfileForm.repas = this.wizardProfileForm.repas.filter(r => r.repas_id !== repasId);
@@ -370,7 +370,7 @@ export const WizardModule = {
         if (!this.wizardProfileForm.repas) this.wizardProfileForm.repas = [];
         const r = this.wizardProfileForm.repas.find(r => r.repas_id === repasId);
         if (r) {
-            r.vegetarien = vege;
+            r.is_vegetarien = vege;
         }
     },
 
