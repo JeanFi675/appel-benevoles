@@ -799,7 +799,7 @@ export const AdminModule = {
 
     async loadProgramme() {
         try {
-            const { data, error } = await ApiService.fetch('programme', {
+            const { data, error } = await ApiService.fetch('programmes', {
                 order: { column: 'heure', ascending: true }
             });
             if (error) throw error;
@@ -1606,7 +1606,7 @@ export const AdminModule = {
             //    jours → type_postes (CASCADE) → postes (CASCADE) → inscriptions (CASCADE)
 
             // Programme du jour (pas en cascade, à supprimer manuellement)
-            const { error: progError } = await ApiService.delete('programme', { date_ref: day });
+            const { error: progError } = await ApiService.delete('programmes', { date_ref: day });
             if (progError) {
                 console.error("Erreur lors de la suppression du programme :", progError);
             }
@@ -2234,7 +2234,7 @@ export const AdminModule = {
             }
             if (this.visualDeletedEventIds.length > 0) {
                 try {
-                    deletePromises.push(ApiService.delete('programme', { id: this.visualDeletedEventIds }));
+                    deletePromises.push(ApiService.delete('programmes', { id: this.visualDeletedEventIds }));
                 } catch(e){}
             }
 
@@ -2436,11 +2436,11 @@ export const AdminModule = {
             });
 
             try {
-                await ApiService.delete('programme', { date_ref: this.visualDaySelected });
+                await ApiService.delete('programmes', { date_ref: this.visualDaySelected });
             } catch (err) {}
 
             if (programmePayload.length > 0) {
-                const { error: insertProgError } = await ApiService.upsertMany('programme', programmePayload);
+                const { error: insertProgError } = await ApiService.upsertMany('programmes', programmePayload);
                 if (insertProgError) throw insertProgError;
             }
 

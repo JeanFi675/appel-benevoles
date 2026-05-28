@@ -312,9 +312,39 @@
 
 ## Phase 5 — Refactoring frontend (Alpine.js + Vite)
 
+### 5.0 Propagation Phase 2.6 dans le code front
+
+> **Contexte** : la Phase 2.6 (Harmonisation du nommage) a renommé 1 table, 4 colonnes, 1 vue et 1 fonction dans la base. La DoD de 2.6 précise « les requêtes du front sont mises à jour en conséquence (à valider en Phase 5) », mais aucune case dédiée n'avait été créée — le report a été perdu. Tâche ajoutée le 2026-05-28 suite à la détection en cours de 5.2.5 du bug `programme` / `programmes` côté visual-creator. Bloque toutes les autres tâches de Phase 5 (le frontend casse en local sur les zones impactées).
+
+- [x] **5.0.1 — Renommage table `programme` → `programmes`**.
+  Cible : 6 occurrences dans `src/js/modules/admin/index.js` (lignes ~802, 1609, 2237, 2439, 2443) et `src/js/admin-timeline.js` (ligne ~365). Remplacer `ApiService.fetch/delete/upsertMany('programme', ...)` par `ApiService.fetch/delete/upsertMany('programmes', ...)`.
+  **DoD :** `grep -rn "'programme'" src/js/` retourne 0 résultat ; build OK ; visual-creator charge sans 404 sur `/rest/v1/programmes`. — **2026-05-28** : 6 chaînes remplacées, grep = 0, `npm run build` OK (163 modules). Audit ligne par ligne dans `audit/25_phase_2_6_propagation.md` §5.0.1.
+- [ ] **5.0.2 — Renommage colonne `benevole_repas.vegetarien` → `is_vegetarien`**.
+  Auditer toutes les références JS/HTML : `grep -rn "vegetarien" src/` puis remplacer les usages relevant de `benevole_repas` uniquement (laisser intact `benevoles.vegetarien` si toujours présent).
+  **DoD :** aucun usage de `.vegetarien` sur un objet `benevole_repas` ; tests manuels page bénévole (cochage repas + vegetarien) OK.
+- [ ] **5.0.3 — Renommage colonne `benevoles.t_shirt_recupere` → `has_recupere_tshirt`**.
+  Auditer : `grep -rn "t_shirt_recupere" src/`. Remplacer.
+  **DoD :** `grep -rn "t_shirt_recupere" src/` retourne 0 résultat ; scanner-tshirt fonctionne (marquage et déduction OK).
+- [ ] **5.0.4 — Renommage colonne `benevoles.cagnotte_forcee` → `is_cagnotte_forcee`**.
+  Auditer : `grep -rn "cagnotte_forcee\b" src/` (attention aux variantes `cagnotte_forcee_type`, `cagnotte_forcee_jours`, `cagnotte_forcee_periodes_ids` qui restent inchangées). Remplacer uniquement le booléen.
+  **DoD :** la colonne booléenne renommée n'a plus aucun usage `cagnotte_forcee` orphelin ; onglet cagnotte-forcee admin OK ; widget cagnotte côté bénévole OK.
+- [ ] **5.0.5 — Renommage colonne `orphan_relances.auth_user_id` → `user_id`**.
+  Auditer : `grep -rn "auth_user_id" src/`. Remplacer.
+  **DoD :** 0 occurrence ; relance des orphelins OK (parcours admin → relances).
+- [ ] **5.0.6 — Renommage colonne vue `public_planning.inscrits_actuels` → `nb_inscrits_actuels`**.
+  Auditer : `grep -rn "inscrits_actuels" src/` (attention à ne pas toucher les `inscrits_actuels` qui ne viennent pas de la vue `public_planning` mais d'un calcul JS local : ex. `shift.inscrits_actuels`, `poste.inscrits_actuels` calculé dans `loadPostes`).
+  **DoD :** seules les lectures de `public_planning` utilisent `nb_inscrits_actuels` ; page publique planning OK.
+- [ ] **5.0.7 — Renommage fonction `public_debit_cagnotte` → `debit_cagnotte_public`**.
+  Auditer : `grep -rn "public_debit_cagnotte" src/`. Remplacer.
+  **DoD :** 0 occurrence ; débit cagnotte via QR fonctionne (parcours debit.html).
+- [ ] **5.0.8 — Validation finale et garde-fou CI**.
+  Exécuter le smoke test complet des 7 zones impactées en local (Supabase local doit être à jour avec `init.sql`). Documenter `PASS/FAIL` dans `audit/25_phase_2_6_propagation.md`.
+  Ajouter au plus tard avant Phase 8 un check `grep` automatisé qui détecte tout usage d'un nom obsolète.
+  **DoD :** rapport `audit/25_phase_2_6_propagation.md` avec 7 PASS ; aucune erreur console ; aucun 404 Supabase REST.
+
 ### 5.1 Architecture cible
 
-- [ ] Rédiger `ARCHITECTURE.md` décrivant la nouvelle arborescence cible :
+- [x] Rédiger `ARCHITECTURE.md` décrivant la nouvelle arborescence cible :
   ```
   src/
     js/
@@ -331,10 +361,31 @@
 
 ### 5.2 Extraction de la logique Alpine
 
-- [ ] Pour chaque page HTML, identifier tous les `x-data="{ ... }"` inline contenant plus de 3 lignes de logique. **DoD :** un tableau `audit/22_spaghetti.md` liste chaque occurrence avec son fichier et son volume.
-- [ ] Pour chaque occurrence, créer un fichier `src/js/components/<nom>.js` qui exporte un `Alpine.data('<nom>', () => ({ ... }))`. **DoD :** le HTML utilise `x-data="<nom>"` et tous les tests manuels passent toujours.
-- [ ] Pour chaque état partagé entre composants, créer un `Alpine.store('<domaine>', { ... })` dans `src/js/stores/`. **DoD :** les composants concernés consomment le store via `$store.<domaine>`.
-- [ ] Vérifier qu'aucun `x-data` inline restant ne dépasse 3 lignes. **DoD :** `grep -E 'x-data="[^"]{200,}"' src/` ne retourne rien.
+- [x] **5.2.1 —** Pour chaque page HTML, identifier tous les `x-data="{ ... }"` inline contenant plus de 3 lignes de logique. **DoD :** un tableau `audit/22_spaghetti.md` liste chaque occurrence avec son fichier et son volume. — **Fait (2026-05-28)** : audit `audit/22_spaghetti.md` → 6 composants nommés déjà externalisés, 5 `x-data` inline tous mono-propriété, **0 occurrence > 3 lignes**.
+- [x] **5.2.2 —** Pour chaque occurrence, créer un fichier `src/js/components/<nom>.js` qui exporte un `Alpine.data('<nom>', () => ({ ... }))`. **DoD :** le HTML utilise `x-data="<nom>"` et tous les tests manuels passent toujours. — **N/A (2026-05-28)** : aucune occurrence inline > 3 lignes à extraire (cf. audit 22).
+- [x] **5.2.3 —** Pour chaque état partagé entre composants, créer un `Alpine.store('<domaine>', { ... })` dans `src/js/stores/`. **DoD :** les composants concernés consomment le store via `$store.<domaine>`. — **Reporté sur 5.2.8** : le seul vrai état partagé identifié est entre `adminApp` et `adminTimelineApp` (cf. couplage `__x.$data`), traité en 5.2.8.
+- [x] **5.2.4 —** Vérifier qu'aucun `x-data` inline restant ne dépasse 3 lignes. **DoD :** `grep -E 'x-data="[^"]{200,}"' src/` ne retourne rien. — **Fait (2026-05-28)** : grep ripgrep multiline `x-data="\{[^"]*$` → `No matches found` (cf. audit 22).
+- [ ] **5.2.5 — Refactor admin god object → architecture `Alpine.store` + `Alpine.data` (fusion ex-5.2.5 + ex-5.2.8).**
+  Le fichier `src/js/modules/admin/index.js` (3073 lignes) est un god object spread dans `adminApp()`, et l'onglet visual-creator est couplé à `adminTimelineApp` via `document.querySelector(...).__x.$data` (cross-page admin.html ↔ besoins.html). Au lieu de faire le découpage en deux passes (5.2.5 spread → 5.2.8 store), on fait **une seule passe** vers l'architecture cible.
+
+  **Cible** :
+  - `Alpine.store('admin', { ... })` contient le state partagé (`postes`, `benevoles`, `periodes`, `config`, `stats`, `dbProgramme`, `dbJours`, `repasList`) + les loaders transverses (`loadData`, `loadPostes`, `loadBenevolesAndStats`, `loadConfig`, `loadPeriodes`, `loadProgramme`, `loadJours`, `loadRepas`) + helpers globaux (`showToast`, `getReferents`).
+  - `Alpine.store('visualProgram', { ... })` remplace le couplage `__x.$data` entre admin (onglet visual-creator) et `adminTimelineApp` (besoins.html). Store chargé sur **les deux pages**.
+  - Un fichier `Alpine.data('admin<X>Tab', () => ({ ... }))` par onglet (7 onglets UI) dans `src/js/components/admin/` consomme `$store.admin`. Chaque partial HTML déclare `x-data="admin<X>Tab"`.
+  - 2 modules utils purs sortis de `index.js` : `utils/admin-time.js` (formatters) et `utils/admin-shift-validation.js` (logique pure du visual-creator).
+  - `adminApp()` devient un wrapper minimal qui ne porte plus aucune méthode métier (puis est supprimé en sous-tâche E).
+
+  **Sous-tâches atomiques** (chaque ligne = 1 commit reversible) :
+  - [ ] **A — Extraction utils purs.** Sortir formatters + validation pure dans `src/js/utils/admin-time.js` et `src/js/utils/admin-shift-validation.js`. **DoD :** `npm run build` OK ; chaque onglet admin chargé sans regression.
+  - [ ] **B — Créer `Alpine.store('admin')`.** State partagé + loaders transverses + helpers globaux. `adminApp()` consomme `$store.admin.X` pour ces champs. **DoD :** `Alpine.store('admin')` existe ; admin.html charge sans erreur ; tous les onglets fonctionnent identiquement.
+  - [ ] **C — Convertir chaque onglet en `Alpine.data`** (7 commits, un onglet à la fois). Ordre proposé : `heures` → `mailing` → `referents` → `recap` → `cagnotte-forcee` → `benevoles` → `visual-creator`. Pour chaque onglet : créer `src/js/components/admin/admin-<x>-tab.js`, modifier le partial `tab-<x>.html` pour `x-data="admin<X>Tab"`, supprimer les méthodes correspondantes du wrapper `adminApp`. **DoD par commit :** `npm run build` OK + test manuel de l'onglet touché + non-régression des autres onglets, documenté dans `audit/24_admin_split.md`.
+  - [ ] **D — `Alpine.store('visualProgram')`** chargé sur admin.html ET besoins.html. `adminVisualCreatorTab` et `adminTimelineApp` consomment le store au lieu du couplage `__x.$data`. **DoD :** `grep -rn "__x" src/js/` ne retourne rien ; mise à jour bi-directionnelle vérifiée manuellement.
+  - [ ] **E — Supprimer le wrapper `adminApp()` god object** (devenu vide une fois les 7 onglets convertis). `admin.html` n'a plus que des `x-data="admin<X>Tab"` par section. **DoD :** `src/js/modules/admin/index.js` supprimé ; `grep -rn "adminApp" src/` ne retourne plus rien.
+
+  **DoD globale 5.2.5 :** plus de god object spread dans `adminApp` ; chaque onglet est un `Alpine.data` autonome consommant `$store.admin` ; aucun fichier `src/js/components/admin/*.js` ne dépasse 500 lignes (ou justification écrite si cohésion forte) ; couplage `__x.$data` éliminé ; tests manuels par onglet documentés dans `audit/24_admin_split.md`.
+- [ ] **5.2.6 — Convertir `modules/user/cagnotte.js` en composant Alpine** (`Alpine.data('cagnotteWidget')` + partial `src/partials/components/cagnotte-widget.html`). Supprimer le render impératif (`innerHTML`, `addEventListener`, `classList` toggle), les flags `isRendering`, `lastParentElement` / `lastBenevoleId`. **DoD :** plus de `document.createElement` ni `.innerHTML =` dans `cagnotte.js` ; test manuel : affichage solde + QR debit fonctionnent.
+- [ ] **5.2.7 — Convertir `modules/user/tshirt.js` en composant Alpine** (`Alpine.data('tshirtWidget')` + partial `src/partials/components/tshirt-widget.html`). Supprimer le render impératif et le flag `isRenderingTshirt`. **DoD :** plus de `document.createElement` ni `.innerHTML =` dans `tshirt.js` ; test manuel : widget masqué si tout collecté / affichage QR scanner OK.
+- [x] **5.2.8 — Fusionnée dans 5.2.5** (ex-tâche "remplacer le couplage `__x.$data` admin↔timeline par un store"). Traitée comme sous-tâche D de la 5.2.5 refondue.
 
 ### 5.3 Application DRY et SOLID
 

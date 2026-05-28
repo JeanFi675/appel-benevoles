@@ -362,7 +362,7 @@ export function initAdminTimelineApp() {
 
     async loadProgramme() {
       try {
-        const { data, error } = await ApiService.fetch('programme', {
+        const { data, error } = await ApiService.fetch('programmes', {
           order: { column: 'heure', ascending: true }
         });
         if (error) throw error;
