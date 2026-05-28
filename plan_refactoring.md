@@ -331,9 +331,9 @@
 - [x] **5.0.5 — Renommage colonne `orphan_relances.auth_user_id` → `user_id`**.
   Auditer : `grep -rn "auth_user_id" src/`. Remplacer.
   **DoD :** 0 occurrence ; relance des orphelins OK (parcours admin → relances). — **2026-05-28** : 0 changement dans `src/`. Les 2 hits `auth_user_id` sont (a) le body envoyé à l'Edge Function `send-relance-orphelin` (contrat HTTP inchangé), (b) le paramètre `p_auth_user_id` de la fonction RPC `save_orphelin_phone` (signature inchangée en 2.6 pour compat, cf. init.sql l.725). **⚠ Anomalie hors-périmètre** documentée dans `audit/notes.md` : l'Edge Function `send-relance-orphelin/index.ts:150` écrit toujours sur la colonne renommée → Edge Function cassée, à corriger Phase 8. Le smoke test 5 de 5.0.8 échouera tant que ce correctif n'est pas appliqué (échec attendu).
-- [ ] **5.0.6 — Renommage colonne vue `public_planning.inscrits_actuels` → `nb_inscrits_actuels`**.
+- [x] **5.0.6 — Renommage colonne vue `public_planning.inscrits_actuels` → `nb_inscrits_actuels`**.
   Auditer : `grep -rn "inscrits_actuels" src/` (attention à ne pas toucher les `inscrits_actuels` qui ne viennent pas de la vue `public_planning` mais d'un calcul JS local : ex. `shift.inscrits_actuels`, `poste.inscrits_actuels` calculé dans `loadPostes`).
-  **DoD :** seules les lectures de `public_planning` utilisent `nb_inscrits_actuels` ; page publique planning OK.
+  **DoD :** seules les lectures de `public_planning` utilisent `nb_inscrits_actuels` ; page publique planning OK. — **2026-05-28** : 1 ligne modifiée (`user/planning.js:242` — ajout `select: '*, inscrits_actuels:nb_inscrits_actuels'` aliasing PostgREST). `admin-timeline.js:425` n'a pas besoin de modification (son `select` explicite n'inclut pas la colonne). Les ~20 calculs JS locaux préservés. Build OK.
 - [ ] **5.0.7 — Renommage fonction `public_debit_cagnotte` → `debit_cagnotte_public`**.
   Auditer : `grep -rn "public_debit_cagnotte" src/`. Remplacer.
   **DoD :** 0 occurrence ; débit cagnotte via QR fonctionne (parcours debit.html).

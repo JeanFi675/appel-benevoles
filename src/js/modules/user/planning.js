@@ -240,6 +240,7 @@ export const PlanningModule = {
     async loadPostes() {
         try {
             const { data, error } = await ApiService.fetch('public_planning', {
+                select: '*, inscrits_actuels:nb_inscrits_actuels',
                 order: { column: 'periode_debut', ascending: true }
             });
 
