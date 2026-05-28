@@ -504,3 +504,21 @@ sur la table `orphan_relances`. La colonne `auth_user_id` a été renommée en `
 - Idem ligne ~150 `onConflict: 'auth_user_id'` → `'user_id'`.
 
 Bug à intégrer dans le plan Phase 8 (déploiement / Edge Functions) ou Phase 6 (tests Edge Functions). Pour mémoire pendant les tests 5.0.8 : le smoke test 5 « Relance orphelin » échouera tant que ce correctif n'est pas appliqué — l'échec est attendu et n'invalide pas 5.0.5.
+
+---
+
+## 2026-05-28 — Scanner T-shirt : impossible de changer la taille (hors périmètre 5.0)
+
+**Contexte** : smoke test 5.0.8 #3 (scanner T-shirt). L'utilisateur ne peut pas modifier la taille du T-shirt sur la page `scanner-tshirt.html`. Le marquage « récupéré » fonctionne (le test 5.0.3 a quand même pu être validé en utilisant un bénévole avec une taille déjà définie en base).
+
+**Périmètre** : indépendant de la propagation Phase 2.6 (le renommage `t_shirt_recupere → has_recupere_tshirt` n'a pas touché à la gestion de la taille — la taille passe via le param `new_taille` du RPC `update_tshirt_status`).
+
+**Symptôme observé** : aucune erreur console ni Supabase ; comportement UI silencieux.
+
+**Pistes à investiguer** :
+- Le `<select>` de taille est-il bindé correctement à `v.taille_tshirt` via `x-model` ?
+- Les options sont-elles bien rendues (enum `tshirt_size` : SANS, XS, S, M, L, XL, XXL) ?
+- Le select est-il accidentellement `disabled` ou caché ?
+- Le RPC `update_tshirt_status` accepte-t-il bien le `new_taille` envoyé ?
+
+**Action** : à programmer comme tâche isolée (probablement Phase 5.2 / refacto des composants user, ou bug-fix prioritaire si la prod est impactée). Ne bloque pas la Phase 5.0.

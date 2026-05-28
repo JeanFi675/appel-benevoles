@@ -337,10 +337,10 @@
 - [x] **5.0.7 — Renommage fonction `public_debit_cagnotte` → `debit_cagnotte_public`**.
   Auditer : `grep -rn "public_debit_cagnotte" src/`. Remplacer.
   **DoD :** 0 occurrence ; débit cagnotte via QR fonctionne (parcours debit.html). — **2026-05-28** : 1 ligne modifiée (`debit.js:89`). Signature de la RPC inchangée (init.sql l.172). Smoke test parcours `debit.html` différé en 5.0.8. Build OK.
-- [ ] **5.0.8 — Validation finale et garde-fou CI**.
+- [x] **5.0.8 — Validation finale et garde-fou CI**.
   Exécuter le smoke test complet des 7 zones impactées en local (Supabase local doit être à jour avec `init.sql`). Documenter `PASS/FAIL` dans `audit/25_phase_2_6_propagation.md`.
   Ajouter au plus tard avant Phase 8 un check `grep` automatisé qui détecte tout usage d'un nom obsolète.
-  **DoD :** rapport `audit/25_phase_2_6_propagation.md` avec 7 PASS ; aucune erreur console ; aucun 404 Supabase REST.
+  **DoD :** rapport `audit/25_phase_2_6_propagation.md` avec 7 PASS ; aucune erreur console ; aucun 404 Supabase REST. — **2026-05-28** : 8 PASS + 1 SKIP (test 5 relance orphelin — FAIL attendu hors-périmètre, Edge Function à corriger Phase 8). Anomalie UI hors-périmètre détectée au passage (scanner-tshirt : impossible de changer la taille) consignée dans `audit/notes.md`. Garde-fou CI grep reporté en Phase 8. **Phase 5.0 close.**
 
 ### 5.1 Architecture cible
 
