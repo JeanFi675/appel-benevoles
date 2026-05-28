@@ -29,6 +29,11 @@ export function createAdminStore() {
         dbJours: [],
         repasList: [],
 
+        // Assignations référent ↔ (titre, périodes) reconstruites depuis `postes`
+        // au chargement initial. Mutées ensuite par l'onglet referents
+        // (`adminReferentsTab`) via add/remove/save.
+        referentAssignments: {},
+
         stats: {
             tshirts: {},
             repas: {},
@@ -140,6 +145,29 @@ export function createAdminStore() {
                 this.loadProgramme(),
                 this.loadJours()
             ]);
+            this.initReferentAssignments();
+        },
+
+        // Reconstruit `referentAssignments` depuis l'état courant des postes :
+        // pour chaque référent, regroupe les postes assignés (referent_id = ref.id)
+        // par titre → liste de periode_id. Appelé en fin de `loadData`
+        // et exposé pour le bouton "Recharger" de l'onglet referents.
+        initReferentAssignments() {
+            const assignments = {};
+            this.getReferents().forEach(ref => {
+                const refPostes = this.postes.filter(p => p.referent_id === ref.id);
+                const groupedByTitre = {};
+                refPostes.forEach(p => {
+                    if (!groupedByTitre[p.titre]) groupedByTitre[p.titre] = [];
+                    groupedByTitre[p.titre].push(p.periode_id);
+                });
+                const lines = [];
+                for (const [titre, periodes] of Object.entries(groupedByTitre)) {
+                    lines.push({ titre, periodes });
+                }
+                assignments[ref.id] = lines;
+            });
+            this.referentAssignments = assignments;
         },
 
         async loadJours() {

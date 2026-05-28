@@ -39,11 +39,7 @@ export const AdminModule = {
     editingRepasName: '',
 
     // Mailing → migré vers Alpine.data('adminMailingTab') (Phase 5.2.5 / C2)
-
-    referentAssignments: {},
-    // `uniquePosteTitres` est désormais un getter dérivé du store admin
-    // (cf. SHARED_DERIVED_FIELDS en fin de fichier). Consommé par tab-mailing.html
-    // (via composant local) et tab-referents.html (via proxy AdminModule).
+    // Referents → migré vers Alpine.data('adminReferentsTab') (Phase 5.2.5 / C3.a)
 
     // Cagnotte forcée
     forcedSearchQuery: '',
@@ -383,142 +379,21 @@ export const AdminModule = {
     },
 
     /**
-     * Loads all admin data.
+     * Loads all admin data. La reconstruction de `referentAssignments` est
+     * désormais déclenchée en fin de `Alpine.store('admin').loadData()`.
      */
     async loadData() {
-        await Alpine.store('admin').loadData();
-        this.initReferentAssignments();
+        return Alpine.store('admin').loadData();
     },
 
     async loadJours() {
         return Alpine.store('admin').loadJours();
     },
 
-    initReferentAssignments() {
-        // `uniquePosteTitres` est désormais un getter dérivé sur le store admin —
-        // plus besoin de l'initialiser ici.
-        const assignments = {};
-        this.getReferents().forEach(ref => {
-            // Find all postes where this referent is assigned
-            const refPostes = this.postes.filter(p => p.referent_id === ref.id);
-            
-            // Group them by titre
-            const groupedByTitre = {};
-            refPostes.forEach(p => {
-                if (!groupedByTitre[p.titre]) {
-                    groupedByTitre[p.titre] = [];
-                }
-                groupedByTitre[p.titre].push(p.periode_id);
-            });
-
-            const lines = [];
-            for (const [titre, periodes] of Object.entries(groupedByTitre)) {
-                lines.push({ titre, periodes });
-            }
-            assignments[ref.id] = lines;
-        });
-
-        this.referentAssignments = assignments;
-    },
-
-    addReferentAssignmentLine(refId) {
-        if (!this.referentAssignments[refId]) {
-            this.referentAssignments[refId] = [];
-        }
-        this.referentAssignments[refId].push({ titre: '', periodes: [] });
-    },
-
-    removeReferentAssignmentLine(refId, index) {
-        if (this.referentAssignments[refId]) {
-            this.referentAssignments[refId].splice(index, 1);
-            this.saveReferentAssignments(refId);
-        }
-    },
-
-    getPeriodesForTitre(titre) {
-        if (!titre) return [];
-        const postesAvecCeTitre = this.postes.filter(p => p.titre === titre);
-        const periodesIds = new Set(postesAvecCeTitre.map(p => p.periode_id));
-        return this.periodes.filter(p => periodesIds.has(p.id));
-    },
-
-    getOrphanPostes() {
-        const orphans = {};
-        this.postes.forEach(p => {
-            if (!p.referent_id) {
-                if (!orphans[p.titre]) orphans[p.titre] = [];
-                const periode = this.periodes.find(per => per.id === p.periode_id);
-                if (periode && !orphans[p.titre].some(per => per.id === p.periode_id)) {
-                    orphans[p.titre].push(periode);
-                }
-            }
-        });
-
-        return Object.entries(orphans).map(([titre, periodes]) => {
-            // Trier les périodes par ordre
-            periodes.sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
-            return { titre, periodes };
-        }).sort((a, b) => a.titre.localeCompare(b.titre));
-    },
-
-    async saveReferentAssignments(refId) {
-        try {
-            const assignments = this.referentAssignments[refId] || [];
-            
-            // On ignore les lignes incomplètes silencieusement au lieu de bloquer
-            // car l'utilisateur peut juste être en train de décocher la dernière case
-            // ou d'ajouter une nouvelle ligne.
-
-            // We need to update referent_id on the corresponding postes.
-            // 1. Get all current postes for this referent to clear them if they were removed
-            const oldRefPostes = this.postes.filter(p => p.referent_id === refId);
-            
-            // 2. Identify which postes should NOW be assigned to this referent
-            const newRefPosteIds = new Set();
-            for (const a of assignments) {
-                // Find matching postes by title and periode
-                for (const pid of a.periodes) {
-                    const matchingPoste = this.postes.find(p => p.titre === a.titre && p.periode_id === pid);
-                    if (matchingPoste) {
-                        newRefPosteIds.add(matchingPoste.id);
-                    }
-                }
-            }
-
-            // 3. Compare and execute updates
-            const updates = [];
-            
-            // Remove from old postes that are not in new list
-            for (const oldP of oldRefPostes) {
-                if (!newRefPosteIds.has(oldP.id)) {
-                    updates.push(ApiService.update('postes', { referent_id: null }, { id: oldP.id }));
-                    
-                    // Mise à jour de l'état local pour éviter le rechargement complet
-                    const localP = this.postes.find(p => p.id === oldP.id);
-                    if (localP) localP.referent_id = null;
-                }
-            }
-
-            // Add to new postes
-            for (const newPid of newRefPosteIds) {
-                updates.push(ApiService.update('postes', { referent_id: refId }, { id: newPid }));
-                
-                // Mise à jour de l'état local pour éviter le rechargement complet
-                const localP = this.postes.find(p => p.id === newPid);
-                if (localP) localP.referent_id = refId;
-            }
-
-            if (updates.length > 0) {
-                await Promise.all(updates);
-            }
-
-            // La sauvegarde se fait "en sourdine", 
-            // la vue n'est pas reconstruite pour ne pas interrompre l'utilisateur.
-        } catch (error) {
-            console.error(error);
-            this.showToast('❌ Erreur : ' + error.message, 'error');
-        }
-    },
+    // Méthodes référents → migrées vers Alpine.data('adminReferentsTab')
+    // (src/js/components/admin/admin-referents-tab.js). Phase 5.2.5 / C3.a.
+    // `initReferentAssignments` vit désormais sur le store et est appelée
+    // en fin de `store.loadData()`.
 
 
 
