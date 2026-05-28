@@ -748,47 +748,8 @@ export const AdminModule = {
         return Alpine.store('admin').calculateStats();
     },
 
-    // --- Heures de bénévolat ---
-
-    getHeuresParPeriode() {
-        const arrondi = v => Math.round(v * 10) / 10;
-        return this.periodes.map(periode => {
-            const postesAvecHeures = this.postes
-                .filter(p => p.periode_id === periode.id && p.periode_debut && p.periode_fin)
-                .map(p => {
-                    const dureeH = (new Date(p.periode_fin).getTime() - new Date(p.periode_debut).getTime()) / 3600000;
-                    const inscrits = p.inscrits_actuels || 0;
-                    return {
-                        id: p.id,
-                        titre: p.titre,
-                        debut: p.periode_debut,
-                        fin: p.periode_fin,
-                        dureeH: arrondi(dureeH),
-                        inscrits,
-                        heuresInscrits: arrondi(dureeH * inscrits),
-                        heuresMin: arrondi(dureeH * p.nb_min),
-                        heuresMax: arrondi(dureeH * p.nb_max),
-                    };
-                });
-
-            return {
-                nom: periode.nom,
-                postes: postesAvecHeures,
-                totalHeuresInscrits: arrondi(postesAvecHeures.reduce((s, p) => s + p.heuresInscrits, 0)),
-                totalHeuresMin: arrondi(postesAvecHeures.reduce((s, p) => s + p.heuresMin, 0)),
-                totalHeuresMax: arrondi(postesAvecHeures.reduce((s, p) => s + p.heuresMax, 0)),
-            };
-        });
-    },
-
-    getTotalHeures() {
-        const periodes = this.getHeuresParPeriode();
-        return {
-            inscrits: Math.round(periodes.reduce((s, p) => s + p.totalHeuresInscrits, 0) * 10) / 10,
-            min: Math.round(periodes.reduce((s, p) => s + p.totalHeuresMin, 0) * 10) / 10,
-            max: Math.round(periodes.reduce((s, p) => s + p.totalHeuresMax, 0) * 10) / 10,
-        };
-    },
+    // Onglet "Heures de bénévolat" → migré vers Alpine.data('adminHeuresTab')
+    // (src/js/components/admin/admin-heures-tab.js). Phase 5.2.5 / C1.
 
     addMailingPostLine() {
         this.mailingPostLines.push({
