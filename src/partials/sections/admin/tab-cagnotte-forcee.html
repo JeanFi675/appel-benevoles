@@ -55,7 +55,7 @@
                                     <div class="text-xs text-gray-500 font-normal" x-text="benevole.email"></div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <template x-if="benevole.cagnotte_forcee">
+                                    <template x-if="benevole.is_cagnotte_forcee">
                                         <span class="px-2 py-0.5 text-[10px] font-black uppercase text-white bg-brutal-black">
                                             FORCÉE (<span x-text="benevole.cagnotte_forcee_type === 'journee' ? 'Jour' : 'Pér.'"></span>)
                                         </span>
@@ -134,7 +134,7 @@
                             <input
                                 type="checkbox"
                                 id="forced-cagnotte-active"
-                                x-model="forcedForm.cagnotte_forcee"
+                                x-model="forcedForm.is_cagnotte_forcee"
                                 class="w-6 h-6 accent-brutal-black cursor-pointer border-2 border-brutal-black rounded-sm"
                             />
                             <label for="forced-cagnotte-active" class="font-black text-base cursor-pointer select-none">
@@ -143,7 +143,7 @@
                         </div>
 
                         <!-- Paramètres avancés si le forçage est actif -->
-                        <div x-show="forcedForm.cagnotte_forcee" class="space-y-6 pt-2 animate-fadeIn">
+                        <div x-show="forcedForm.is_cagnotte_forcee" class="space-y-6 pt-2 animate-fadeIn">
                             <!-- Type de forçage -->
                             <div>
                                 <label class="block text-xs font-black uppercase text-gray-500 mb-2">2. Choisir le type de forçage</label>
@@ -279,7 +279,7 @@
                     <h3 class="text-2xl font-black uppercase tracking-tight">
                         Cagnottes forcées actives
                     </h3>
-                    <span class="bg-brutal-black text-white px-3 py-1 font-black text-sm uppercase tracking-wide border-2 border-brutal-black shadow-brutal-sm" x-text="benevoles.filter(b => b.cagnotte_forcee).length + ' actives'"></span>
+                    <span class="bg-brutal-black text-white px-3 py-1 font-black text-sm uppercase tracking-wide border-2 border-brutal-black shadow-brutal-sm" x-text="benevoles.filter(b => b.is_cagnotte_forcee).length + ' actives'"></span>
                 </div>
                 <p class="text-xs font-bold text-gray-500 max-w-md md:text-right">
                     Ces bénévoles bénéficient d'un crédit de cagnotte fixe et personnalisé, indépendamment de leurs inscriptions de planning réelles.
@@ -287,7 +287,7 @@
             </div>
 
             <!-- État vide -->
-            <template x-if="benevoles.filter(b => b.cagnotte_forcee).length === 0">
+            <template x-if="benevoles.filter(b => b.is_cagnotte_forcee).length === 0">
                 <div class="border-4 border-dashed border-gray-300 bg-gray-50 p-8 text-center shadow-brutal-sm rounded-sm">
                     <div class="text-4xl mb-2">😴</div>
                     <p class="font-bold text-gray-500">Aucune cagnotte n'est forcée pour le moment.</p>
@@ -295,7 +295,7 @@
             </template>
 
             <!-- Tableau des cagnottes forcées -->
-            <template x-if="benevoles.filter(b => b.cagnotte_forcee).length > 0">
+            <template x-if="benevoles.filter(b => b.is_cagnotte_forcee).length > 0">
                 <div class="overflow-x-auto border-4 border-brutal-black shadow-brutal bg-white">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -308,7 +308,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y-2 divide-brutal-black font-bold">
-                            <template x-for="b in benevoles.filter(b => b.cagnotte_forcee)" :key="b.id">
+                            <template x-for="b in benevoles.filter(b => b.is_cagnotte_forcee)" :key="b.id">
                                 <tr class="hover:bg-yellow-50/50 transition-colors">
                                     <!-- Bénévole -->
                                     <td class="py-3 px-4 border-r-2 border-brutal-black">

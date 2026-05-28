@@ -61,7 +61,7 @@ export const AdminModule = {
     forcedSearchQuery: '',
     selectedForcedBenevole: null,
     forcedForm: {
-        cagnotte_forcee: false,
+        is_cagnotte_forcee: false,
         cagnotte_forcee_type: 'journee',
         cagnotte_forcee_jours: [],
         cagnotte_forcee_periodes_ids: []
@@ -232,7 +232,7 @@ export const AdminModule = {
                 b.is_family_head ? 'Oui' : (b.user_id ? 'Non (Membre famille)' : 'Non (Compte unique)'),
                 b.cagnotte_real_consumed || 0,
                 b.cagnotte_solde || 0,
-                b.cagnotte_forcee ? ('Oui (' + (b.cagnotte_forcee_type === 'journee' ? 'Jour' : 'Période') + ')') : 'Non',
+                b.is_cagnotte_forcee ? ('Oui (' + (b.cagnotte_forcee_type === 'journee' ? 'Jour' : 'Période') + ')') : 'Non',
                 dateStr
             ]);
         });
@@ -673,7 +673,7 @@ export const AdminModule = {
 
                     // A. Store individual credit (only for non forced cagnottes)
                     const benevole = (benevolesData || []).find(b => b.id === insc.benevole_id);
-                    const isForced = benevole?.cagnotte_forcee;
+                    const isForced = benevole?.is_cagnotte_forcee;
                     if (!isForced) {
                         benevoleCredits[insc.benevole_id] = (benevoleCredits[insc.benevole_id] || 0) + credit;
 
@@ -688,7 +688,7 @@ export const AdminModule = {
             });
 
             // Crédits pour les bénévoles avec cagnotte forcée
-            (benevolesData || []).filter(b => b.cagnotte_forcee).forEach(b => {
+            (benevolesData || []).filter(b => b.is_cagnotte_forcee).forEach(b => {
                 let creditForced = 0;
                 if (b.cagnotte_forcee_type === 'journee') {
                     const nbJours = Array.isArray(b.cagnotte_forcee_jours) ? b.cagnotte_forcee_jours.length : 0;
@@ -2928,7 +2928,7 @@ export const AdminModule = {
 
     selectBenevoleForCagnotte(benevole) {
         this.selectedForcedBenevole = benevole;
-        this.forcedForm.cagnotte_forcee = benevole.cagnotte_forcee || false;
+        this.forcedForm.is_cagnotte_forcee = benevole.is_cagnotte_forcee || false;
         this.forcedForm.cagnotte_forcee_type = benevole.cagnotte_forcee_type || 'journee';
         this.forcedForm.cagnotte_forcee_jours = benevole.cagnotte_forcee_jours ? [...benevole.cagnotte_forcee_jours] : [];
         this.forcedForm.cagnotte_forcee_periodes_ids = benevole.cagnotte_forcee_periodes_ids ? [...benevole.cagnotte_forcee_periodes_ids] : [];
@@ -2942,12 +2942,12 @@ export const AdminModule = {
             const benevoleId = this.selectedForcedBenevole.id;
             
             // 1. Préparation et exécution de l'update de benevoles
-            const isForced = this.forcedForm.cagnotte_forcee;
+            const isForced = this.forcedForm.is_cagnotte_forcee;
             const type = isForced ? this.forcedForm.cagnotte_forcee_type : null;
             const jours = (isForced && type === 'journee') ? this.forcedForm.cagnotte_forcee_jours : [];
 
             const updatePayload = {
-                cagnotte_forcee: isForced,
+                is_cagnotte_forcee: isForced,
                 cagnotte_forcee_type: type,
                 cagnotte_forcee_jours: jours
             };
@@ -3000,7 +3000,7 @@ export const AdminModule = {
             
             // 1. Désactiver le forçage sur le bénévole
             const updatePayload = {
-                cagnotte_forcee: false,
+                is_cagnotte_forcee: false,
                 cagnotte_forcee_type: null,
                 cagnotte_forcee_jours: []
             };

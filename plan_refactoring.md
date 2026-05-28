@@ -325,9 +325,9 @@
 - [x] **5.0.3 — Renommage colonne `benevoles.t_shirt_recupere` → `has_recupere_tshirt`**.
   Auditer : `grep -rn "t_shirt_recupere" src/`. Remplacer.
   **DoD :** `grep -rn "t_shirt_recupere" src/` retourne 0 résultat ; scanner-tshirt fonctionne (marquage et déduction OK). — **2026-05-28** : 7 remplacements (scanner-tshirt.js: JSDoc + 4 lectures/écriture, user/tshirt.js: 2 lectures). RPC `get_family_tshirt_info_smart` retourne le nouveau nom (init.sql l.381). Build OK.
-- [ ] **5.0.4 — Renommage colonne `benevoles.cagnotte_forcee` → `is_cagnotte_forcee`**.
+- [x] **5.0.4 — Renommage colonne `benevoles.cagnotte_forcee` → `is_cagnotte_forcee`**.
   Auditer : `grep -rn "cagnotte_forcee\b" src/` (attention aux variantes `cagnotte_forcee_type`, `cagnotte_forcee_jours`, `cagnotte_forcee_periodes_ids` qui restent inchangées). Remplacer uniquement le booléen.
-  **DoD :** la colonne booléenne renommée n'a plus aucun usage `cagnotte_forcee` orphelin ; onglet cagnotte-forcee admin OK ; widget cagnotte côté bénévole OK.
+  **DoD :** la colonne booléenne renommée n'a plus aucun usage `cagnotte_forcee` orphelin ; onglet cagnotte-forcee admin OK ; widget cagnotte côté bénévole OK. — **2026-05-28** : 15 booléens renommés (7 dans tab-cagnotte-forcee.html : x-if/x-model/x-show/filter ; 8 dans admin/index.js : init forcedForm, l.235 récap CSV, l.676 isForced, l.691 stats, l.2931 editForced bidirectionnel, l.2945+l.2950 saveForced, l.3003 reset). 42 occurrences `_type`/`_jours`/`_periodes_ids` préservées (compte vérifié). Build OK.
 - [ ] **5.0.5 — Renommage colonne `orphan_relances.auth_user_id` → `user_id`**.
   Auditer : `grep -rn "auth_user_id" src/`. Remplacer.
   **DoD :** 0 occurrence ; relance des orphelins OK (parcours admin → relances).
@@ -376,7 +376,7 @@
   - `adminApp()` devient un wrapper minimal qui ne porte plus aucune méthode métier (puis est supprimé en sous-tâche E).
 
   **Sous-tâches atomiques** (chaque ligne = 1 commit reversible) :
-  - [ ] **A — Extraction utils purs.** Sortir formatters + validation pure dans `src/js/utils/admin-time.js` et `src/js/utils/admin-shift-validation.js`. **DoD :** `npm run build` OK ; chaque onglet admin chargé sans regression.
+  - [x] **A — Extraction utils purs.** Sortir formatters + validation pure dans `src/js/utils/admin-time.js` et `src/js/utils/admin-shift-validation.js`. **DoD :** `npm run build` OK ; chaque onglet admin chargé sans regression. — **A1 fait (2026-05-28, commit `1577cb1`)** : `src/js/utils/admin-time.js` créé (5 fonctions pures : `getLocalDateKey`, `formatDecimalHour`, `formatHourMin`, `formatDay`, `formatDecimalToISO`). 3 closures internes dupliquées supprimées de `index.js` ; 3 méthodes redondantes supprimées ; `formatDay`+`formatDecimalHour` restent exposés comme propriétés (consommés par partials HTML). `admin/index.js` : 3073 → 3042 lignes. `npm run build` OK. **A2 (extraction `admin-shift-validation.js`) reportée** après Phase 5.0 (propagation 2.6 bloque les tests admin en local).
   - [ ] **B — Créer `Alpine.store('admin')`.** State partagé + loaders transverses + helpers globaux. `adminApp()` consomme `$store.admin.X` pour ces champs. **DoD :** `Alpine.store('admin')` existe ; admin.html charge sans erreur ; tous les onglets fonctionnent identiquement.
   - [ ] **C — Convertir chaque onglet en `Alpine.data`** (7 commits, un onglet à la fois). Ordre proposé : `heures` → `mailing` → `referents` → `recap` → `cagnotte-forcee` → `benevoles` → `visual-creator`. Pour chaque onglet : créer `src/js/components/admin/admin-<x>-tab.js`, modifier le partial `tab-<x>.html` pour `x-data="admin<X>Tab"`, supprimer les méthodes correspondantes du wrapper `adminApp`. **DoD par commit :** `npm run build` OK + test manuel de l'onglet touché + non-régression des autres onglets, documenté dans `audit/24_admin_split.md`.
   - [ ] **D — `Alpine.store('visualProgram')`** chargé sur admin.html ET besoins.html. `adminVisualCreatorTab` et `adminTimelineApp` consomment le store au lieu du couplage `__x.$data`. **DoD :** `grep -rn "__x" src/js/` ne retourne rien ; mise à jour bi-directionnelle vérifiée manuellement.
