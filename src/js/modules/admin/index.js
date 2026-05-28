@@ -7,6 +7,11 @@ import {
     formatDay,
     formatDecimalToISO
 } from '../../utils/admin-time.js';
+import {
+    findBestPeriodForShift,
+    detectShiftConflicts,
+    computePeriodWeight
+} from '../../utils/admin-shift-validation.js';
 
 /**
  * Module for managing admin operations (Postes, Periodes, Benevoles).
@@ -1932,72 +1937,23 @@ export const AdminModule = {
             per.nom = `${dayPrefixNoYear} - ${formatHourMin(per.debut)} / ${formatHourMin(per.fin)}`;
         });
 
-        // 2. Assigner chaque créneau (shift) à sa période avec la règle de la durée maximale de chevauchement
+        // 2. Assigner chaque créneau à sa période (overlap max, fallback proximité du milieu)
         this.visualLines.forEach(line => {
             line.shifts.forEach(shift => {
                 shift.error = null;
-                shift.periode_id = null;
-
-                let maxOverlap = 0;
-                let bestPeriodId = null;
-
-                this.visualPeriods.forEach(per => {
-                    const overlap = Math.max(0, Math.min(shift.fin, per.fin) - Math.max(shift.debut, per.debut));
-                    if (overlap > maxOverlap) {
-                        maxOverlap = overlap;
-                        bestPeriodId = per.id;
-                    }
-                });
-
-                if (bestPeriodId) {
-                    shift.periode_id = bestPeriodId;
-                } else {
-                    // Fallback sur la période la plus proche du milieu du shift si pas d'intersection
-                    if (this.visualPeriods.length > 0) {
-                        const mid = (shift.debut + shift.fin) / 2;
-                        let minDistance = Infinity;
-                        let closestPeriodId = this.visualPeriods[0].id;
-                        
-                        this.visualPeriods.forEach(per => {
-                            const perMid = (per.debut + per.fin) / 2;
-                            const dist = Math.abs(mid - perMid);
-                            if (dist < minDistance) {
-                                minDistance = dist;
-                                closestPeriodId = per.id;
-                            }
-                        });
-                        shift.periode_id = closestPeriodId;
-                    }
-                }
+                shift.periode_id = findBestPeriodForShift(shift, this.visualPeriods);
             });
         });
 
         // 3. Détecter les conflits de chevauchement pour des créneaux de même titre
-        for (let i = 0; i < allShifts.length; i++) {
-            const s1 = allShifts[i];
-            for (let j = i + 1; j < allShifts.length; j++) {
-                const s2 = allShifts[j];
-
-                if (s1.lineTitle === s2.lineTitle) {
-                    if (s1.shift.debut < s2.shift.fin - 0.01 && s1.shift.fin > s2.shift.debut + 0.01) {
-                        s1.shift.error = 'Chevauchement';
-                        s2.shift.error = 'Chevauchement';
-
-                        const time1 = `${formatDecimalHour(s1.shift.debut)}–${formatDecimalHour(s1.shift.fin)}`;
-                        const time2 = `${formatDecimalHour(s2.shift.debut)}–${formatDecimalHour(s2.shift.fin)}`;
-
-                        let conflictMsg = `Le créneau ${time1} de "${s1.lineTitleRaw}"`;
-                        if (s1.lineDescription) conflictMsg += ` (${s1.lineDescription})`;
-                        conflictMsg += ` chevauche le créneau ${time2} de "${s2.lineTitleRaw}"`;
-                        if (s2.lineDescription) conflictMsg += ` (${s2.lineDescription})`;
-
-                        if (!this.periodConflicts.includes(conflictMsg)) {
-                            this.periodConflicts.push(conflictMsg);
-                        }
-                    }
-                }
+        const conflicts = detectShiftConflicts(allShifts, formatDecimalHour);
+        conflicts.forEach(({ shiftA, shiftB, message }) => {
+            shiftA.error = 'Chevauchement';
+            shiftB.error = 'Chevauchement';
+            if (!this.periodConflicts.includes(message)) {
+                this.periodConflicts.push(message);
             }
-        }
+        });
     },
 
     togglePeriodFilter(perId) {
@@ -2271,52 +2227,14 @@ export const AdminModule = {
                 ...this.visualPeriods
             ];
 
-            // 2. Fonction robuste pour calculer le poids chronologique d'une période
-            const getPeriodeWeight = (per) => {
-                if (currentPeriodIds.has(per.id)) {
-                    const vp = this.visualPeriods.find(p => p.id === per.id);
-                    const dayTime = new Date(this.visualDaySelected + 'T00:00:00').getTime();
-                    const hourOffset = (vp.debut || 0) * 3600000;
-                    return dayTime + hourOffset;
-                }
-
-                const perPostes = this.postes.filter(p => p.periode_id === per.id && p.periode_debut);
-                if (perPostes.length > 0) {
-                    const starts = perPostes.map(p => new Date(p.periode_debut).getTime());
-                    return Math.min(...starts);
-                }
-
-                if (per.nom) {
-                    const cleanNom = per.nom.toLowerCase();
-                    const moisMap = {
-                        'janvier': 0, 'fevrier': 1, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5,
-                        'juillet': 6, 'aout': 7, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'decembre': 11, 'décembre': 11
-                    };
-
-                    const match = cleanNom.match(/(\d{1,2})\s+([a-zéû]+)/);
-                    if (match) {
-                        const dayNum = parseInt(match[1]);
-                        const moisStr = match[2];
-                        if (moisMap[moisStr] !== undefined) {
-                            const yearMatch = cleanNom.match(/20\d{2}/);
-                            const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-                            const parsedDate = new Date(year, moisMap[moisStr], dayNum);
-                            
-                            let hour = 8;
-                            const timeMatch = cleanNom.match(/(\d{1,2})[:h](\d{2})/);
-                            if (timeMatch) {
-                                hour = parseInt(timeMatch[1]) + parseInt(timeMatch[2]) / 60;
-                            }
-                            return parsedDate.getTime() + hour * 3600000;
-                        }
-                    }
-                }
-
-                return 9999999999999 + (per.ordre || 0);
+            // 2. Trier toutes les périodes par poids chronologique
+            const weightCtx = {
+                currentPeriodIds,
+                visualPeriods: this.visualPeriods,
+                postes: this.postes,
+                daySelected: this.visualDaySelected
             };
-
-            // 3. Trier toutes les périodes par poids chronologique
-            allPeriodsToSave.sort((a, b) => getPeriodeWeight(a) - getPeriodeWeight(b));
+            allPeriodsToSave.sort((a, b) => computePeriodWeight(a, weightCtx) - computePeriodWeight(b, weightCtx));
 
             // 4. Attribuer les ordres cibles de 1 à N
             allPeriodsToSave.forEach((per, index) => {
