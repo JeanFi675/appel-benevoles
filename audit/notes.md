@@ -484,3 +484,23 @@ En revanche, la règle `no-unused-vars` détecte 10 **variables locales** non ut
 **Action recommandée** : nettoyage groupé en Phase 5.5 (mise en place définitive d'ESLint + Prettier).
 
 **Note technique** : `eslint.config.js` installé en racine (config minimale flat ESM ciblée `src/**/*.js`), packages `eslint`, `@eslint/js`, `globals` ajoutés en `devDependencies`. Cette config est volontairement minimaliste — elle sera remplacée par la config complète de la Phase 5.5.
+
+---
+
+## 2026-05-28 — Phase 5.0.5 — Edge Function `send-relance-orphelin` cassée (hors périmètre 5.0)
+
+**Contexte** : audit de la propagation Phase 2.6 (`orphan_relances.auth_user_id` → `user_id`). Le périmètre 5.0.5 est limité à `src/` ; les Edge Functions sont hors scope.
+
+**Findings dans `src/`** : 0 changement requis. Les 2 hits `auth_user_id` dans `src/` sont :
+- `src/js/admin-connexions.js:222` — `body: { auth_user_id: user.id }` envoyé à l'Edge Function `send-relance-orphelin` (contrat HTTP de l'Edge Function, pas un nom de colonne SQL).
+- `src/js/admin-connexions.js:285` — `p_auth_user_id: user.id` dans `ApiService.rpc('save_orphelin_phone', ...)` : nom de paramètre de la fonction PL/pgSQL inchangé en 2.6 (cf. init.sql l.725 — la fonction écrit en interne sur `orphan_relances.user_id` via le nouveau nom de colonne, mais le param de l'API reste `p_auth_user_id` pour compatibilité).
+
+**Anomalie hors-périmètre détectée** : `supabase/functions/send-relance-orphelin/index.ts:150` exécute :
+```ts
+.upsert({ auth_user_id, relance_sent_at: now }, { onConflict: 'auth_user_id' });
+```
+sur la table `orphan_relances`. La colonne `auth_user_id` a été renommée en `user_id` (init.sql) → **Edge Function cassée en LOCAL** (et en PROD dès que la consolidation init.sql sera déployée). À traiter au plus tard avant le déploiement Phase 8 (Edge Functions). Correctif requis :
+- Renommer la variable interne ou la déstructurer différemment : `.upsert({ user_id: auth_user_id, relance_sent_at: now }, { onConflict: 'user_id' });` (conservation du contrat HTTP `auth_user_id` côté entrée, mais écriture sur la nouvelle colonne).
+- Idem ligne ~150 `onConflict: 'auth_user_id'` → `'user_id'`.
+
+Bug à intégrer dans le plan Phase 8 (déploiement / Edge Functions) ou Phase 6 (tests Edge Functions). Pour mémoire pendant les tests 5.0.8 : le smoke test 5 « Relance orphelin » échouera tant que ce correctif n'est pas appliqué — l'échec est attendu et n'invalide pas 5.0.5.

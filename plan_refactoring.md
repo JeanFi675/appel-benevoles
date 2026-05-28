@@ -328,9 +328,9 @@
 - [x] **5.0.4 — Renommage colonne `benevoles.cagnotte_forcee` → `is_cagnotte_forcee`**.
   Auditer : `grep -rn "cagnotte_forcee\b" src/` (attention aux variantes `cagnotte_forcee_type`, `cagnotte_forcee_jours`, `cagnotte_forcee_periodes_ids` qui restent inchangées). Remplacer uniquement le booléen.
   **DoD :** la colonne booléenne renommée n'a plus aucun usage `cagnotte_forcee` orphelin ; onglet cagnotte-forcee admin OK ; widget cagnotte côté bénévole OK. — **2026-05-28** : 15 booléens renommés (7 dans tab-cagnotte-forcee.html : x-if/x-model/x-show/filter ; 8 dans admin/index.js : init forcedForm, l.235 récap CSV, l.676 isForced, l.691 stats, l.2931 editForced bidirectionnel, l.2945+l.2950 saveForced, l.3003 reset). 42 occurrences `_type`/`_jours`/`_periodes_ids` préservées (compte vérifié). Build OK.
-- [ ] **5.0.5 — Renommage colonne `orphan_relances.auth_user_id` → `user_id`**.
+- [x] **5.0.5 — Renommage colonne `orphan_relances.auth_user_id` → `user_id`**.
   Auditer : `grep -rn "auth_user_id" src/`. Remplacer.
-  **DoD :** 0 occurrence ; relance des orphelins OK (parcours admin → relances).
+  **DoD :** 0 occurrence ; relance des orphelins OK (parcours admin → relances). — **2026-05-28** : 0 changement dans `src/`. Les 2 hits `auth_user_id` sont (a) le body envoyé à l'Edge Function `send-relance-orphelin` (contrat HTTP inchangé), (b) le paramètre `p_auth_user_id` de la fonction RPC `save_orphelin_phone` (signature inchangée en 2.6 pour compat, cf. init.sql l.725). **⚠ Anomalie hors-périmètre** documentée dans `audit/notes.md` : l'Edge Function `send-relance-orphelin/index.ts:150` écrit toujours sur la colonne renommée → Edge Function cassée, à corriger Phase 8. Le smoke test 5 de 5.0.8 échouera tant que ce correctif n'est pas appliqué (échec attendu).
 - [ ] **5.0.6 — Renommage colonne vue `public_planning.inscrits_actuels` → `nb_inscrits_actuels`**.
   Auditer : `grep -rn "inscrits_actuels" src/` (attention à ne pas toucher les `inscrits_actuels` qui ne viennent pas de la vue `public_planning` mais d'un calcul JS local : ex. `shift.inscrits_actuels`, `poste.inscrits_actuels` calculé dans `loadPostes`).
   **DoD :** seules les lectures de `public_planning` utilisent `nb_inscrits_actuels` ; page publique planning OK.
