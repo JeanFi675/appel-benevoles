@@ -69,24 +69,24 @@
         <!-- Main Content -->
         <div x-show="!loading && !error && volunteers.length > 0" style="display: none;">
 
-            <p class="text-center mb-6 font-bold text-gray-600">Famille détectée</p>
+            <p x-show="volunteers.length > 1" class="text-center mb-6 font-bold text-gray-600">Famille détectée</p>
 
             <div class="space-y-4">
                 <template x-for="v in volunteers" :key="v.benevole_id">
                     <div class="border-2 border-black p-3 bg-gray-50 relative flex gap-3 pb-8 md:pb-3"
-                        :class="{'opacity-50': v.t_shirt_recupere}">
+                        :class="{'opacity-50': v.has_recupere_tshirt}">
 
                         <!-- Checkbox for Selection -->
                         <div class="flex items-start pt-1">
                             <input type="checkbox" x-model="v.selected"
-                                :disabled="v.t_shirt_recupere || !v.has_registrations"
+                                :disabled="v.has_recupere_tshirt || !v.has_registrations"
                                 class="w-6 h-6 border-2 border-black accent-black cursor-pointer">
                         </div>
 
                         <div class="flex-grow">
                             <!-- Helper Badge -->
                             <div class="absolute -top-3 -right-2 bg-black text-white text-xs px-2 py-1 font-bold"
-                                x-show="v.t_shirt_recupere">
+                                x-show="v.has_recupere_tshirt">
                                 RÉCUPÉRÉ
                             </div>
                             <div class="absolute -top-3 -right-2 bg-red-500 text-white text-xs px-2 py-1 font-bold"
@@ -99,8 +99,10 @@
                             <div class="mt-2" x-show="v.has_registrations">
                                 <div class="flex items-center gap-2 mb-2">
                                     <label class="font-bold text-sm">Taille:</label>
-                                    <select x-model="v.taille_tshirt" :disabled="v.t_shirt_recupere"
+                                    <select x-model="v.taille_tshirt" :disabled="v.has_recupere_tshirt"
                                         class="brutal-input py-1 px-2 text-sm w-24">
+                                        <option value="">— choisir —</option>
+                                        <option value="SANS">SANS</option>
                                         <option value="XS">XS</option>
                                         <option value="S">S</option>
                                         <option value="M">M</option>
@@ -110,7 +112,7 @@
                                     </select>
                                 </div>
 
-                                <p x-show="v.t_shirt_recupere" class="text-sm font-bold text-green-700 italic mt-1">
+                                <p x-show="v.has_recupere_tshirt" class="text-sm font-bold text-green-700 italic mt-1">
                                     T-shirt remis ✅
                                 </p>
                             </div>

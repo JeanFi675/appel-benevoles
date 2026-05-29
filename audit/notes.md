@@ -522,3 +522,38 @@ Bug à intégrer dans le plan Phase 8 (déploiement / Edge Functions) ou Phase 6
 - Le RPC `update_tshirt_status` accepte-t-il bien le `new_taille` envoyé ?
 
 **Action** : à programmer comme tâche isolée (probablement Phase 5.2 / refacto des composants user, ou bug-fix prioritaire si la prod est impactée). Ne bloque pas la Phase 5.0.
+
+**Mise à jour 2026-05-29 (relevé mainteneur, début 5.2.7)** : confirmé toujours présent. Reclassé comme amélioration UX : **autoriser le changement de taille au moment du retrait** si la taille saisie initialement ne convient pas au bénévole. Le composant cible est `scanner-tshirt.html` (page admin/scanner), **pas** le widget bénévole refactoré en 5.2.7 — donc hors scope 5.2.7.
+
+**✅ Résolu 2026-05-29 — Tâche 5.2.9 Patch B** : ajout `<option value="">— choisir —</option>` (placeholder) + `<option value="SANS">SANS</option>` (valeur enum manquante) sur le `<select>` taille. Hypothèse retenue : `x-model` ne pouvait pas binder un état initial `null`/`SANS` faute d'option matchant → changement utilisateur non propagé selon comportement navigateur. Test manuel PASS (mainteneur) : changement de taille puis validation → nouvelle taille persiste après reload.
+
+---
+
+## 2026-05-29 — Scanner T-shirt : absence de feedback "récupéré" (hors périmètre 5.2.7)
+
+**Contexte** : relevé mainteneur au lancement de la tâche 5.2.7 (refacto du widget T-shirt bénévole en Alpine).
+
+**Symptôme** : une fois un T-shirt marqué comme récupéré sur `scanner-tshirt.html`, le bouton de validation disparaît mais aucun élément UI n'indique explicitement que le ou les T-shirts ont bien été récupérés (état vide ambigu).
+
+**Périmètre** : page `scanner-tshirt.html` / module scanner T-shirt côté admin. Côté **bénévole**, le widget est volontairement masqué quand tout est collecté (comportement délibéré confirmé en 5.2.7) — l'absence de feedback ne concerne donc que la vue scanner.
+
+**Action** : ajouter un état "✅ Tous les T-shirts ont été récupérés" (ou équivalent par ligne familiale) sur `scanner-tshirt.html`. À programmer avec le bug "changer la taille au retrait" ci-dessus — les deux concernent la même page et seront probablement traités dans la même passe (probablement Phase 5.2.x dédiée scanner, ou bug-fix prioritaire).
+
+**✅ Résolu 2026-05-29 — Tâche 5.2.9 Patch A** : le markup contenait déjà badge `RÉCUPÉRÉ` (lignes 88-91), texte `T-shirt remis ✅` (ligne 113), `opacity-50` (ligne 77) — tous bindés sur `v.t_shirt_recupere` (ancien nom de colonne). La Phase 2.6 a renommé la colonne en `has_recupere_tshirt` côté DB/RPC mais la propagation a été oubliée dans `scanner-tshirt.html` (5 occurrences). Renommage appliqué → feedback visuel rétabli. Test manuel PASS (mainteneur).
+
+---
+
+## 2026-05-29 — RPC `get_family_tshirt_info_smart` : détection famille erronée pour user solo (hors périmètre 5.2.7)
+
+**Contexte** : relevé mainteneur au lancement de la tâche 5.2.7. Un `user_id` qui n'a qu'un seul profil bénévole associé est néanmoins détecté/affiché comme "famille" (probablement plusieurs lignes retournées par la RPC).
+
+**Périmètre** : logique côté **SQL** (`get_family_tshirt_info_smart`), pas frontend. Le refactor 5.2.7 conserve à l'identique le filtre `eligibles` (`has_registrations && taille_tshirt valide`) sur les lignes retournées par la RPC — il **ne peut pas corriger** ce bug et n'introduit pas de régression supplémentaire.
+
+**Pistes à investiguer** :
+- La RPC fait-elle un `JOIN` qui multiplie les lignes (inscriptions, repas, etc.) au lieu d'un `DISTINCT` sur `benevole_id` ?
+- La logique "famille" repose-t-elle sur `auth.users.id` (un compte = N bénévoles) ou sur un autre lien implicite ?
+- Cf. décision D1 du 2026-05-26 : la fonction `get_family_tshirt_info_smart` est listée comme code à nettoyer dans le cadre de la suppression des rôles `juge`/`admin-juge`/`officiel`. À recouper.
+
+**Action** : audit SQL de la fonction + correctif, à programmer en Phase 5.2.x dédiée scanner T-shirt ou en Phase 3.x (bug RLS/RPC) selon priorité. Ne bloque pas 5.2.7.
+
+**✅ Résolu 2026-05-29 — Tâche 5.2.9 Patch C (faux positif diagnostique)** : audit code confirme que la RPC `get_family_tshirt_info_smart` est correcte (`WHERE b.user_id = found_user_id` → autant de lignes que de bénévoles pour ce auth user, donc 1 ligne pour un user solo). Le bug réel : le libellé `<p>Famille détectée</p>` (ligne 72) était affiché inconditionnellement dès `volunteers.length > 0`. Fix : `<p x-show="volunteers.length > 1">`. Test manuel PASS (mainteneur) : user solo → libellé masqué.
