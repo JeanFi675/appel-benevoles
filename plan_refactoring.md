@@ -438,10 +438,10 @@
 
 ### 5.6 Accessibilité et performance
 
-- [ ] Exécuter Lighthouse sur les principales pages en mode production. **DoD :** chaque rapport est sauvegardé dans `audit/lighthouse/<page>.html`.
-- [ ] Corriger les erreurs d'a11y identifiées (labels, contrastes, `alt`, focus visible). **DoD :** un nouveau passage Lighthouse retourne ≥ 90 en a11y.
-- [ ] Optimiser les images (formats modernes, lazy loading). **DoD :** Lighthouse Performance ≥ 90 sur les pages principales.
-- [ ] Vérifier que les Core Web Vitals (LCP, CLS, INP) sont au vert. **DoD :** un rapport final est dans `audit/lighthouse/final.md`.
+- [x] Exécuter Lighthouse sur les principales pages en mode production. **DoD :** chaque rapport est sauvegardé dans `audit/lighthouse/<page>.html`.
+- [x] Corriger les erreurs d'a11y identifiées (labels, contrastes, `alt`, focus visible). **DoD :** un nouveau passage Lighthouse retourne ≥ 90 en a11y.
+- [x] Optimiser les images (formats modernes, lazy loading). **DoD :** Lighthouse Performance ≥ 90 sur les pages principales.
+- [x] Vérifier que les Core Web Vitals (LCP, CLS, INP) sont au vert. **DoD :** un rapport final est dans `audit/lighthouse/final.md`.
 
 ---
 

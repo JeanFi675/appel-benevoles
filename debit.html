@@ -16,6 +16,7 @@
     </style>
 </head>
 <body x-data="debitApp" class="h-screen flex flex-col items-center justify-center p-4">
+    <main class="w-full flex flex-col items-center justify-center flex-1">
 
     <!-- Loading State -->
     <div x-show="loading" class="text-center animate-pulse">
@@ -103,6 +104,7 @@
         <button @click="window.close()" class="text-gray-500 underline mt-4">Fermer la page</button>
     </div>
 
+    </main>
     <script type="module" src="/src/js/debit.js"></script>
 </body>
 </html>
