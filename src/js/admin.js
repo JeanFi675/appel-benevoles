@@ -9,6 +9,7 @@ import { adminReferentsTab } from "./components/admin/admin-referents-tab.js";
 import { adminRecapTab } from "./components/admin/admin-recap-tab.js";
 import { adminCagnotteForceeTab } from "./components/admin/admin-cagnotte-forcee-tab.js";
 import { adminBenevolesTab } from "./components/admin/admin-benevoles-tab.js";
+import { adminVisualCreatorTab } from "./components/admin/admin-visual-creator-tab.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.store("admin", createAdminStore());
@@ -18,6 +19,7 @@ document.addEventListener("alpine:init", () => {
   Alpine.data("adminRecapTab", adminRecapTab);
   Alpine.data("adminCagnotteForceeTab", adminCagnotteForceeTab);
   Alpine.data("adminBenevolesTab", adminBenevolesTab);
+  Alpine.data("adminVisualCreatorTab", adminVisualCreatorTab);
 
   // `Object.create(AdminModule)` (au lieu du spread `...AdminModule`) préserve les
   // getters/setters de prototype installés sur AdminModule, qui délèguent le state
@@ -52,7 +54,9 @@ document.addEventListener("alpine:init", () => {
       this.isAdmin = true;
 
       await this.loadData();
-      await this.initVisualCreator();
+      // Signaler aux composants Phase C (notamment `adminVisualCreatorTab`)
+      // qu'ils peuvent procéder à leur initialisation différée.
+      window.dispatchEvent(new CustomEvent('admin:loaded'));
       this.loading = false;
 
       AuthService.onAuthStateChange(async (event, session) => {
