@@ -423,11 +423,11 @@
 
 ### 5.4 Configuration Vite production
 
-- [ ] Activer le code splitting par page via `rollupOptions.input`. **DoD :** `dist/assets/` contient un chunk par page.
-- [ ] Activer la minification (Terser ou esbuild) et les sourcemaps en production. **DoD :** `vite.config.js` contient `build.minify` et `build.sourcemap = 'hidden'`.
-- [ ] Configurer le chunking des `vendor` (Alpine, Supabase) pour optimiser le cache navigateur. **DoD :** un chunk `vendor` distinct existe dans `dist/assets/`.
-- [ ] Vérifier que `base: "./"` est conservé pour le déploiement relatif (GitHub Pages). **DoD :** la ligne est présente dans `vite.config.js`.
-- [ ] Documenter dans `.env.example` toutes les variables `VITE_*` requises. **DoD :** le fichier liste chaque variable avec un commentaire.
+- [x] Activer le code splitting par page via `rollupOptions.input`. **DoD :** `dist/assets/` contient un chunk par page.
+- [x] Activer la minification (Terser ou esbuild) et les sourcemaps en production. **DoD :** `vite.config.js` contient `build.minify` et `build.sourcemap = 'hidden'`.
+- [x] Configurer le chunking des `vendor` (Alpine, Supabase) pour optimiser le cache navigateur. **DoD :** un chunk `vendor` distinct existe dans `dist/assets/`.
+- [x] Vérifier que `base: "./"` est conservé pour le déploiement relatif (GitHub Pages). **DoD :** la ligne est présente dans `vite.config.js`.
+- [x] Documenter dans `.env.example` toutes les variables `VITE_*` requises. **DoD :** le fichier liste chaque variable avec un commentaire.
 
 ### 5.5 Linter et formatter
 
