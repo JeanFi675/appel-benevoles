@@ -22,7 +22,9 @@ export function adminReferentsTab() {
         },
 
         get uniquePosteTitres() {
-            return Alpine.store('admin').uniquePosteTitres;
+            // Source canonique : table `type_postes` (permet d'attribuer un référent
+            // à un type de poste même sans créneau encore créé).
+            return Alpine.store('admin').posteTitres;
         },
 
         getReferents() {

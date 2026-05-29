@@ -2320,15 +2320,3 @@ SHARED_STATE_FIELDS.forEach(field => {
         configurable: true
     });
 });
-
-// Champs dérivés (read-only) du store admin. Exposés sur AdminModule pour que
-// les partials encore couplés au god object (ex: tab-referents.html jusqu'à C3)
-// puissent les résoudre via le scope hérité.
-const SHARED_DERIVED_FIELDS = ['uniquePosteTitres'];
-SHARED_DERIVED_FIELDS.forEach(field => {
-    Object.defineProperty(AdminModule, field, {
-        get() { return Alpine.store('admin')[field]; },
-        enumerable: true,
-        configurable: true
-    });
-});

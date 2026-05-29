@@ -28,6 +28,7 @@ export function createAdminStore() {
         dbProgramme: null,
         dbJours: [],
         repasList: [],
+        typePostes: [],
 
         // Assignations référent ↔ (titre, périodes) reconstruites depuis `postes`
         // au chargement initial. Mutées ensuite par l'onglet referents
@@ -52,10 +53,17 @@ export function createAdminStore() {
 
         // --- Dérivés réactifs ---
 
-        // Titres uniques de postes (triés). Recalculé à chaque lecture par Alpine ;
-        // consommé par les onglets mailing (`adminMailingTab`) et referents
-        // (`tab-referents.html` via proxy AdminModule jusqu'à la migration C3).
-        get uniquePosteTitres() {
+        // Titres uniques **canoniques** depuis la table `type_postes` — source
+        // de vérité métier pour l'onglet referents (permet d'attribuer un référent
+        // à un type même s'il n'a pas encore de poste créé).
+        get posteTitres() {
+            return [...new Set(this.typePostes.map(t => t.titre).filter(Boolean))].sort();
+        },
+
+        // Titres uniques **opérationnels** depuis `postes` (ayant au moins un
+        // créneau créé) — sémantique mailing : on ne propose à l'envoi que les
+        // types ayant un slot existant.
+        get posteTitresWithSlots() {
             return [...new Set(this.postes.map(p => p.titre).filter(Boolean))].sort();
         },
 
@@ -143,9 +151,23 @@ export function createAdminStore() {
                 this.loadConfig(),
                 this.loadRepas(),
                 this.loadProgramme(),
-                this.loadJours()
+                this.loadJours(),
+                this.loadTypePostes()
             ]);
             this.initReferentAssignments();
+        },
+
+        async loadTypePostes() {
+            try {
+                const { data, error } = await ApiService.fetch('type_postes', {
+                    select: 'id, titre',
+                    order: { column: 'titre', ascending: true }
+                });
+                if (error) throw error;
+                this.typePostes = data || [];
+            } catch (error) {
+                console.error('Erreur chargement type_postes:', error);
+            }
         },
 
         // Reconstruit `referentAssignments` depuis l'état courant des postes :

@@ -25,7 +25,8 @@ export function adminMailingTab() {
         // --- Dérivés (lecture store) ---
 
         get uniquePosteTitres() {
-            return Alpine.store('admin').uniquePosteTitres;
+            // Sémantique mailing : titres ayant au moins un slot créé.
+            return Alpine.store('admin').posteTitresWithSlots;
         },
 
         // --- Mutations locales ---
