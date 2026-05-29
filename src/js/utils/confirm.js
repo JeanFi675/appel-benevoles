@@ -34,12 +34,12 @@
  * @returns {ConfirmModalState}
  */
 export function createConfirmModalState() {
-    return {
-        open: false,
-        title: '',
-        message: '',
-        resolve: null,
-    };
+  return {
+    open: false,
+    title: '',
+    message: '',
+    resolve: null,
+  };
 }
 
 /**
@@ -51,12 +51,12 @@ export function createConfirmModalState() {
  * @returns {Promise<boolean>}
  */
 export function askConfirm(state, message, title = 'Confirmation') {
-    state.title = title;
-    state.message = message;
-    state.open = true;
-    return new Promise((resolve) => {
-        state.resolve = resolve;
-    });
+  state.title = title;
+  state.message = message;
+  state.open = true;
+  return new Promise((resolve) => {
+    state.resolve = resolve;
+  });
 }
 
 /**
@@ -66,9 +66,9 @@ export function askConfirm(state, message, title = 'Confirmation') {
  * @param {boolean} result
  */
 export function handleConfirm(state, result) {
-    state.open = false;
-    if (state.resolve) {
-        state.resolve(result);
-        state.resolve = null;
-    }
+  state.open = false;
+  if (state.resolve) {
+    state.resolve(result);
+    state.resolve = null;
+  }
 }

@@ -1,12 +1,8 @@
 <!-- Tab: Bénévoles -->
 <div x-show="activeTab === 'benevoles'" x-data="adminBenevolesTab">
   <div class="brutal-card bg-brutal-white p-8">
-    <div
-      class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"
-    >
-      <h2 class="text-4xl font-black uppercase tracking-tight">
-        Liste des bénévoles
-      </h2>
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+      <h2 class="text-4xl font-black uppercase tracking-tight">Liste des bénévoles</h2>
       <div class="w-full md:w-1/3 relative">
         <input
           type="text"
@@ -14,10 +10,7 @@
           placeholder="Rechercher un bénévole..."
           class="brutal-input w-full pl-12 pr-10 py-3 font-bold text-lg shadow-brutal-sm focus:shadow-brutal transition-all"
         />
-        <span
-          class="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl"
-          >🔍</span
-        >
+        <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">🔍</span>
         <button
           x-show="searchQuery"
           @click="searchQuery = ''"
@@ -53,14 +46,18 @@
 
     <!-- Stats inscriptions -->
     <div class="flex flex-wrap gap-4 mb-6">
-      <div class="flex items-center gap-3 border-2 border-brutal-black px-4 py-2 shadow-brutal-sm bg-brutal-white">
+      <div
+        class="flex items-center gap-3 border-2 border-brutal-black px-4 py-2 shadow-brutal-sm bg-brutal-white"
+      >
         <span class="text-2xl">✅</span>
         <div>
           <div class="text-xs font-bold uppercase text-gray-500">Bénévoles (Avec inscr.)</div>
           <div class="text-2xl font-black" x-text="getBenevolesStandardAvecInscriptions()"></div>
         </div>
       </div>
-      <div class="flex items-center gap-3 border-2 border-brutal-black px-4 py-2 shadow-brutal-sm bg-brutal-white">
+      <div
+        class="flex items-center gap-3 border-2 border-brutal-black px-4 py-2 shadow-brutal-sm bg-brutal-white"
+      >
         <span class="text-2xl">⏳</span>
         <div>
           <div class="text-xs font-bold uppercase text-gray-500">Bénévoles (Sans inscr.)</div>
@@ -75,9 +72,7 @@
       class="text-center py-16 bg-gray-50 border-3 border-dashed border-gray-300 rounded-lg"
     >
       <div class="text-6xl mb-4">🤷‍♂️</div>
-      <h3 class="text-2xl font-black text-gray-400 uppercase">
-        Aucun bénévole trouvé
-      </h3>
+      <h3 class="text-2xl font-black text-gray-400 uppercase">Aucun bénévole trouvé</h3>
       <p class="font-bold text-gray-400 mt-2">Essayez une autre recherche.</p>
     </div>
 
@@ -96,10 +91,7 @@
                   class="font-black text-lg leading-tight"
                   x-text="benevole.prenom + ' ' + benevole.nom"
                 ></div>
-                <div
-                  class="font-bold text-sm text-gray-500"
-                  x-text="benevole.email"
-                ></div>
+                <div class="font-bold text-sm text-gray-500" x-text="benevole.email"></div>
                 <div
                   class="text-xs text-gray-400 mt-1 italic"
                   x-show="benevole.created_at"
@@ -122,27 +114,16 @@
 
             <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
               <div>
-                <span class="block text-xs font-bold text-gray-400 uppercase"
-                  >Tél</span
-                >
-                <span
-                  class="font-bold"
-                  x-text="benevole.telephone || '-'"
-                ></span>
+                <span class="block text-xs font-bold text-gray-400 uppercase">Tél</span>
+                <span class="font-bold" x-text="benevole.telephone || '-'"></span>
               </div>
               <div>
-                <span class="block text-xs font-bold text-gray-400 uppercase"
-                  >T-shirt</span
-                >
+                <span class="block text-xs font-bold text-gray-400 uppercase">T-shirt</span>
                 <span class="font-bold" x-text="benevole.taille_tshirt"></span>
               </div>
             </div>
 
-
-
-            <div
-              class="flex gap-4 mb-4 border-t-2 border-dashed border-gray-200 pt-3 flex-wrap"
-            >
+            <div class="flex gap-4 mb-4 border-t-2 border-dashed border-gray-200 pt-3 flex-wrap">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold uppercase">Inscr.</span>
                 <span
@@ -150,22 +131,15 @@
                   x-text="benevole.nb_inscriptions"
                 ></span>
               </div>
-              <div
-                class="flex items-center gap-2"
-                x-show="benevole.nb_postes_referent > 0"
-              >
+              <div class="flex items-center gap-2" x-show="benevole.nb_postes_referent > 0">
                 <span class="text-xs font-bold uppercase">Réf.</span>
                 <span
                   class="inline-block w-6 h-6 leading-6 text-center rounded-full bg-brutal-yellow border border-brutal-black font-black text-xs"
                   x-text="benevole.nb_postes_referent"
                 ></span>
               </div>
-              <div
-                class="flex items-center gap-2 border-l-2 border-gray-300 pl-3"
-              >
-                <span class="text-xs font-bold uppercase text-gray-500"
-                  >Matos:</span
-                >
+              <div class="flex items-center gap-2 border-l-2 border-gray-300 pl-3">
+                <span class="text-xs font-bold uppercase text-gray-500">Matos:</span>
                 <span
                   class="font-black text-sm"
                   x-text="(benevole.cagnotte_total || 0) + ' D'"
@@ -175,18 +149,14 @@
               <template x-if="benevole.is_family_head">
                 <div class="flex items-center gap-3">
                   <div class="flex items-center gap-1">
-                    <span class="text-xs font-bold uppercase text-red-500"
-                      >Conso:</span
-                    >
+                    <span class="text-xs font-bold uppercase text-red-500">Conso:</span>
                     <span
                       class="font-black text-xs text-red-500"
                       x-text="'-' + (benevole.cagnotte_real_consumed || 0)"
                     ></span>
                   </div>
                   <div class="flex items-center gap-1">
-                    <span class="text-xs font-bold uppercase text-emerald-600"
-                      >Reste:</span
-                    >
+                    <span class="text-xs font-bold uppercase text-emerald-600">Reste:</span>
                     <span
                       class="font-black text-xs text-emerald-600"
                       x-text="(benevole.cagnotte_solde || 0)"
@@ -250,51 +220,30 @@
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="border-b-4 border-brutal-black">
-              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">
-                Identité
-              </th>
-              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">
-                Contact
-              </th>
-              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">
-                T-shirt
-              </th>
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Identité</th>
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Contact</th>
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">T-shirt</th>
 
-              <th
-                class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center"
-              >
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">
                 Inscriptions
               </th>
-              <th
-                class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center"
-              >
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">
                 Référent
               </th>
-              <th
-                class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center"
-              >
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">
                 Total Matériel
               </th>
-              <th
-                class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center"
-              >
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-center">
                 Conso
               </th>
-              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">
-                Rôle
-              </th>
-              <th
-                class="py-4 px-4 font-black uppercase tracking-wider text-sm text-right"
-              >
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm">Rôle</th>
+              <th class="py-4 px-4 font-black uppercase tracking-wider text-sm text-right">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody class="text-brutal-black">
-            <template
-              x-for="benevole in getFilteredBenevoles()"
-              :key="benevole.id"
-            >
+            <template x-for="benevole in getFilteredBenevoles()" :key="benevole.id">
               <tr
                 class="border-b-2 border-gray-200 transition-colors group"
                 :class="[benevole.bgClass, 'hover:bg-yellow-50']"
@@ -317,10 +266,7 @@
                     x-text="'Inscrit le ' + new Date(benevole.created_at).toLocaleDateString('fr-FR')"
                   ></div>
                 </td>
-                <td
-                  class="py-4 px-4 align-middle font-bold"
-                  x-text="benevole.taille_tshirt"
-                ></td>
+                <td class="py-4 px-4 align-middle font-bold" x-text="benevole.taille_tshirt"></td>
 
                 <td class="py-4 px-4 align-middle text-center">
                   <span
@@ -351,31 +297,20 @@
                 <td class="py-4 px-4 align-middle text-center">
                   <template x-if="benevole.is_family_head">
                     <div class="flex flex-col items-center">
-                      <div
-                        class="font-black text-sm text-red-500 flex items-center gap-1"
-                      >
+                      <div class="font-black text-sm text-red-500 flex items-center gap-1">
                         <span>📉</span>
-                        <span
-                          x-text="'-' + (benevole.cagnotte_real_consumed || 0) + ' D'"
-                        ></span>
+                        <span x-text="'-' + (benevole.cagnotte_real_consumed || 0) + ' D'"></span>
                       </div>
                       <div
                         class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded mt-1 border border-emerald-200"
                         title="Reste à dépenser"
                       >
-                        <span
-                          x-text="'Reste: ' + (benevole.cagnotte_solde || 0)"
-                        ></span>
+                        <span x-text="'Reste: ' + (benevole.cagnotte_solde || 0)"></span>
                       </div>
                     </div>
                   </template>
-                  <template
-                    x-if="benevole.has_family && !benevole.is_family_head"
-                  >
-                    <div
-                      class="text-gray-300 text-xs italic"
-                      title="Voir compte principal"
-                    >
+                  <template x-if="benevole.has_family && !benevole.is_family_head">
+                    <div class="text-gray-300 text-xs italic" title="Voir compte principal">
                       (voir chef)
                     </div>
                   </template>
@@ -462,13 +397,8 @@
     >
       <div class="flex justify-between items-start mb-8">
         <div>
-          <h3 class="text-3xl font-black uppercase italic">
-            Détails Inscriptions
-          </h3>
-          <p
-            class="text-xl font-bold text-gray-600"
-            x-text="selectedBenevoleName"
-          ></p>
+          <h3 class="text-3xl font-black uppercase italic">Détails Inscriptions</h3>
+          <p class="text-xl font-bold text-gray-600" x-text="selectedBenevoleName"></p>
         </div>
         <button
           @click="closeInscriptionsModal()"
@@ -479,25 +409,16 @@
       </div>
 
       <template x-if="selectedBenevoleInscriptions.length === 0">
-        <div
-          class="text-center py-16 bg-gray-50 border-3 border-dashed border-gray-300"
-        >
+        <div class="text-center py-16 bg-gray-50 border-3 border-dashed border-gray-300">
           <div class="text-4xl mb-2">😴</div>
-          <p class="font-black text-gray-400 text-lg uppercase">
-            Aucune inscription
-          </p>
+          <p class="font-black text-gray-400 text-lg uppercase">Aucune inscription</p>
         </div>
       </template>
 
       <template x-if="selectedBenevoleInscriptions.length > 0">
         <div class="space-y-4">
-          <template
-            x-for="inscription in selectedBenevoleInscriptions"
-            :key="inscription.id"
-          >
-            <div
-              class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm"
-            >
+          <template x-for="inscription in selectedBenevoleInscriptions" :key="inscription.id">
+            <div class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm">
               <div class="flex justify-between items-start gap-4">
                 <div class="w-full">
                   <div class="mb-1">
@@ -557,13 +478,8 @@
     >
       <div class="flex justify-between items-start mb-8">
         <div>
-          <h3 class="text-3xl font-black uppercase italic">
-            Modifier Inscriptions
-          </h3>
-          <p
-            class="text-xl font-bold text-gray-600"
-            x-text="selectedBenevoleName"
-          ></p>
+          <h3 class="text-3xl font-black uppercase italic">Modifier Inscriptions</h3>
+          <p class="text-xl font-bold text-gray-600" x-text="selectedBenevoleName"></p>
         </div>
         <button
           @click="closeInscriptionsModal()"
@@ -582,9 +498,7 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold uppercase mb-1"
-              >Période</label
-            >
+            <label class="block text-xs font-bold uppercase mb-1">Période</label>
             <select
               x-model="newInscriptionForm.periode_id"
               class="w-full bg-white border-2 border-brutal-black p-2 font-bold text-sm focus:outline-none focus:shadow-brutal-sm"
@@ -603,10 +517,7 @@
               :disabled="!newInscriptionForm.periode_id"
             >
               <option value="">-- Choisir un poste --</option>
-              <template
-                x-for="poste in getPostesForSelectedPeriod()"
-                :key="poste.id"
-              >
+              <template x-for="poste in getPostesForSelectedPeriod()" :key="poste.id">
                 <option
                   :value="poste.id"
                   x-text="poste.titre + ' (' + poste.inscrits_actuels + '/' + poste.nb_min + ')'"
@@ -630,17 +541,12 @@
 
       <template x-if="selectedBenevoleInscriptions.length === 0">
         <div class="text-center py-8">
-          <p class="font-bold text-gray-400 uppercase">
-            Aucune inscription pour le moment
-          </p>
+          <p class="font-bold text-gray-400 uppercase">Aucune inscription pour le moment</p>
         </div>
       </template>
 
       <div class="space-y-4">
-        <template
-          x-for="inscription in selectedBenevoleInscriptions"
-          :key="inscription.id"
-        >
+        <template x-for="inscription in selectedBenevoleInscriptions" :key="inscription.id">
           <div
             class="border-3 border-brutal-black p-4 bg-white shadow-brutal-sm transition-all group"
           >

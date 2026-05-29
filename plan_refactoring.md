@@ -431,10 +431,10 @@
 
 ### 5.5 Linter et formatter
 
-- [ ] Installer `eslint` + `eslint-plugin-alpinejs` (si dispo) ou règles personnalisées. **DoD :** `npx eslint --print-config src/js/config.js` retourne une config valide.
-- [ ] Installer `prettier` et créer `.prettierrc` aligné avec les conventions du projet. **DoD :** `npx prettier --check src/` est exécutable.
-- [ ] Configurer `husky` + `lint-staged` pour exécuter `eslint --fix` et `prettier --write` en pre-commit. **DoD :** un commit avec un fichier mal formaté déclenche le formatage automatique.
-- [ ] Faire passer un premier `npx eslint src/ --fix` et `npx prettier --write src/` sur l'ensemble du code. **DoD :** `npx eslint src/` ne retourne aucune erreur.
+- [x] Installer `eslint` + `eslint-plugin-alpinejs` (si dispo) ou règles personnalisées. **DoD :** `npx eslint --print-config src/js/config.js` retourne une config valide.
+- [x] Installer `prettier` et créer `.prettierrc` aligné avec les conventions du projet. **DoD :** `npx prettier --check src/` est exécutable.
+- [x] Configurer `husky` + `lint-staged` pour exécuter `eslint --fix` et `prettier --write` en pre-commit. **DoD :** un commit avec un fichier mal formaté déclenche le formatage automatique.
+- [x] Faire passer un premier `npx eslint src/ --fix` et `npx prettier --write src/` sur l'ensemble du code. **DoD :** `npx eslint src/` ne retourne aucune erreur.
 
 ### 5.6 Accessibilité et performance
 

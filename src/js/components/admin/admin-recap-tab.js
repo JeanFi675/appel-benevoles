@@ -8,9 +8,9 @@
 import Alpine from 'alpinejs';
 
 export function adminRecapTab() {
-    return {
-        get stats() {
-            return Alpine.store('admin').stats;
-        },
-    };
+  return {
+    get stats() {
+      return Alpine.store('admin').stats;
+    },
+  };
 }

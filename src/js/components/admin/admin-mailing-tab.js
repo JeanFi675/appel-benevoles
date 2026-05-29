@@ -12,119 +12,118 @@ import Alpine from 'alpinejs';
 import { formatTime } from '../../utils.js';
 
 export function adminMailingTab() {
-    return {
-        // --- State local ---
-        mailingFilterRole: 'tous',           // 'tous' | 'benevole' | 'referent' | 'admin'
-        mailingFilterAssignation: 'tous',    // 'tous' | 'avec_poste' | 'sans_poste' | 'poste_specifique'
-        mailingPostLines: [
-            { id: 1, selectedTitle: '', selectedSlots: [] }
-        ],
+  return {
+    // --- State local ---
+    mailingFilterRole: 'tous', // 'tous' | 'benevole' | 'referent' | 'admin'
+    mailingFilterAssignation: 'tous', // 'tous' | 'avec_poste' | 'sans_poste' | 'poste_specifique'
+    mailingPostLines: [{ id: 1, selectedTitle: '', selectedSlots: [] }],
 
-        formatTime,
+    formatTime,
 
-        // --- Dérivés (lecture store) ---
+    // --- Dérivés (lecture store) ---
 
-        get uniquePosteTitres() {
-            // Sémantique mailing : titres ayant au moins un slot créé.
-            return Alpine.store('admin').posteTitresWithSlots;
-        },
+    get uniquePosteTitres() {
+      // Sémantique mailing : titres ayant au moins un slot créé.
+      return Alpine.store('admin').posteTitresWithSlots;
+    },
 
-        // --- Mutations locales ---
+    // --- Mutations locales ---
 
-        addMailingPostLine() {
-            this.mailingPostLines.push({
-                id: Date.now(),
-                selectedTitle: '',
-                selectedSlots: []
+    addMailingPostLine() {
+      this.mailingPostLines.push({
+        id: Date.now(),
+        selectedTitle: '',
+        selectedSlots: [],
+      });
+    },
+
+    removeMailingPostLine(index) {
+      this.mailingPostLines.splice(index, 1);
+      if (this.mailingPostLines.length === 0) {
+        this.addMailingPostLine();
+      }
+    },
+
+    // --- Calculs / sélections ---
+
+    getSlotsForPostTitle(title) {
+      if (!title) return [];
+      return Alpine.store('admin')
+        .postes.filter((p) => p.titre === title)
+        .sort((a, b) => {
+          if (a.periode_ordre !== b.periode_ordre) {
+            return a.periode_ordre - b.periode_ordre;
+          }
+          return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
+        });
+    },
+
+    getFilteredMailingBenevoles() {
+      const store = Alpine.store('admin');
+      let list = [...store.benevoles];
+
+      // 1. Filtre par rôle
+      if (this.mailingFilterRole !== 'tous') {
+        list = list.filter((b) => b.role === this.mailingFilterRole);
+      }
+
+      // 2. Filtre par assignation/poste
+      if (this.mailingFilterAssignation === 'avec_poste') {
+        list = list.filter((b) => (b.nb_inscriptions || 0) > 0);
+      } else if (this.mailingFilterAssignation === 'sans_poste') {
+        list = list.filter((b) => (b.nb_inscriptions || 0) === 0);
+      } else if (this.mailingFilterAssignation === 'poste_specifique') {
+        // Agrège les IDs de créneaux sélectionnés à travers toutes les lignes
+        const allSelectedSlotIds = new Set();
+        this.mailingPostLines.forEach((line) => {
+          if (line.selectedTitle) {
+            line.selectedSlots.forEach((slotId) => {
+              allSelectedSlotIds.add(slotId);
             });
-        },
+          }
+        });
 
-        removeMailingPostLine(index) {
-            this.mailingPostLines.splice(index, 1);
-            if (this.mailingPostLines.length === 0) {
-                this.addMailingPostLine();
+        if (allSelectedSlotIds.size > 0) {
+          const matchedBenevoleIds = new Set();
+          store.postes.forEach((p) => {
+            if (allSelectedSlotIds.has(p.id)) {
+              (p.inscrits_ids || []).forEach((bId) => {
+                matchedBenevoleIds.add(bId);
+              });
             }
-        },
+          });
+          list = list.filter((b) => matchedBenevoleIds.has(b.id));
+        } else {
+          list = [];
+        }
+      }
 
-        // --- Calculs / sélections ---
+      return list;
+    },
 
-        getSlotsForPostTitle(title) {
-            if (!title) return [];
-            return Alpine.store('admin').postes
-                .filter(p => p.titre === title)
-                .sort((a, b) => {
-                    if (a.periode_ordre !== b.periode_ordre) {
-                        return a.periode_ordre - b.periode_ordre;
-                    }
-                    return new Date(a.periode_debut).getTime() - new Date(b.periode_debut).getTime();
-                });
-        },
+    getFilteredMailingEmails() {
+      return this.getFilteredMailingBenevoles()
+        .map((b) => (b.email ? b.email.trim() : ''))
+        .filter((email) => email.length > 0);
+    },
 
-        getFilteredMailingBenevoles() {
-            const store = Alpine.store('admin');
-            let list = [...store.benevoles];
+    copyMailingEmails() {
+      const store = Alpine.store('admin');
+      const emails = this.getFilteredMailingEmails();
+      if (emails.length === 0) {
+        store.showToast('⚠️ Aucun e-mail à copier.', 'warning');
+        return;
+      }
 
-            // 1. Filtre par rôle
-            if (this.mailingFilterRole !== 'tous') {
-                list = list.filter(b => b.role === this.mailingFilterRole);
-            }
-
-            // 2. Filtre par assignation/poste
-            if (this.mailingFilterAssignation === 'avec_poste') {
-                list = list.filter(b => (b.nb_inscriptions || 0) > 0);
-            } else if (this.mailingFilterAssignation === 'sans_poste') {
-                list = list.filter(b => (b.nb_inscriptions || 0) === 0);
-            } else if (this.mailingFilterAssignation === 'poste_specifique') {
-                // Agrège les IDs de créneaux sélectionnés à travers toutes les lignes
-                const allSelectedSlotIds = new Set();
-                this.mailingPostLines.forEach(line => {
-                    if (line.selectedTitle) {
-                        line.selectedSlots.forEach(slotId => {
-                            allSelectedSlotIds.add(slotId);
-                        });
-                    }
-                });
-
-                if (allSelectedSlotIds.size > 0) {
-                    const matchedBenevoleIds = new Set();
-                    store.postes.forEach(p => {
-                        if (allSelectedSlotIds.has(p.id)) {
-                            (p.inscrits_ids || []).forEach(bId => {
-                                matchedBenevoleIds.add(bId);
-                            });
-                        }
-                    });
-                    list = list.filter(b => matchedBenevoleIds.has(b.id));
-                } else {
-                    list = [];
-                }
-            }
-
-            return list;
-        },
-
-        getFilteredMailingEmails() {
-            return this.getFilteredMailingBenevoles()
-                .map(b => b.email ? b.email.trim() : '')
-                .filter(email => email.length > 0);
-        },
-
-        copyMailingEmails() {
-            const store = Alpine.store('admin');
-            const emails = this.getFilteredMailingEmails();
-            if (emails.length === 0) {
-                store.showToast('⚠️ Aucun e-mail à copier.', 'warning');
-                return;
-            }
-
-            navigator.clipboard.writeText(emails.join(', '))
-                .then(() => {
-                    store.showToast(`📋 ${emails.length} adresses e-mail copiées !`, 'success');
-                })
-                .catch(err => {
-                    console.error('Erreur lors de la copie :', err);
-                    store.showToast('❌ Impossible de copier les e-mails automatiquement.', 'error');
-                });
-        },
-    };
+      navigator.clipboard
+        .writeText(emails.join(', '))
+        .then(() => {
+          store.showToast(`📋 ${emails.length} adresses e-mail copiées !`, 'success');
+        })
+        .catch((err) => {
+          console.error('Erreur lors de la copie :', err);
+          store.showToast('❌ Impossible de copier les e-mails automatiquement.', 'error');
+        });
+    },
+  };
 }

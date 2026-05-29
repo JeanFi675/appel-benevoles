@@ -16,17 +16,17 @@ import { getPublicSupabaseClient } from '../config.js';
  * @namespace PublicApiService
  */
 export const PublicApiService = {
-    /**
-     * Appelle une fonction RPC publique via le client Supabase isolé.
-     *
-     * Ne wrappe pas de timeout par défaut : les callers ajoutent leur propre
-     * `Promise.race` s'ils ont des contraintes de latence spécifiques.
-     *
-     * @param {string} rpcName
-     * @param {object} [params]
-     * @returns {Promise<{ data: any, error: object|null }>}
-     */
-    async rpc(rpcName, params = {}) {
-        return await getPublicSupabaseClient().rpc(rpcName, params);
-    },
+  /**
+   * Appelle une fonction RPC publique via le client Supabase isolé.
+   *
+   * Ne wrappe pas de timeout par défaut : les callers ajoutent leur propre
+   * `Promise.race` s'ils ont des contraintes de latence spécifiques.
+   *
+   * @param {string} rpcName
+   * @param {object} [params]
+   * @returns {Promise<{ data: any, error: object|null }>}
+   */
+  async rpc(rpcName, params = {}) {
+    return await getPublicSupabaseClient().rpc(rpcName, params);
+  },
 };

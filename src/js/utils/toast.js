@@ -19,7 +19,7 @@ const DEFAULT_TIMEOUT_MS = 5000;
  * @returns {string}
  */
 function generateToastId() {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /**
@@ -35,11 +35,11 @@ function generateToastId() {
  * @returns {string} - L'ID généré (utile pour annulation manuelle si besoin futur).
  */
 export function pushToast(toastsArray, message, type = 'success', timeoutMs = DEFAULT_TIMEOUT_MS) {
-    const id = generateToastId();
-    toastsArray.push({ id, message, type });
-    setTimeout(() => {
-        const idx = toastsArray.findIndex(t => t.id === id);
-        if (idx !== -1) toastsArray.splice(idx, 1);
-    }, timeoutMs);
-    return id;
+  const id = generateToastId();
+  toastsArray.push({ id, message, type });
+  setTimeout(() => {
+    const idx = toastsArray.findIndex((t) => t.id === id);
+    if (idx !== -1) toastsArray.splice(idx, 1);
+  }, timeoutMs);
+  return id;
 }

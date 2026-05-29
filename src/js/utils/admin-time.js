@@ -9,12 +9,12 @@
  * @returns {string} Clé locale (ex: "2026-05-16") ou "" si vide.
  */
 export function getLocalDateKey(isoStr) {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 /**
@@ -23,9 +23,9 @@ export function getLocalDateKey(isoStr) {
  * @returns {string} Libellé formaté (ex: "08h30").
  */
 export function formatDecimalHour(dec) {
-    const h = Math.floor(dec);
-    const m = Math.round((dec - h) * 60);
-    return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+  const h = Math.floor(dec);
+  const m = Math.round((dec - h) * 60);
+  return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
 }
 
 /**
@@ -34,9 +34,9 @@ export function formatDecimalHour(dec) {
  * @returns {string} Libellé formaté (ex: "08:30").
  */
 export function formatHourMin(dec) {
-    const h = Math.floor(dec);
-    const m = Math.round((dec - h) * 60);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  const h = Math.floor(dec);
+  const m = Math.round((dec - h) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 /**
@@ -45,11 +45,15 @@ export function formatHourMin(dec) {
  * @returns {string} Libellé (ex: "Samedi 16 mai") ou "" si vide.
  */
 export function formatDay(dayKey) {
-    if (!dayKey) return '';
-    const [y, m, d] = dayKey.split('-');
-    const date = new Date(Number(y), Number(m) - 1, Number(d));
-    const formatted = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  if (!dayKey) return '';
+  const [y, m, d] = dayKey.split('-');
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+  const formatted = date.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 /**
@@ -59,8 +63,8 @@ export function formatDay(dayKey) {
  * @returns {string} ISO string.
  */
 export function formatDecimalToISO(dec, dayStr) {
-    const h = Math.floor(dec);
-    const m = Math.round((dec - h) * 60);
-    const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-    return new Date(`${dayStr}T${timeStr}`).toISOString();
+  const h = Math.floor(dec);
+  const m = Math.round((dec - h) * 60);
+  const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  return new Date(`${dayStr}T${timeStr}`).toISOString();
 }

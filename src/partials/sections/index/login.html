@@ -8,9 +8,7 @@
         <!-- Étape 1 : Demande de code -->
         <form @submit.prevent="requestOtp()" x-show="step === 1">
           <div class="mb-4">
-            <label for="email" class="block font-bold mb-2 text-lg"
-              >Votre email</label
-            >
+            <label for="email" class="block font-bold mb-2 text-lg">Votre email</label>
             <input
               type="email"
               id="email"
@@ -31,17 +29,15 @@
           </button>
 
           <p class="mt-4 text-sm text-center">
-            Vous recevrez un email contenant un code à 6 chiffres pour vous
-            connecter en toute sécurité.
+            Vous recevrez un email contenant un code à 6 chiffres pour vous connecter en toute
+            sécurité.
           </p>
         </form>
 
         <!-- Étape 2 : Saisie du code -->
         <form @submit.prevent="verifyOtp()" x-show="step === 2" x-cloak>
           <div class="mb-4">
-            <label for="otp" class="block font-bold mb-2 text-lg"
-              >Code à 6 chiffres</label
-            >
+            <label for="otp" class="block font-bold mb-2 text-lg">Code à 6 chiffres</label>
             <p class="text-sm mb-4">
               Envoyé à: <span class="font-bold" x-text="loginEmail"></span>
             </p>
