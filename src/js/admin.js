@@ -1,7 +1,6 @@
 import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
-import { AdminModule } from "./modules/admin/index.js";
 import { createAdminStore } from "./stores/admin-store.js";
 import { adminHeuresTab } from "./components/admin/admin-heures-tab.js";
 import { adminMailingTab } from "./components/admin/admin-mailing-tab.js";
@@ -21,14 +20,24 @@ document.addEventListener("alpine:init", () => {
   Alpine.data("adminBenevolesTab", adminBenevolesTab);
   Alpine.data("adminVisualCreatorTab", adminVisualCreatorTab);
 
-  // `Object.create(AdminModule)` (au lieu du spread `...AdminModule`) préserve les
-  // getters/setters de prototype installés sur AdminModule, qui délèguent le state
-  // partagé à `Alpine.store('admin')`. Un spread invoquerait les getters et copierait
-  // les valeurs au moment du wiring, cassant la délégation.
-  Alpine.data("adminApp", () => {
-    const inst = Object.create(AdminModule);
+  // Coquille racine d'admin.html. Tous les onglets sont des `Alpine.data(...)`
+  // autonomes ; le state partagé vit dans `Alpine.store('admin')`. `adminApp`
+  // n'expose que ce que le scope racine d'admin.html consomme : `activeTab`
+  // (tabs.html), `isAdmin` / `loading` (bandeaux), `toasts` (toast.html) et
+  // `init` (x-init).
+  Alpine.data("adminApp", () => ({
+    activeTab: 'visual-creator',
 
-    inst.init = async function () {
+    get isAdmin() { return Alpine.store('admin').isAdmin; },
+    set isAdmin(v) { Alpine.store('admin').isAdmin = v; },
+
+    get loading() { return Alpine.store('admin').loading; },
+    set loading(v) { Alpine.store('admin').loading = v; },
+
+    get toasts() { return Alpine.store('admin').toasts; },
+    set toasts(v) { Alpine.store('admin').toasts = v; },
+
+    async init() {
       const { user } = await AuthService.getSession();
       if (!user) {
         window.location.href = "index.html";
@@ -66,10 +75,8 @@ document.addEventListener("alpine:init", () => {
           window.history.replaceState(null, "", window.location.pathname);
         }
       });
-    };
-
-    return inst;
-  });
+    },
+  }));
 });
 
 Alpine.start();

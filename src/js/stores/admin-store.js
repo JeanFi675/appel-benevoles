@@ -1,15 +1,14 @@
 /**
  * Alpine.store('admin') — source de vérité du state partagé admin.
  *
- * Architecture cible (Phase 5.2.5) :
- *  - Détient le state transverse aux onglets : postes, benevoles, periodes, config, etc.
- *  - Détient les loaders cross-onglets et les helpers globaux (toast, getReferents, calculateStats).
- *  - `adminApp()` (god object encore présent) délègue ici via getters/setters et stubs ;
- *    les onglets Phase C consommeront `$store.admin.X` directement.
+ * - Détient le state transverse aux onglets : postes, benevoles, periodes, config, etc.
+ * - Détient les loaders cross-onglets et les helpers globaux (toast, getReferents,
+ *   calculateStats).
+ * - Les composants `Alpine.data('admin<X>Tab', ...)` consomment ce store directement
+ *   via `Alpine.store('admin').X` ou via des getters de proxy sur leur scope local.
  *
- * Notes :
- *  - `loadX()` mute `this.X` (state du store) — l'AdminModule lit via getter de prototype.
- *  - Les mutations passent par les setters → propagation réactive automatique.
+ * `loadX()` mute `this.X` (state du store) ; mutations via setter → propagation
+ * réactive automatique.
  */
 
 import { ApiService } from '../services/api.js';

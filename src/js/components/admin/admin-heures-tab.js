@@ -3,9 +3,6 @@
  *
  * Composant Alpine.data autonome consommant `Alpine.store('admin')` en lecture seule
  * (postes + periodes). Aucune mutation : agrégations pures à partir du state partagé.
- *
- * Ce composant remplace les méthodes `getHeuresParPeriode` / `getTotalHeures`
- * précédemment portées par l'objet god `AdminModule`.
  */
 
 import Alpine from 'alpinejs';
