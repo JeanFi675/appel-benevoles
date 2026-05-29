@@ -8,6 +8,7 @@ import { adminMailingTab } from "./components/admin/admin-mailing-tab.js";
 import { adminReferentsTab } from "./components/admin/admin-referents-tab.js";
 import { adminRecapTab } from "./components/admin/admin-recap-tab.js";
 import { adminCagnotteForceeTab } from "./components/admin/admin-cagnotte-forcee-tab.js";
+import { adminBenevolesTab } from "./components/admin/admin-benevoles-tab.js";
 
 document.addEventListener("alpine:init", () => {
   Alpine.store("admin", createAdminStore());
@@ -16,6 +17,7 @@ document.addEventListener("alpine:init", () => {
   Alpine.data("adminReferentsTab", adminReferentsTab);
   Alpine.data("adminRecapTab", adminRecapTab);
   Alpine.data("adminCagnotteForceeTab", adminCagnotteForceeTab);
+  Alpine.data("adminBenevolesTab", adminBenevolesTab);
 
   // `Object.create(AdminModule)` (au lieu du spread `...AdminModule`) préserve les
   // getters/setters de prototype installés sur AdminModule, qui délèguent le state
