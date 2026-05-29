@@ -11,13 +11,8 @@
  * `dbProgramme`, `dbJours`, `visualDays`, `config`. Loaders + toasts +
  * `getReferents` passent par `Alpine.store('admin')`.
  *
- * Couplage résiduel : `__x.$data` avec la timeline (`adminTimelineApp`)
- * dans `selectVisualDay` et `saveVisualCreator` — extraction prévue en
- * phase D (`Alpine.store('visualProgram')`).
- *
  * Bootstrap : écoute l'événement `admin:loaded` (dispatché par
  * `adminApp.init()` après `loadData`) pour déclencher `initVisualCreator`.
- * Évite le couplage DOM `__x.$data` pour l'init.
  */
 
 import Alpine from 'alpinejs';
@@ -324,16 +319,8 @@ export function adminVisualCreatorTab() {
 
             this.visualProgramEvents = [];
 
-            // Couplage timeline (deferred → D)
-            const timelineAppEl = document.querySelector('[x-data="adminTimelineApp()"]');
-            let currentDbProg = null;
-            if (timelineAppEl && timelineAppEl.__x && timelineAppEl.__x.$data) {
-                currentDbProg = timelineAppEl.__x.$data.dbProgramme;
-            }
-
-            const activeProg = currentDbProg || this.dbProgramme;
-            if (activeProg && activeProg.days && activeProg.days[day]) {
-                this.visualProgramEvents = activeProg.days[day].events.map(ev => ({
+            if (this.dbProgramme && this.dbProgramme.days && this.dbProgramme.days[day]) {
+                this.visualProgramEvents = this.dbProgramme.days[day].events.map(ev => ({
                     id: ev.id || null,
                     hStart: ev.hStart,
                     description: ev.description
@@ -1222,18 +1209,6 @@ export function adminVisualCreatorTab() {
                 }
 
                 await this.loadData();
-
-                // Couplage timeline (deferred → D)
-                const timelineAppEl = document.querySelector('[x-data="adminTimelineApp()"]');
-                if (timelineAppEl && timelineAppEl.__x && timelineAppEl.__x.$data) {
-                    const timelineData = timelineAppEl.__x.$data;
-                    if (typeof timelineData.loadProgramme === 'function') {
-                        await timelineData.loadProgramme();
-                    }
-                    if (typeof timelineData.loadPostes === 'function') {
-                        await timelineData.loadPostes();
-                    }
-                }
 
                 if (!isSilent) {
                     await this.selectVisualDay(this.visualDaySelected);
