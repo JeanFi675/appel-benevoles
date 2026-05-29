@@ -15,6 +15,11 @@ import { ApiService } from '../../services/api.js';
 
 export function adminReferentsTab() {
     return {
+        // --- State local ---
+        // Statut de l'encart de sauvegarde (top-right). Pattern aligné sur
+        // tab-visual-creator (`autoSaveStatus` ∈ 'synced' | 'saving' | 'error').
+        autoSaveStatus: 'synced',
+
         // --- Proxies de lecture vers le store (résolution scope template) ---
 
         get referentAssignments() {
@@ -102,6 +107,7 @@ export function adminReferentsTab() {
 
         async saveReferentAssignments(refId) {
             const store = Alpine.store('admin');
+            this.autoSaveStatus = 'saving';
             try {
                 const assignments = store.referentAssignments[refId] || [];
 
@@ -144,9 +150,9 @@ export function adminReferentsTab() {
                 if (updates.length > 0) {
                     await Promise.all(updates);
                 }
-                // Sauvegarde "en sourdine" : la vue n'est pas reconstruite pour
-                // ne pas interrompre l'utilisateur (toast retiré, cf. C3.d à venir).
+                this.autoSaveStatus = 'synced';
             } catch (error) {
+                this.autoSaveStatus = 'error';
                 console.error(error);
                 store.showToast('❌ Erreur : ' + error.message, 'error');
             }

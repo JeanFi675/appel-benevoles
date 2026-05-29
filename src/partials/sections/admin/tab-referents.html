@@ -6,9 +6,22 @@
                 <h2 class="text-3xl font-black">Attribution des Postes aux Référents</h2>
                 <p class="font-bold text-gray-600 mt-2">Gérez les responsabilités de chaque référent pour chaque période.</p>
             </div>
-            <button @click="initReferentAssignments()" class="brutal-btn bg-brutal-ice px-4 py-2 shadow-brutal-sm text-sm">
-                🔄 Recharger les données
-            </button>
+            <div class="flex items-center gap-3">
+                <!-- Encart statut de sauvegarde automatique -->
+                <div class="flex items-center gap-2 border-2 border-brutal-black px-3 py-1.5 font-black shadow-brutal-sm transition-colors duration-300 text-sm"
+                     :class="{
+                         'bg-green-300 text-brutal-black': autoSaveStatus === 'synced',
+                         'bg-blue-300 text-brutal-black animate-pulse': autoSaveStatus === 'saving',
+                         'bg-red-300 text-red-900': autoSaveStatus === 'error'
+                     }">
+                    <template x-if="autoSaveStatus === 'synced'"><span>🟢 Enregistré</span></template>
+                    <template x-if="autoSaveStatus === 'saving'"><span>⏳ Sauvegarde...</span></template>
+                    <template x-if="autoSaveStatus === 'error'"><span>🔴 Erreur</span></template>
+                </div>
+                <button @click="initReferentAssignments()" class="brutal-btn bg-brutal-ice px-4 py-2 shadow-brutal-sm text-sm">
+                    🔄 Recharger les données
+                </button>
+            </div>
         </div>
 
         <div class="space-y-6">
