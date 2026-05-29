@@ -55,12 +55,29 @@ export function adminReferentsTab() {
 
         // --- Dérivations pour le rendu ---
 
-        getPeriodesForTitre(titre) {
+        // Retourne les périodes disponibles pour un titre donné, enrichies d'un
+        // marqueur `takenBy` (= référent autre que celui de la ligne) afin que
+        // l'UI puisse griser et désactiver les créneaux déjà pris. Sans cette
+        // protection, cocher un slot déjà pris écraserait silencieusement
+        // l'assignation de l'autre référent (cf. saveReferentAssignments).
+        getPeriodesForTitre(titre, currentRefId) {
             if (!titre) return [];
             const store = Alpine.store('admin');
             const postesAvecCeTitre = store.postes.filter(p => p.titre === titre);
             const periodesIds = new Set(postesAvecCeTitre.map(p => p.periode_id));
-            return store.periodes.filter(p => periodesIds.has(p.id));
+            return store.periodes
+                .filter(p => periodesIds.has(p.id))
+                .map(periode => {
+                    const poste = postesAvecCeTitre.find(p => p.periode_id === periode.id);
+                    let takenBy = null;
+                    if (poste && poste.referent_id && poste.referent_id !== currentRefId) {
+                        const ref = store.benevoles.find(b => b.id === poste.referent_id);
+                        if (ref) {
+                            takenBy = { id: ref.id, fullName: `${ref.prenom} ${ref.nom}` };
+                        }
+                    }
+                    return { id: periode.id, nom: periode.nom, ordre: periode.ordre, takenBy };
+                });
         },
 
         getOrphanPostes() {

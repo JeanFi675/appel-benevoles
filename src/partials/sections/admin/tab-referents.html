@@ -45,11 +45,15 @@
                                 <div class="w-full md:w-flex-1">
                                     <label class="block text-xs font-bold uppercase mb-1">Périodes (Cases à cocher)</label>
                                     <div class="flex flex-wrap gap-3">
-                                        <template x-for="periode in getPeriodesForTitre(assign.titre)" :key="periode.id">
-                                            <label class="flex items-center gap-2 px-3 py-1 border-2 border-brutal-black cursor-pointer transition-colors"
-                                                :class="assign.periodes.includes(periode.id) ? 'bg-green-300' : 'bg-white hover:bg-brutal-ice'">
-                                                <input type="checkbox" :value="periode.id" x-model="assign.periodes" @change="saveReferentAssignments(ref.id)" class="w-4 h-4 accent-brutal-black">
+                                        <template x-for="periode in getPeriodesForTitre(assign.titre, ref.id)" :key="periode.id">
+                                            <label class="flex items-center gap-2 px-3 py-1 border-2 border-brutal-black transition-colors"
+                                                :class="periode.takenBy
+                                                    ? 'bg-gray-200 opacity-60 cursor-not-allowed'
+                                                    : (assign.periodes.includes(periode.id) ? 'bg-green-300 cursor-pointer' : 'bg-white hover:bg-brutal-ice cursor-pointer')"
+                                                :title="periode.takenBy ? `Déjà pris par ${periode.takenBy.fullName}` : ''">
+                                                <input type="checkbox" :value="periode.id" x-model="assign.periodes" :disabled="periode.takenBy !== null" @change="saveReferentAssignments(ref.id)" class="w-4 h-4 accent-brutal-black disabled:cursor-not-allowed">
                                                 <span class="text-sm font-bold" x-text="periode.nom"></span>
+                                                <span x-show="periode.takenBy" class="text-xs italic text-gray-600" x-text="`(pris par ${periode.takenBy?.fullName})`"></span>
                                             </label>
                                         </template>
                                         <div x-show="!assign.titre" class="text-sm italic text-gray-500 py-1">Sélectionnez d'abord un poste.</div>
