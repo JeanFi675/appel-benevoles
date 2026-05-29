@@ -34,7 +34,6 @@ document.addEventListener("alpine:init", () => {
         window.location.href = "index.html";
         return;
       }
-      this.currentUser = user;
 
       const { data: profiles, error } = await ApiService.fetch("benevoles", {
         eq: { user_id: user.id },
@@ -53,7 +52,7 @@ document.addEventListener("alpine:init", () => {
 
       this.isAdmin = true;
 
-      await this.loadData();
+      await Alpine.store("admin").loadData();
       // Signaler aux composants Phase C (notamment `adminVisualCreatorTab`)
       // qu'ils peuvent procéder à leur initialisation différée.
       window.dispatchEvent(new CustomEvent('admin:loaded'));
