@@ -2,12 +2,7 @@
  * Onglet "Cagnotte forcée" — Phase 5.2.5 (C5).
  *
  * State local : recherche, sélection courante, formulaire d'édition.
- * Lecture store : `benevoles`, `periodes`, `config`, `loading`.
- *
- * Couplage résiduel : le template lit `visualDays` (liste des jours
- * du championnat dérivée des postes), qui vit encore sur le god object
- * `adminApp` (admin/index.js). Le scope parent Alpine résout `visualDays`
- * via `adminApp` — couplage à nettoyer en C7 (migration visual-creator).
+ * Lecture store : `benevoles`, `periodes`, `config`, `loading`, `visualDays`.
  */
 
 import Alpine from 'alpinejs';
@@ -41,6 +36,10 @@ export function adminCagnotteForceeTab() {
 
         get loading() {
             return Alpine.store('admin').loading;
+        },
+
+        get visualDays() {
+            return Alpine.store('admin').visualDays;
         },
 
         // --- Méthodes ---
