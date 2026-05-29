@@ -1,4 +1,4 @@
-import { supabase } from '../config.js';
+import { supabase, safeRefreshSession } from '../config.js';
 
 /**
  * Service handling authentication operations.
@@ -69,5 +69,14 @@ export const AuthService = {
      */
     async signOut() {
         return await supabase.auth.signOut();
+    },
+
+    /**
+     * Refreshes the current session safely (singleton de déduplication
+     * géré dans config.js pour éviter les race conditions).
+     * @returns {Promise<{ data: { session: object|null }, error: object|null }>}
+     */
+    async refreshSession() {
+        return await safeRefreshSession();
     }
 };

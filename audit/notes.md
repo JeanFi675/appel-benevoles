@@ -557,3 +557,194 @@ Bug à intégrer dans le plan Phase 8 (déploiement / Edge Functions) ou Phase 6
 **Action** : audit SQL de la fonction + correctif, à programmer en Phase 5.2.x dédiée scanner T-shirt ou en Phase 3.x (bug RLS/RPC) selon priorité. Ne bloque pas 5.2.7.
 
 **✅ Résolu 2026-05-29 — Tâche 5.2.9 Patch C (faux positif diagnostique)** : audit code confirme que la RPC `get_family_tshirt_info_smart` est correcte (`WHERE b.user_id = found_user_id` → autant de lignes que de bénévoles pour ce auth user, donc 1 ligne pour un user solo). Le bug réel : le libellé `<p>Famille détectée</p>` (ligne 72) était affiché inconditionnellement dès `volunteers.length > 0`. Fix : `<p x-show="volunteers.length > 1">`. Test manuel PASS (mainteneur) : user solo → libellé masqué.
+
+---
+
+## 2026-05-29 — Phase 5.3.1 — Cartographie des patterns dupliqués (DRY)
+
+**Contexte** : étape 1 (audit lecture seule) de la tâche 5.3.1 « Identifier les patterns répétés et extraire en composants/helpers réutilisables ». Seuil de centralisation = ≥ 3 occurrences distinctes.
+
+### Pattern A — `showToast(message, type)` → 4 implémentations + ~120 callsites (DUPLIQUÉ)
+
+**Implémentations** (logique quasi-identique, divergences mineures) :
+
+| Fichier | Ligne | ID toast | Timeout |
+|---|---|---|---|
+| `src/js/modules/store.js` | 420 | `Date.now() + Math.random()` | 5000 ms |
+| `src/js/stores/admin-store.js` | 77 | `Date.now()` (collisions possibles si 2 toasts/ms) | 5000 ms |
+| `src/js/admin-connexions.js` | 316 | `Date.now() + Math.random()` | 5000 ms |
+| `src/js/admin-timeline.js` | 351 | `Date.now()` | **4000 ms** (anomalie) |
+
+**Rendu** : un seul template `src/partials/components/toast.html` itère sur `toasts` — chaque host (store ou root Alpine.data) doit donc exposer un tableau `toasts` localement.
+
+**Proxy supplémentaire** (sain, non comptabilisé) : `admin-visual-creator-tab.js:103` délègue à `Alpine.store('admin').showToast`.
+
+**Décision proposée** : extraire un helper pur `src/js/utils/toast.js` exportant `pushToast(toastsArray, message, type, timeoutMs = 5000)`. Les 4 méthodes `showToast` deviennent des wrappers à 1 ligne qui appellent le helper. Bénéfice : ID/timeout uniformes, logique non dupliquée, aucune modification du contrat des callsites (~120 inchangés).
+
+### Pattern B — Confirmation utilisateur → 1 modal Promise + 8 `window.confirm()` (DUPLIQUÉ)
+
+**Pattern centralisé existant** (déjà fait, à étendre) :
+- `src/js/modules/store.js:80-103` : objet `confirmModal` + méthode `askConfirm(message, title) → Promise<bool>` + méthode `handleConfirm(result)`.
+- Partial : `src/partials/components/confirm-modal.html`.
+- Utilisé uniquement par : `src/js/modules/user/profiles.js:41`.
+
+**Appels natifs `window.confirm()` non migrés** (8 occurrences, devraient utiliser le pattern) :
+
+| Fichier | Ligne |
+|---|---|
+| `src/js/components/admin/admin-cagnotte-forcee-tab.js` | 139 |
+| `src/js/components/admin/admin-benevoles-tab.js` | 283 |
+| `src/js/components/admin/admin-visual-creator-tab.js` | 198, 471, 529, 900, 1514 |
+| `src/js/scanner-tshirt.js` | 86 |
+| `src/js/modules/user/wizard.js` | 162, 408 |
+
+**Limitation actuelle** : l'admin-store ne fournit pas `askConfirm` ; les composants admin n'y ont donc pas accès aujourd'hui.
+
+**Décision proposée** :
+1. Extraire un helper `src/js/utils/confirm.js` exportant `createConfirmModalState()` (factory réactif) + `askConfirm(modalState, message, title)`.
+2. Refactorer `store.js` pour consommer ce helper (compatibilité totale, callsites inchangés).
+3. Ajouter `confirmModal` + `askConfirm` à l'admin-store via le même helper.
+4. Inclure `confirm-modal.html` dans les layouts admin (`admin.html`, `admin-timeline.html`, `admin-connexions.html`, `scanner-tshirt.html`) si non déjà présent.
+5. Remplacer les 8 `window.confirm()` par des `await Alpine.store('admin').askConfirm(...)` (ou `store user` pour `wizard.js`).
+
+### Pattern C — Validation de formulaires (`!champ.trim()`, messages "Veuillez remplir") → SOUS SEUIL
+
+**Occurrences** :
+- `!X.trim()` / `X.trim() === ''` : 5 hits, **dont 4 dans `admin-visual-creator-tab.js`** + 1 ailleurs.
+- "Veuillez remplir tous les champs" : 2 hits (`admin-benevoles-tab.js:370`, `wizard.js:246`).
+- "Veuillez saisir" : 1 hit.
+
+**Décision proposée** : **PAS DE CENTRALISATION** dans cette tâche. Les patterns sont soit concentrés sur un seul fichier (donc pas un problème DRY transverse), soit sous le seuil ≥ 3. Atomicity first : on ne refactore pas les formulaires ici.
+
+### Patterns hors scope vérifiés (zéro hit)
+
+- Validation email (regex, `isEmail`, `validateEmail`, etc.) : 0 occurrence. Pas de validation email côté frontend (déléguée à Supabase Auth → magic link).
+- Toasts via lib externe (Toastify, etc.) : 0 occurrence.
+
+### Plan d'extraction proposé (étape 2 de la tâche, en attente de GO)
+
+**Fichiers à créer** :
+- `src/js/utils/toast.js` (helper pur `pushToast`).
+- `src/js/utils/confirm.js` (factory `createConfirmModalState` + `askConfirm`).
+
+**Fichiers à modifier** :
+- `src/js/modules/store.js` : wire les 2 helpers.
+- `src/js/stores/admin-store.js` : wire les 2 helpers + ajout du pattern confirm.
+- `src/js/admin-connexions.js` : wire le helper toast + ajout pattern confirm (utilisé par scanner-tshirt et confirme natif).
+- `src/js/admin-timeline.js` : wire le helper toast (uniformise timeout à 5000).
+- Migration des 8 `window.confirm()` (admin-cagnotte-forcee, admin-benevoles, admin-visual-creator, scanner-tshirt, wizard).
+- Inclusion du partial `confirm-modal.html` dans les pages admin qui ne l'ont pas encore.
+
+**Hors scope** : refactor des modales métier (`showAddDayModal`, `showEditShiftModal`, etc.) — ce sont des dialogs spécifiques non répétés, pas une duplication.
+
+---
+
+## 2026-05-29 — Phase 5.3.2 — Revue SRP des services (`api.js`, `auth.js`)
+
+**Contexte** : DoD = « une revue manuelle confirme qu'aucune méthode ne mélange deux préoccupations ». Revue lecture seule effectuée le 2026-05-29.
+
+### `src/js/services/api.js` (ApiService) — Responsabilité unique = wrapper Supabase REST/RPC/Functions
+
+| Méthode | Verdict | Note |
+|---|---|---|
+| `fetch(table, options)` | ✅ OK | Pure passe-plat `select/eq/in/order`. Aucun mélange. |
+| `rpc(rpcName, params)` | 🟡 ACCEPTABLE | Ajoute un timeout 30s côté client (politique transverse de résilience). Centraliser cette garantie dans le wrapper évite la duplication aux callsites — cohérent avec le rôle "infrastructure Supabase". |
+| `refreshSession()` | ⚠️ **MÉLANGE LÉGER** | Sémantiquement c'est une opération **AUTH** logée dans le service API. Importe `safeRefreshSession` de `config.js` pour le ré-exposer côté API. **1 seul callsite** (`wizard.js:509`) → déplacement vers `AuthService.refreshSession` trivial. |
+| `insert/update/updateMany/upsert/upsertMany/delete` | ✅ OK | Wrappers REST. Aucun mélange. |
+| `invoke(functionName, options)` | 🟡 ACCEPTABLE | Edge Functions ≠ REST mais reste de l'infra Supabase. Cohérent avec le wrapper unifié. |
+
+### `src/js/services/auth.js` (AuthService) — Responsabilité unique = wrapper Supabase Auth
+
+| Méthode | Verdict | Note |
+|---|---|---|
+| `getSession()` | 🟡 ACCEPTABLE | Try/catch + `console.error` + fallback `{session:null, user:null}`. Mélange micro (auth + observability + gestion d'erreur défensive). Pattern défensif cohérent pour le seul point d'entrée session lu partout. Pas de side-effect global. |
+| `onAuthStateChange(callback)` | ✅ OK | Pur passe-plat. |
+| `signInWithOtp(email)` | ✅ OK | |
+| `verifyOtp(email, token)` | ✅ OK | |
+| `signOut()` | ✅ OK | |
+
+### Verdict global
+
+**Aucun mélange critique.** Une seule violation SRP légère identifiée : `ApiService.refreshSession()` est sémantiquement une opération d'auth. Impact d'un déplacement : 1 callsite (`wizard.js:509`).
+
+### Action atomique proposée (en attente de GO mainteneur)
+
+Déplacer `refreshSession` de `ApiService` vers `AuthService` :
+1. Ajouter `AuthService.refreshSession()` (import de `safeRefreshSession` depuis `config.js`).
+2. Retirer `ApiService.refreshSession` + l'import `safeRefreshSession` de `api.js`.
+3. Migrer `wizard.js:509` : `ApiService.refreshSession()` → `AuthService.refreshSession()` (l'import `AuthService` est-il déjà présent dans wizard.js ? À vérifier).
+
+Si refus du déplacement (préférence pour le statu quo) : la DoD reste atteinte avec note d'acceptation du mélange — `refreshSession` est techniquement un appel de bas niveau qui n'effectue pas de logique d'auth (juste un proxy vers Supabase), et son placement dans ApiService a un sens pratique (pas besoin d'importer 2 services pour un refresh dans wizard).
+
+**Mise à jour 2026-05-29** : option (1) appliquée. Migration effectuée. Build PASS. DoD strictement satisfaite.
+
+---
+
+## 2026-05-29 — Phase 5.3.3 — Cartographie des appels directs à `supabase` hors services
+
+**Contexte** : DoD = « `grep -rn "from.*config" src/js/components/` ne montre que des imports de services, pas de `supabase` ». Périmètre élargi (option B) à tout `src/js/` hors `config.js` et `services/*.js`.
+
+### Bonnes surprises (zéro violation)
+
+| Répertoire | Violations |
+|---|---|
+| `src/js/components/` | **0** ✅ |
+| `src/js/modules/` | **0** ✅ |
+| `src/js/stores/` | **0** ✅ |
+| Fichiers d'entrée standards (`admin.js`, `admin-connexions.js`, `admin-timeline.js`, `besoins.js`, `main.js`) | **0** ✅ |
+
+### Violations identifiées (concentrées sur 2 pages publiques)
+
+#### `src/js/scanner-tshirt.js` (page admin scanner T-shirt)
+
+| Ligne | Violation | Action |
+|---|---|---|
+| 2 | `import { createClient } from '@supabase/supabase-js'` | Supprimer + remplacer par `import { supabase } from './config.js'` (ou simplement supprimer si seul ApiService est utilisé). |
+| 3 | `import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants.js'` | Supprimer (devient inutile). |
+| 5 | `const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)` | Supprimer (client local sans config spéciale). |
+| 55 | `supabase.rpc('get_family_tshirt_info_smart', ...)` | → `ApiService.rpc('get_family_tshirt_info_smart', ...)` |
+| 108 | `supabase.rpc('update_tshirt_status', ...)` | → `ApiService.rpc('update_tshirt_status', ...)` |
+
+**Impact** : aucun (le client local n'avait aucune config spéciale). Migration triviale.
+
+#### `src/js/debit.js` (page publique de débit cagnotte via QR code)
+
+| Ligne | Violation | Particularité |
+|---|---|---|
+| 2 | `import { createClient } from '@supabase/supabase-js'` | Crée un **client isolé volontairement** |
+| 6-12 | `createClient(..., { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })` | **Config délibérément différente** du client principal : commentaire "Isolated Client for Public Page (No Session / No Conflict)". Ne doit pas interférer avec la session d'un utilisateur connecté en parallèle. |
+| 36 | `supabase.rpc('get_public_benevole_info', ...)` | Wrap dans Promise.race + timeout 10s custom. |
+| 89 | `supabase.rpc('debit_cagnotte_public', ...)` | Appel direct. |
+| 125 | `window.supabase = supabase` | Exposition globale (legacy ou debug ?). |
+
+**Impact d'une migration vers le client unique** : la page debit perd son isolement de session. Si un utilisateur admin connecté scanne un QR code de débit publique, les RPCs partiraient avec son JWT au lieu de `anon`. Risque RLS si les RPCs ne sont pas strictement SECURITY DEFINER ou dépendent de `auth.uid()`.
+
+### Options d'arbitrage pour `debit.js`
+
+- **D1 — Migration directe (comme scanner-tshirt)** : remplacer `createClient` par `supabase` du config + `ApiService.rpc`. Simple. Risque comportemental sur le flow public (à valider en testant la page debit avec un admin connecté en parallèle).
+- **D2 — Factory `createPublicClient()` dans `config.js`** : centraliser la création du client isolé, debit.js l'importe et utilise un mini-helper `PublicApiService` interne (ou continue à appeler `client.rpc(...)` mais sans import direct de `@supabase/supabase-js`). Plus de code mais préserve l'isolement et respecte l'esprit "1 seul `createClient` dans tout le projet".
+- **D3 — Statu quo + exception documentée** : laisser debit.js comme aujourd'hui, ajouter un commentaire dans `CLAUDE.md` (ou laisser cette note `audit/notes.md`) actant la dérogation pour les pages publiques. DoD stricte non atteinte sur ce fichier mais conformité ailleurs.
+
+**Hors scope (à investiguer séparément)** : `window.supabase = supabase` ligne 125 — probable debug oublié, à retirer mais c'est un changement indépendant de la DoD courante.
+
+### Plan d'action proposé pour exécution
+
+1. **scanner-tshirt.js** : migration directe (option unique, aucun risque).
+2. **debit.js** : choisir D1, D2 ou D3 (avec mainteneur).
+
+### Décision mainteneur (2026-05-29) — **D2 retenu**
+
+Justification mainteneur : « Pas besoin de savoir quel utilisateur a utilisé la page debit. Et ça doit marcher si c'est un utilisateur non authentifié dans Supabase. » → conforme à l'isolement assuré par D2.
+
+**Implémentation** :
+- `config.js` : nouvelle factory `getPublicSupabaseClient()` (singleton interne) qui crée le client isolé avec `persistSession: false`, `autoRefreshToken: false`, `detectSessionInUrl: false`. Mêmes options qu'avant, mais centralisées dans le module config.
+- `src/js/services/public-api.js` : nouveau service `PublicApiService.rpc(rpcName, params)` consommant ce client isolé. Minimaliste (uniquement `rpc` pour l'instant — YAGNI).
+- `debit.js` : `createClient` local supprimé, 2 RPCs migrées vers `PublicApiService.rpc(...)`, `window.supabase = supabase` retiré (debug obsolète sans valeur conservée).
+- `scanner-tshirt.js` : `createClient` local supprimé (aucune config particulière), 2 RPCs migrées vers `ApiService.rpc(...)`.
+
+**DoD finale** :
+- `grep -rn "from.*config" src/js/components/` → 0 hit ✅
+- `from '@supabase/supabase-js'` dans `src/` → 1 hit unique (`config.js`) ✅
+- `supabase.*` hors `config.js` et `services/*.js` → 0 hit ✅
+
+Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateur connecté en parallèle).

@@ -2,6 +2,7 @@
 import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
+import { pushToast } from "./utils/toast.js";
 
 const PROGRAMME = { meta: [], days: {} };
 
@@ -347,9 +348,7 @@ export function initAdminTimelineApp() {
     formatHour(h) { return `${String(h).padStart(2,'0')}h`; },
 
     addToast(message, type = 'info') {
-      const id = Date.now();
-      this.toasts.push({ id, message, type });
-      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 4000);
+      pushToast(this.toasts, message, type);
     },
 
     async init() {

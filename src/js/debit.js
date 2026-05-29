@@ -1,15 +1,5 @@
 import Alpine from 'alpinejs';
-import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants.js';
-
-// Isolated Client for Public Page (No Session / No Conflict)
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-    }
-});
+import { PublicApiService } from './services/public-api.js';
 
 Alpine.data('debitApp', () => ({
     loading: true,
@@ -33,7 +23,7 @@ Alpine.data('debitApp', () => ({
             }
 
             // Fetch Benevole Public Info with Timeout
-            const rpcPromise = supabase.rpc('get_public_benevole_info', { target_id: benevoleId });
+            const rpcPromise = PublicApiService.rpc('get_public_benevole_info', { target_id: benevoleId });
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("RPC Timeout (10s)")), 10000));
 
             const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
@@ -86,7 +76,7 @@ Alpine.data('debitApp', () => ({
             const amount = parseFloat(this.currentAmount);
             this.loading = true;
 
-            const { data, error } = await supabase.rpc('debit_cagnotte_public', {
+            const { data, error } = await PublicApiService.rpc('debit_cagnotte_public', {
                 target_benevole_id: this.benevole.id,
                 montant_input: amount,
                 description_input: 'Debit QR Code Public'
@@ -122,5 +112,4 @@ Alpine.data('debitApp', () => ({
 }));
 
 window.Alpine = Alpine;
-window.supabase = supabase;
 Alpine.start();

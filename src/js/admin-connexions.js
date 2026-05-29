@@ -1,6 +1,7 @@
 import Alpine from "alpinejs";
 import { AuthService } from "./services/auth.js";
 import { ApiService } from "./services/api.js";
+import { pushToast } from "./utils/toast.js";
 
 function initAdminConnexionsApp() {
   Alpine.data("adminConnexionsApp", () => ({
@@ -314,11 +315,7 @@ function initAdminConnexionsApp() {
     },
 
     showToast(message, type = "success") {
-      const id = Date.now() + Math.random().toString(36).substr(2, 9);
-      this.toasts.push({ id, message, type });
-      setTimeout(() => {
-        this.toasts = this.toasts.filter(t => /** @type {any} */ (t).id !== id);
-      }, 5000);
+      pushToast(this.toasts, message, type);
     }
   }));
 }

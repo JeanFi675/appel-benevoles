@@ -5,6 +5,8 @@ import { ApiService } from "../services/api.js";
 import { ProfilesModule } from "./user/profiles.js";
 import { PlanningModule } from "./user/planning.js";
 import { WizardModule } from "./user/wizard.js";
+import { pushToast } from "../utils/toast.js";
+import { createConfirmModalState, askConfirm, handleConfirm } from "../utils/confirm.js";
 
 /**
  * Initializes the central application store.
@@ -63,14 +65,8 @@ export function initStore() {
       }
     },
 
-    // Modal State
-    confirmModal: {
-      open: false,
-      title: "",
-      message: "",
-      /** @type {((value: boolean) => void) | null} */
-      resolve: null,
-    },
+    // Modal State (cf. src/js/utils/confirm.js + src/partials/components/confirm-modal.html)
+    confirmModal: createConfirmModalState(),
 
     // Polling State
     /** @type {any} */
@@ -83,13 +79,7 @@ export function initStore() {
      * @returns {Promise<boolean>} True if confirmed, false otherwise.
      */
     askConfirm(message, title = "Confirmation") {
-      this.confirmModal.title = title;
-      this.confirmModal.message = message;
-      this.confirmModal.open = true;
-
-      return new Promise((resolve) => {
-        this.confirmModal.resolve = resolve;
-      });
+      return askConfirm(this.confirmModal, message, title);
     },
 
     /**
@@ -97,11 +87,7 @@ export function initStore() {
      * @param {boolean} result - The user's choice.
      */
     handleConfirm(result) {
-      this.confirmModal.open = false;
-      if (this.confirmModal.resolve) {
-        this.confirmModal.resolve(result);
-        this.confirmModal.resolve = null;
-      }
+      handleConfirm(this.confirmModal, result);
     },
 
     // Modules
@@ -418,14 +404,7 @@ export function initStore() {
      * @param {'success'|'error'} [type='success'] - The type of toast.
      */
     showToast(message, type = "success") {
-      const id = Date.now() + Math.random().toString(36).substr(2, 9);
-      // @ts-ignore
-      this.toasts.push({ id, message, type });
-
-      setTimeout(() => {
-        // @ts-ignore
-        this.toasts = this.toasts.filter((t) => t.id !== id);
-      }, 5000);
+      pushToast(this.toasts, message, type);
     },
   }));
 }

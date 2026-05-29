@@ -280,8 +280,12 @@ export function adminBenevolesTab() {
         },
 
         async deleteInscription(inscriptionId) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer cette inscription ?')) return;
             const store = Alpine.store('admin');
+            const confirmed = await store.askConfirm(
+                'Êtes-vous sûr de vouloir supprimer cette inscription ?',
+                'Supprimer l\'inscription'
+            );
+            if (!confirmed) return;
 
             // Optimistic UI
             const originalList = [...this.selectedBenevoleInscriptions];

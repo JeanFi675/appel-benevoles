@@ -21,6 +21,36 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     },
 });
 
+/**
+ * Crée un client Supabase isolé pour les pages PUBLIQUES (sans session).
+ *
+ * Pourquoi un client distinct du client principal :
+ * - Les pages publiques (ex: debit.html scanné via QR code par un commerçant)
+ *   ne doivent JAMAIS hériter de la session d'un utilisateur connecté en parallèle
+ *   (autre onglet). Sinon, leurs RPC partiraient avec le JWT de l'utilisateur
+ *   au lieu du rôle `anon`.
+ * - Ce client n'écrit pas en `localStorage`, ne refresh aucun token, ne détecte
+ *   pas les `access_token` dans l'URL → totalement neutre.
+ *
+ * Singleton : appeler plusieurs fois renvoie la même instance pour éviter de
+ * multiplier les clients HTTP. Consommé par `src/js/services/public-api.js`.
+ *
+ * @returns {ReturnType<typeof createClient>}
+ */
+let _publicClient = null;
+export function getPublicSupabaseClient() {
+    if (!_publicClient) {
+        _publicClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false,
+            },
+        });
+    }
+    return _publicClient;
+}
+
 // 🔒 Singleton de refresh pour éviter les race conditions
 // Permet de dédupliquer les appels simultanés au refresh (ex: retour d'onglet + polling + auto-refresh)
 let _refreshPromise = null;

@@ -12,6 +12,8 @@
  */
 
 import { ApiService } from '../services/api.js';
+import { pushToast } from '../utils/toast.js';
+import { createConfirmModalState, askConfirm, handleConfirm } from '../utils/confirm.js';
 
 export function createAdminStore() {
     return {
@@ -20,6 +22,10 @@ export function createAdminStore() {
         loading: true,
         currentUser: null,
         toasts: [],
+
+        // Modale de confirmation (cf. src/js/utils/confirm.js +
+        // src/partials/components/confirm-modal.html, inclus dans admin.html).
+        confirmModal: createConfirmModalState(),
 
         postes: [],
         benevoles: [],
@@ -75,11 +81,22 @@ export function createAdminStore() {
         // --- Helpers globaux ---
 
         showToast(message, type = 'success') {
-            const id = Date.now();
-            this.toasts.push({ id, message, type });
-            setTimeout(() => {
-                this.toasts = this.toasts.filter(t => t.id !== id);
-            }, 5000);
+            pushToast(this.toasts, message, type);
+        },
+
+        /**
+         * Ouvre la modale de confirmation et retourne une Promise<bool>.
+         * @param {string} message
+         * @param {string} [title='Confirmation']
+         * @returns {Promise<boolean>}
+         */
+        askConfirm(message, title = 'Confirmation') {
+            return askConfirm(this.confirmModal, message, title);
+        },
+
+        /** @param {boolean} result */
+        handleConfirm(result) {
+            handleConfirm(this.confirmModal, result);
         },
 
         getReferents() {

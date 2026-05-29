@@ -417,9 +417,9 @@
 
 ### 5.3 Application DRY et SOLID
 
-- [ ] Identifier les patterns répétés (toasts, modals, validation de formulaires) et extraire en composants/helpers réutilisables. **DoD :** chaque pattern dupliqué ≥ 3 fois est centralisé.
-- [ ] Chaque service (`api.js`, `auth.js`) a une responsabilité unique et claire. **DoD :** une revue manuelle confirme qu'aucune méthode ne mélange deux préoccupations.
-- [ ] Aucun module ne fait d'appel direct à `supabase` hors des services. **DoD :** `grep -rn "from.*config" src/js/components/` ne montre que des imports de services, pas de `supabase`.
+- [x] Identifier les patterns répétés (toasts, modals, validation de formulaires) et extraire en composants/helpers réutilisables. **DoD :** chaque pattern dupliqué ≥ 3 fois est centralisé.
+- [x] Chaque service (`api.js`, `auth.js`) a une responsabilité unique et claire. **DoD :** une revue manuelle confirme qu'aucune méthode ne mélange deux préoccupations.
+- [x] Aucun module ne fait d'appel direct à `supabase` hors des services. **DoD :** `grep -rn "from.*config" src/js/components/` ne montre que des imports de services, pas de `supabase`.
 
 ### 5.4 Configuration Vite production
 

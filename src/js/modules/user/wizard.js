@@ -1,4 +1,5 @@
 import { ApiService } from '../../services/api.js';
+import { AuthService } from '../../services/auth.js';
 
 /**
  * Module for the Registration Wizard.
@@ -157,11 +158,13 @@ export const WizardModule = {
     },
 
 
-    closeWizard() {
+    async closeWizard() {
         if (this.wizardSelections.length > 0 || this.wizardRemovals.length > 0) {
-            if (!confirm("Attention, vos choix dans l'assistant seront perdus. Continuer ?")) {
-                return;
-            }
+            const confirmed = await this.askConfirm(
+                "Attention, vos choix dans l'assistant seront perdus. Continuer ?",
+                "Fermer l'assistant"
+            );
+            if (!confirmed) return;
 
             // Revert Optimistic Updates manually to ensure immediate UI consistency
             // 1. Revert Removals (Add back)
@@ -504,7 +507,7 @@ export const WizardModule = {
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     const refreshResult = await Promise.race([
-                        ApiService.refreshSession(),
+                        AuthService.refreshSession(),
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout (10s)')), 10000))
                     ]); // 10s is generous but safe
 
@@ -570,12 +573,7 @@ export const WizardModule = {
 
             await this.loadInitialData();
 
-            // Refund/Payment made -> Update Cagnotte Widget
-            // Since WizardModule and CagnotteModule are mixed into the same Alpine store,
-            // we can access refreshWidget directly via 'this' if it exists.
-            if (typeof this.refreshWidget === 'function') {
-                this.refreshWidget();
-            }
+            window.dispatchEvent(new CustomEvent('cagnotte-refresh'));
 
         } catch (error) {
             console.error('Submit Error Caught:', error);

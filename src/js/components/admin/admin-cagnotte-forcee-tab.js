@@ -136,8 +136,12 @@ export function adminCagnotteForceeTab() {
 
         async revertCagnotteForcee(benevole) {
             if (!benevole) return;
-            if (!confirm(`Voulez-vous vraiment annuler le forçage de la cagnotte pour ${benevole.prenom} ${benevole.nom} ?`)) return;
             const store = Alpine.store('admin');
+            const confirmed = await store.askConfirm(
+                `Voulez-vous vraiment annuler le forçage de la cagnotte pour ${benevole.prenom} ${benevole.nom} ?`,
+                'Annuler le forçage'
+            );
+            if (!confirmed) return;
 
             store.loading = true;
             try {

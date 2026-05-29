@@ -195,7 +195,11 @@ export function adminVisualCreatorTab() {
         },
 
         async deleteRepas(id) {
-            if (!confirm('Voulez-vous vraiment supprimer ce repas ? Tous les choix des bénévoles associés à ce repas seront perdus.')) return;
+            const confirmed = await Alpine.store('admin').askConfirm(
+                'Voulez-vous vraiment supprimer ce repas ? Tous les choix des bénévoles associés à ce repas seront perdus.',
+                'Supprimer le repas'
+            );
+            if (!confirmed) return;
             this.loading = true;
             try {
                 const { error } = await ApiService.delete('repas', { id });
@@ -468,9 +472,11 @@ export function adminVisualCreatorTab() {
             if (!day) return;
 
             const formattedDayStr = formatDay(day);
-            if (!confirm(`⚠️ Attention : Êtes-vous sûr de vouloir supprimer le jour "${formattedDayStr}" ?\n\nCette action supprimera DÉFINITIVEMENT :\n- Tous les postes et créneaux associés à ce jour\n- Toutes les périodes définies pour ce jour\n- Toutes les inscriptions de bénévoles sur ces postes\n- Tous les événements de programme de ce jour\n\nCette action est irréversible et modifiera directement la base de production. Voulez-vous continuer ?`)) {
-                return;
-            }
+            const confirmed = await Alpine.store('admin').askConfirm(
+                `⚠️ Attention : Êtes-vous sûr de vouloir supprimer le jour "${formattedDayStr}" ?\n\nCette action supprimera DÉFINITIVEMENT :\n- Tous les postes et créneaux associés à ce jour\n- Toutes les périodes définies pour ce jour\n- Toutes les inscriptions de bénévoles sur ces postes\n- Tous les événements de programme de ce jour\n\nCette action est irréversible et modifiera directement la base de production. Voulez-vous continuer ?`,
+                `Supprimer le jour "${formattedDayStr}"`
+            );
+            if (!confirmed) return;
 
             this.loading = true;
 
@@ -525,8 +531,12 @@ export function adminVisualCreatorTab() {
             }
         },
 
-        deleteVisualLine(lineIndex) {
-            if (!confirm("Voulez-vous supprimer cette ligne de postes et tous ses créneaux ?")) return;
+        async deleteVisualLine(lineIndex) {
+            const confirmed = await Alpine.store('admin').askConfirm(
+                'Voulez-vous supprimer cette ligne de postes et tous ses créneaux ?',
+                'Supprimer la ligne'
+            );
+            if (!confirmed) return;
             const line = this.visualLines[lineIndex];
             if (line && line.shifts) {
                 line.shifts.forEach(shift => {
@@ -879,7 +889,7 @@ export function adminVisualCreatorTab() {
             this.triggerAutoSave();
         },
 
-        removeVisualPeriod() {
+        async removeVisualPeriod() {
             if (this.visualPeriods.length <= 1) {
                 this.showToast("Impossible de supprimer la dernière période restante. Il doit y en avoir au moins une.", "warning");
                 return;
@@ -897,9 +907,11 @@ export function adminVisualCreatorTab() {
             if (!per) return;
 
             const timeStr = per.nom.split(' - ')[1] || per.nom;
-            if (!confirm(`Voulez-vous supprimer la période "${timeStr}" ?\nLes créneaux associés seront automatiquement réassignés aux autres périodes les plus adaptées.`)) {
-                return;
-            }
+            const confirmed = await Alpine.store('admin').askConfirm(
+                `Voulez-vous supprimer la période "${timeStr}" ?\nLes créneaux associés seront automatiquement réassignés aux autres périodes les plus adaptées.`,
+                'Supprimer la période'
+            );
+            if (!confirmed) return;
 
             if (per.id && !String(per.id).startsWith('temp-per-')) {
                 this.visualDeletedPeriodIds.push(per.id);
@@ -1509,9 +1521,13 @@ export function adminVisualCreatorTab() {
             this.triggerAutoSave();
         },
 
-        deleteShiftFromModal() {
+        async deleteShiftFromModal() {
             if (this.editShiftData.lineIndex === -1 || this.editShiftData.shiftIndex === -1) return;
-            if (!confirm("Voulez-vous supprimer ce créneau ?")) return;
+            const confirmed = await Alpine.store('admin').askConfirm(
+                'Voulez-vous supprimer ce créneau ?',
+                'Supprimer le créneau'
+            );
+            if (!confirmed) return;
 
             const line = this.visualLines[this.editShiftData.lineIndex];
             const shift = line.shifts[this.editShiftData.shiftIndex];

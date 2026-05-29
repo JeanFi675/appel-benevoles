@@ -37,6 +37,12 @@ document.addEventListener("alpine:init", () => {
     get toasts() { return Alpine.store('admin').toasts; },
     set toasts(v) { Alpine.store('admin').toasts = v; },
 
+    // Proxy de la modale de confirmation : confirm-modal.html lit `confirmModal.{open,title,message}`
+    // et invoque `handleConfirm(true|false)` sur le scope racine. La source de vérité
+    // vit dans `Alpine.store('admin').confirmModal`.
+    get confirmModal() { return Alpine.store('admin').confirmModal; },
+    handleConfirm(result) { Alpine.store('admin').handleConfirm(result); },
+
     async init() {
       const { user } = await AuthService.getSession();
       if (!user) {

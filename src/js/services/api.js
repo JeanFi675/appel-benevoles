@@ -1,4 +1,4 @@
-import { supabase, safeRefreshSession } from '../config.js';
+import { supabase } from '../config.js';
 
 /**
  * Generic service for database operations.
@@ -48,13 +48,6 @@ export const ApiService = {
         const rpcCall = supabase.rpc(rpcName, params);
         const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout (30s)')), 30000));
         return await Promise.race([rpcCall, timeout]);
-    },
-
-    /**
-     * Refreshes the current session safely (singleton).
-     */
-    async refreshSession() {
-        return await safeRefreshSession();
     },
 
     /**
