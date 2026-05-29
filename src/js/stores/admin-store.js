@@ -30,6 +30,12 @@ export function createAdminStore() {
         repasList: [],
         typePostes: [],
 
+        // Liste des jours affichés dans l'onglet visual-creator (et lue par
+        // l'onglet cagnotte-forcée). Calculée par `initVisualCreator` à partir
+        // de `dbJours`, `dbProgramme`, `postes` et `periodes`, puis mutée par
+        // add/deleteVisualDay. Hoistée ici pour partage cross-onglets.
+        visualDays: [],
+
         // Assignations référent ↔ (titre, périodes) reconstruites depuis `postes`
         // au chargement initial. Mutées ensuite par l'onglet referents
         // (`adminReferentsTab`) via add/remove/save.

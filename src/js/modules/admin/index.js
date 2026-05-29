@@ -224,7 +224,8 @@ export const AdminModule = {
 
     // --- Planning Interactif (Créateur Visuel) ---
     visualDaySelected: '',
-    visualDays: [],
+    // `visualDays` est hoisté dans `Alpine.store('admin')` (Phase 5.2.5 / C7.a)
+    // → exposé ici via SHARED_STATE_FIELDS pour le scope parent adminApp.
     visualProgramEvents: [],
     visualPeriods: [],
     visualLines: [],
@@ -1784,7 +1785,8 @@ export const AdminModule = {
 const SHARED_STATE_FIELDS = [
     'isAdmin', 'loading', 'currentUser', 'toasts',
     'postes', 'benevoles', 'periodes', 'dbProgramme', 'dbJours', 'repasList',
-    'stats', 'config'
+    'stats', 'config',
+    'visualDays'
 ];
 
 SHARED_STATE_FIELDS.forEach(field => {
