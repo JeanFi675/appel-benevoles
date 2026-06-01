@@ -9,7 +9,7 @@
  */
 
 import Alpine from 'alpinejs';
-import { formatTime } from '../../utils.js';
+import { formatTime } from '../../utils/format-date.js';
 
 export function adminMailingTab() {
   return {

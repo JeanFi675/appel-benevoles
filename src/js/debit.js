@@ -1,3 +1,4 @@
+import '../css/debit.css';
 import Alpine from 'alpinejs';
 import { PublicApiService } from './services/public-api.js';
 

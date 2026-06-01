@@ -1,3 +1,4 @@
+import '../css/scanner-tshirt.css';
 import Alpine from 'alpinejs';
 import { ApiService } from './services/api.js';
 import { createConfirmModalState, askConfirm, handleConfirm } from './utils/confirm.js';

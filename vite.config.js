@@ -109,7 +109,7 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             if (id.includes('@supabase')) return 'vendor-supabase';
             if (id.includes('alpinejs')) return 'vendor-alpine';
-            if (id.includes('html5-qrcode') || id.includes('qrcode')) return 'vendor-qrcode';
+            if (id.includes('qrcode')) return 'vendor-qrcode';
             return 'vendor';
           }
         },

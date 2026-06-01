@@ -28,12 +28,18 @@ logs/
 vite.config.js.timestamp-*.mjs
 
 # Claude Code — configuration locale et skills téléchargés
-.claude/settings.local.json
-.claude/skills/
+.claude/
 .claude-octopus/
 .agent/
 .agents/
 skills-lock.json
+
+# Audit — snapshots éphémères et données privées (UUIDs prod)
+# Les analyses .md sont conservées (livrables Phase 1).
+audit/_*
+audit/*.csv
+audit/lighthouse/*.html
+audit/lighthouse/*.json
 
 # Artefacts de pentest / sécurité
 .sb-pentest-*
@@ -59,11 +65,17 @@ coverage/
 supabase/.temp/
 supabase/migrations_backup/
 
-# Documentation (sauf fichiers racine et données événement)
+# Documentation (sauf fichiers racine, livrables doc et données événement)
 *.md
 !README.md
 !ARCHITECTURE.md
 !CLAUDE.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!DATABASE.md
+!audit/**/*.md
+!security/**/*.md
+!docs/**/*.md
 !src/data/programme.md
 
 # Scripts locaux & exports JSON

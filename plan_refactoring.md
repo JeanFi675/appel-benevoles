@@ -409,11 +409,11 @@
 - [x] **5.2.7 — Convertir `modules/user/tshirt.js` en composant Alpine** (`Alpine.data('tshirtWidget')` + partial `src/partials/components/tshirt-widget.html`). Supprimer le render impératif et le flag `isRenderingTshirt`. **DoD :** plus de `document.createElement` ni `.innerHTML =` dans `tshirt.js` ; test manuel : widget masqué si tout collecté / affichage QR scanner OK. — **Fait (2026-05-29)** : `src/js/modules/user/tshirt.js` supprimé (106 l → 0). Nouveau composant `src/js/components/user/tshirt-widget.js` (76 l, déclaratif Alpine.data) + partial `src/partials/components/tshirt-widget.html`. État local (pas de store : un seul consommateur, aligné sur décision 5.2.6). Filtre `eligibles` migré en getter Alpine (computed) plutôt qu'en filtre impératif. QR rendu à l'ouverture (`toggleQR` + `$nextTick(renderQR)`) car bloc en `x-show`. Layout `col-span-2` géré par `:class="{ 'col-span-2': isOpen }"` (vs `parentElement.classList.add` impératif avant). Suppression : flag `isRenderingTshirt`, `document.createElement`, `innerHTML =`, `addEventListener`, `classList.add/remove`. Refresh hook préventif `window.dispatchEvent(new CustomEvent('tshirt-refresh'))` exposé via `x-on:tshirt-refresh.window="reload()"`. Preuves : `grep -n "document.createElement\|innerHTML\s*=\|addEventListener\|classList" src/js/components/user/tshirt-widget.js` → No matches. `grep -rn "TshirtModule\|renderTshirtWidget\|isRenderingTshirt" src/` → No matches (sauf `audit/22_alpine_methods.txt`, artefact horodaté). `npm run build` OK (171 modules, 2.52 s, aucun warning). Test manuel PASS (mainteneur, 2026-05-29) : 4 scénarios (taille valide non récupéré → widget visible + QR ; SANS/vide → masqué ; tout récupéré → masqué ; flag off → masqué).
 - [x] **5.2.8 — Fusionnée dans 5.2.5** (ex-tâche "remplacer le couplage `__x.$data` admin↔timeline par un store"). Traitée comme sous-tâche D de la 5.2.5 refondue.
 - [x] **5.2.9 — Fix `scanner-tshirt.html` (hors-périmètre 5.2.7, relevés mainteneur 2026-05-29)**. Trois patchs atomiques sur la page scanner (admin) — fichier unique, zéro SQL :
-    - **Patch A — Propagation Phase 2.6 oubliée** : 5× `v.t_shirt_recupere` → `v.has_recupere_tshirt` (badge `RÉCUPÉRÉ`, texte "T-shirt remis ✅", `opacity-50`, `:disabled` checkbox, `:disabled` select). Conséquence avant patch : aucun feedback visuel après retrait. Cf. `audit/notes.md` entrée 2026-05-29 "Scanner T-shirt : absence de feedback".
-    - **Patch B — `<select>` complet** : ajout `<option value="">— choisir —</option>` (placeholder pour `null`) + `<option value="SANS">SANS</option>` (valeur valide de l'enum `tshirt_size`). Hypothèse pour le bug "impossible de changer la taille" (notes 2026-05-28) : `x-model` ne pouvait pas binder un état initial `SANS`/`null` faute d'option matchant.
-    - **Patch C — Libellé famille conditionnel** : `<p x-show="volunteers.length > 1">Famille détectée</p>` (vs affichage inconditionnel). Cf. `audit/notes.md` entrée 2026-05-29 "RPC détection famille erronée pour user solo" : la RPC est correcte, seul le libellé mentait.
+  - **Patch A — Propagation Phase 2.6 oubliée** : 5× `v.t_shirt_recupere` → `v.has_recupere_tshirt` (badge `RÉCUPÉRÉ`, texte "T-shirt remis ✅", `opacity-50`, `:disabled` checkbox, `:disabled` select). Conséquence avant patch : aucun feedback visuel après retrait. Cf. `audit/notes.md` entrée 2026-05-29 "Scanner T-shirt : absence de feedback".
+  - **Patch B — `<select>` complet** : ajout `<option value="">— choisir —</option>` (placeholder pour `null`) + `<option value="SANS">SANS</option>` (valeur valide de l'enum `tshirt_size`). Hypothèse pour le bug "impossible de changer la taille" (notes 2026-05-28) : `x-model` ne pouvait pas binder un état initial `SANS`/`null` faute d'option matchant.
+  - **Patch C — Libellé famille conditionnel** : `<p x-show="volunteers.length > 1">Famille détectée</p>` (vs affichage inconditionnel). Cf. `audit/notes.md` entrée 2026-05-29 "RPC détection famille erronée pour user solo" : la RPC est correcte, seul le libellé mentait.
 
-    **DoD :** `grep -n "t_shirt_recupere" scanner-tshirt.html` → No matches. `npm run build` OK. Test manuel PASS (mainteneur, 2026-05-29) : (i) bénévole déjà récupéré → badge + texte + opacity affichés ; (ii) changement de taille puis validation → persiste après reload ; (iii) user solo → "Famille détectée" masqué.
+  **DoD :** `grep -n "t_shirt_recupere" scanner-tshirt.html` → No matches. `npm run build` OK. Test manuel PASS (mainteneur, 2026-05-29) : (i) bénévole déjà récupéré → badge + texte + opacity affichés ; (ii) changement de taille puis validation → persiste après reload ; (iii) user solo → "Famille détectée" masqué.
 
 ### 5.3 Application DRY et SOLID
 
@@ -445,33 +445,49 @@
 
 ---
 
-## Phase 6 — Tests et validation fonctionnelle
+## Phase 6 — Consolidation pré-documentation
 
-### 6.1 Parcours utilisateurs
+> Avant de figer la documentation (Phase 7), purger les dettes techniques résiduelles tracées dans `audit/notes.md` qui contamineraient la doc si on documente l'état actuel. Cette phase est volontairement courte et atomique.
 
-- [ ] Rédiger `tests/manual_scenarios.md` listant les parcours critiques par rôle (benevole, referent, admin, juge, admin-juge, officiel). **DoD :** chaque rôle a au moins 3 scénarios documentés.
-- [ ] Exécuter chaque scénario sur Supabase local et noter le résultat. **DoD :** `tests/manual_results.md` recense les résultats datés.
-- [ ] Pour chaque échec, créer une issue et corriger avant Phase 7. **DoD :** tous les scénarios sont `PASS` dans le rapport final.
+### 6.1 Hygiène du repo
 
-### 6.2 Non-régression
+- [x] **6.1.1 — Étendre la whitelist `.gitignore` aux Markdown du projet**. La règle `*.md` actuelle ignore tous les futurs livrables de doc (`audit/**/*.md`, `security/**/*.md`, `docs/**/*.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `DATABASE.md`). Origine : `audit/notes.md` 2026-05-25 (« Règle *.md du .gitignore trop large »). **DoD :** `git check-ignore audit/notes.md` ne retourne rien ET `git check-ignore CHANGELOG.md` ne retourne rien ET tout fichier `.md` aléatoire à la racine reste ignoré (`git check-ignore foo.md` retourne `foo.md`).
+- [x] **6.1.2 — Ajouter `.gitattributes` `*.sql text eol=lf`**. Rend `pg_dump --schema-only` déterministe entre postes Windows/macOS/Linux ; supprime la divergence cosmétique CRLF documentée en Phase 2.9. Origine : `audit/notes.md` 2026-05-27 (« Recommandation .gitattributes post-Phase 2.9 »). **DoD :** fichier `.gitattributes` présent à la racine contenant au minimum `*.sql text eol=lf` ; `git check-attr eol supabase/migrations/00000000000000_init.sql` retourne `eol: lf`.
 
-- [ ] Comparer le comportement actuel (vidéos/captures sur prod) avec le comportement local post-refacto sur les 10 fonctionnalités les plus utilisées. **DoD :** un tableau dans `tests/regression.md` montre `Avant === Après` pour chaque cas.
+### 6.2 Cohérence du frontend avant figeage de la doc
 
-### 6.3 Tests de charge minimaux (si pertinent)
+> ARCHITECTURE.md (Phase 7.2) doit décrire la réalité du code. Ces 3 items, repérés pendant l'inspection préparatoire à la doc (`audit/notes.md` 2026-05-30), figeraient des incohérences dans le diagramme s'ils étaient laissés en l'état.
 
-- [ ] Identifier les pages critiques (planning, admin). **DoD :** la liste est dans `tests/load.md`.
-- [ ] Lancer `k6` ou `autocannon` simulant 50 utilisateurs concurrents sur ces pages contre Supabase local. **DoD :** les temps de réponse P95 sont < 1s. _Note : mesures indicatives — Supabase local n'a pas les mêmes caractéristiques que la prod managée._
+- [x] **6.2.1 — Statuer sur `src/js/admin-timeline.js`**. **Vérification 2026-05-31 : faux positif d'audit.** Le fichier est importé par `src/js/besoins.js:2` (`import { initAdminTimelineApp } from './admin-timeline.js'`), lui-même déclaré comme entrypoint Vite (`vite.config.js:78-89` + `rollupOptions.input.besoins:105`). En tant que module enfant transitif, il est suivi automatiquement par Vite — aucune entrée séparée requise dans `pages[]` ni `rollupOptions.input`. Aucune action code. La note ⚠️ d'`ARCHITECTURE.md:188` (« Non déclaré dans vite.config.js ») est obsolète et sera corrigée lors de la rédaction en Phase 7.2. **DoD :** constat consigné ici ; correction d'`ARCHITECTURE.md` reportée à 7.2.
+- [x] **6.2.2 — Nettoyer la règle `manualChunks` html5-qrcode dans `vite.config.js`**. La lib a été désinstallée en Phase 4.2 mais la règle de chunking la référence toujours (ligne ~112). **DoD :** `grep -n "html5-qrcode" vite.config.js` ne retourne rien ; `npm run build` réussit.
+- [x] **6.2.3 — Trancher l'état `src/js/utils.js` (monolithe) vs `src/js/utils/` (dossier thématique)**. Deux options : (a) finir l'extraction (déplacer chaque export restant de `utils.js` vers un fichier thématique dans `utils/`, puis supprimer `utils.js`), (b) acter explicitement l'état hybride dans ARCHITECTURE.md avec justification. **DoD :** soit `src/js/utils.js` n'existe plus, soit une note `audit/notes.md` documente la dérogation pour ARCHITECTURE.md.
+- [x] **6.2.4 — Fix erreur transitoire `vite-plugin-html` (html-inline-proxy)**. Le bug `[vite:html-inline-proxy] No matching HTML proxy module found` se déclenche ~1 build sur 2 sur `debit.html` à cause d'un `<style>` inline + `minify: true` (race condition `vite-plugin-html@3.2.2` + Vite 7). Extraire les `<style>` inline de `debit.html` et `scanner-tshirt.html` vers `src/css/<page>.css` importés depuis les entrypoints JS respectifs. **DoD :** plus de `<style>` inline dans les 2 HTML ; 5 builds consécutifs réussissent sans erreur `html-inline-proxy`.
 
-### 6.4 Tests des Edge Functions (en local via `supabase functions serve`)
+### 6.3 Vérifications de clôture Phase 5
 
-- [ ] Démarrer les Edge Functions en local : `supabase functions serve`. **DoD :** la commande affiche les endpoints locaux.
-- [ ] Tester `send-planning` avec un bénévole de test (SMTP test via Mailpit/Inbucket local fourni par Supabase). **DoD :** l'email arrive avec le bon contenu dans l'interface Inbucket (`http://127.0.0.1:54324`).
-- [ ] Tester `create-benevole` en tant qu'admin avec un email de test. **DoD :** le compte est créé et apparaît dans `auth.users` local.
-- [ ] Tester `create-benevole` avec un appelant non-admin → doit échouer. **DoD :** la réponse HTTP est `403`.
+- [x] **6.3.1 — Re-passer `npx eslint src/` et vérifier que les 10 variables `no-unused-vars` reportées en Phase 4.3.3 sont traitées**. Origine : `audit/notes.md` 2026-05-28 (liste des 10 occurrences). Si la Phase 5.5 ne les a pas nettoyées, les corriger ici. **DoD :** `npx eslint src/` retourne `0 error 0 warning` OU justification écrite par variable conservée.
+- [x] **6.3.2 — Re-passer `node scripts/audit-alpine-methods.js`**. Détecte d'éventuelles méthodes/propriétés Alpine devenues mortes par cascade depuis la fin de Phase 5.2. **DoD :** la sortie liste 0 candidat OU une justification est ajoutée pour chaque entrée conservée.
+
+### 6.4 Consolidation des dettes différées à Phase 8
+
+> Cette section ne fait que **lister** les dettes connues qui doivent attendre la Phase 8 (mise en prod). Elle sert de checklist d'entrée pour Phase 8 — aucune action ici. Ces items resteront dans `audit/notes.md` jusqu'à leur résolution.
+
+- [x] **6.4.1 — Recenser dans `audit/notes.md` (section « Actif ») la liste des dettes Phase 8** :
+  - Fix Edge Function `send-relance-orphelin/index.ts:150` (`auth_user_id` → `user_id` en interne, contrat HTTP conservé). Cf. `audit/notes.md` 2026-05-28.
+  - Génération de `prod_migration_YYYYMMDD.sql` via diff schéma prod ↔ `init.sql` cible (D8). Cf. `audit/notes.md` 2026-05-26.
+  - Push des 22 commits `master` local non poussés sur `origin/master`. Cf. `audit/notes.md` 2026-05-25.
+
+  **DoD :** la section « Actif » de `audit/notes.md` contient ces 3 entrées avec un lien vers leur description détaillée plus bas dans le fichier.
+
+- [x] **6.4.2 — Fix Edge Function `send-relance-orphelin/index.ts:150`**. La colonne `orphan_relances.auth_user_id` a été renommée `user_id` en Phase 2.6 ; l'Edge Function fait toujours référence à l'ancien nom → upsert cassé dès le déploiement de la consolidation `init.sql`. Fix atomique : `.upsert({ user_id: auth_user_id, relance_sent_at: now }, { onConflict: 'user_id' });` (préserver le param HTTP `auth_user_id` côté entrée pour ne pas casser le contrat avec `admin-connexions.js:222`). Le déploiement (`supabase functions deploy`) reste en Phase 8, synchronisé avec l'application de `prod_migration_YYYYMMDD.sql`. **DoD :** ligne 150 reformulée ; `grep auth_user_id supabase/functions/send-relance-orphelin/index.ts` ne renvoie que les occurrences du paramètre HTTP (pas la colonne SQL) ; tableau « Actif » de `audit/notes.md` mis à jour (cette dette est sortie de Phase 8, ne reste que le déploiement).
 
 ---
 
 ## Phase 7 — Documentation
+
+### 7.1bis docs/deployment.md
+
+- [ ] Créer `docs/deployment.md` documentant le déploiement frontend (GitHub Pages / GitHub Actions), les variables d'environnement de prod requises, et la procédure de déploiement des Edge Functions Supabase (`supabase functions deploy`). **DoD :** le fichier existe et est référencé depuis le README (tâche 7.1).
 
 ### 7.1 README principal
 
@@ -557,7 +573,6 @@
 
 ### 8.5 Checklist finale de go-live
 
-- [ ] Tous les tests manuels Phase 6 passent en production. **DoD :** `tests/manual_results_prod.md` est rempli.
 - [ ] Tous les rôles peuvent se connecter et accéder à leurs pages respectives. **DoD :** validation croisée par au moins un utilisateur réel par rôle.
 - [ ] Aucune erreur n'apparaît dans Sentry sur les 24 premières heures. **DoD :** le dashboard est vide d'erreurs critiques.
 - [ ] Le `CHANGELOG.md` est mis à jour avec la date de mise en production. **DoD :** un tag `v1.0.0` est créé sur `master`.

@@ -1,6 +1,6 @@
 import { ApiService } from '../../services/api.js';
 import { AuthService } from '../../services/auth.js';
-import { formatDate, formatTime } from '../../utils.js';
+import { formatDate, formatTime } from '../../utils/format-date.js';
 
 /**
  * Module for managing planning and inscriptions.

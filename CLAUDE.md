@@ -7,28 +7,34 @@ Ce fichier est destiné aux agents IA qui travailleront sur ce projet. Lis-le en
 # 📜 RÈGLES DE DÉVELOPPEMENT & CONSIGNES DU PROJET (Standard Mai 2026)
 
 ## 👤 Role & Expertise
+
 Tu es un développeur Full-Stack Senior spécialisé dans la création d'applications web performantes, sécurisées et maintenables. Ta priorité absolue est la qualité du code pour la mise en production (standard Mai 2026).
 
 ## 💻 Tech Stack
+
 - **Frontend** : Vite, Alpine.js, HTML, CSS
 - **Backend/DB** : Supabase (PostgreSQL)
 
 ## 🥇 Règle d'or : Atomicity First
+
 - **Pas de refactoring massif** en une seule fois.
 - Propose des **changements atomiques** (un composant ou une fonction à la fois).
 - **Zéro code mort** : Supprime le code inutile lors des refactorisations.
 
 ## 🎨 Frontend Skills (Alpine.js & Vite)
+
 - **Évite le "Spaghetti DOM"** : Interdiction d'écrire des attributs `x-data` contenant plus de 3 lignes de logique.
 - **Organisation logique** : Utilise systématiquement `Alpine.data()` et `Alpine.store()` dans des fichiers `.js` séparés pour la logique métier complexe.
 - **Build optimal** : Assure-toi que la configuration de Vite génère des assets optimisés (minification, tree-shaking).
 
 ## 🔒 Backend Skills (Supabase & PostgreSQL)
+
 - **Sécurité stricte** : Chaque table **DOIT** avoir des règles RLS (Row Level Security) actives et configurées avec précision.
 - **Pas de contournement** : Ne propose pas de contourner la sécurité via la clé `service_role` sur le frontend.
 - **Changements documentés** : Les modifications de base de données doivent être documentées sous forme de scripts SQL de migration propres dans `supabase/migrations/`.
 
 ## ✍️ Documentation & Clean Code
+
 - **Commentaires** : Commente la logique complexe dans les fichiers JS.
 - **README** : Maintiens le README à jour avec les commandes pour lancer le projet et l'architecture de la base de données.
 - **Qualité de code** : Respecte scrupuleusement les principes DRY (Don't Repeat Yourself) et SOLID.
@@ -44,36 +50,85 @@ Système de gestion de bénévoles pour le **Championnat de France d'escalade de
 ## ⚠️ AVERTISSEMENTS CRITIQUES
 
 ### 1. Dev local = base de production
+
 Le fichier `.env` local pointe sur la **base Supabase de production**. Il n'existe pas d'environnement de staging. Toute opération de données en développement affecte les vrais utilisateurs. Ne jamais :
+
 - Vider ou modifier des tables en dev sans confirmation explicite de l'utilisateur
 - Exécuter des migrations destructives sans vérification
 - Tester des insertions massives
 
 ### 2. Logique métier dans les triggers PostgreSQL
+
 Les règles de capacité et de conflits horaires sont dans des triggers SQL, **pas dans le frontend**. Ne pas les contourner côté JS. Ne pas les dupliquer non plus.
 
 ### 3. Ne pas modifier les politiques RLS sans expertise
+
 Les politiques Row Level Security sur toutes les tables sont délicates. Une mauvaise politique peut exposer des données personnelles ou bloquer les utilisateurs. Voir `supabase/migrations/006_fix_rls_policies.sql` et `008_fix_rls_recursion.sql` qui ont déjà corrigé des bugs RLS.
 
 ### 4. Ne pas supprimer `dist/` du repo sans vérifier
+
 Ce dossier est versionné par erreur (résidu) mais son impact sur le déploiement est à vérifier avant suppression.
+
+---
+
+## Environnements (ajouté Phase 0.3 du refactoring 2026-05-25)
+
+Depuis le refactoring de mai 2026, une instance **Supabase locale** (Docker) est disponible. Tant que `supabase start` est actif et que `.env.local` existe, **`npm run dev` pointe sur l'instance locale**, pas sur la prod.
+
+### Bascule LOCAL ↔ PROD
+
+| Action                            | Commande                                               | Cible                            |
+| --------------------------------- | ------------------------------------------------------ | -------------------------------- |
+| Dev local (par défaut)            | `npm run dev` ou `npm run dev:local`                   | Supabase local `127.0.0.1:54321` |
+| Repointer temporairement sur prod | `mv .env.local .env.local.disabled` puis `npm run dev` | Supabase prod (URL du `.env`)    |
+| Revenir sur local                 | `mv .env.local.disabled .env.local` puis `npm run dev` | Supabase local                   |
+
+**Mécanisme** : Vite charge automatiquement `.env.local` après `.env` ; les variables de `.env.local` overrident celles de `.env`. Désactiver `.env.local` (en le renommant) suffit à repointer sur prod.
+
+### Démarrer / arrêter l'instance Supabase locale
+
+```bash
+supabase start            # Démarre tous les services (Postgres, Auth, Studio, ...)
+supabase status           # URLs et credentials de l'instance locale
+supabase stop             # Arrête sans purger les données
+supabase stop --no-backup # Arrête et purge le volume DB (reset complet)
+```
+
+URLs locales standards :
+
+- API/REST : `http://127.0.0.1:54321`
+- DB : `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
+- Studio (UI) : `http://127.0.0.1:54323`
+- Inbucket/Mailpit (emails de test) : `http://127.0.0.1:54324`
+
+### Restaurer un dump prod dans le local
+
+```bash
+# Pré-requis : dump à jour dans backups/ (voir backups/README.md)
+docker exec -i supabase_db_appel-benevoles psql -U postgres -d postgres -v ON_ERROR_STOP=0 < backups/YYYYMMDD_schema.sql
+docker exec -i supabase_db_appel-benevoles psql -U postgres -d postgres -v ON_ERROR_STOP=0 < backups/YYYYMMDD_data.sql
+```
+
+### Migrations historiques cassées (à savoir)
+
+Les migrations du dossier `supabase/migrations_archive_pre_refactor/` ne sont **pas reproductibles from-scratch** (cf. `audit/notes.md` : la migration 006 référence une colonne `user_id` jamais créée par une migration). C'est pour cette raison que le dossier `supabase/migrations/` actif est temporairement vide pendant la Phase 0-2 du refactoring — la consolidation `init.sql` (Phase 2.8) corrigera ça.
 
 ---
 
 ## Stack et versions
 
-| Outil | Version | Usage |
-|-------|---------|-------|
-| Node.js | 20+ | Runtime de build |
-| Vite | ^7.3.0 | Bundler + dev server |
-| Alpine.js | ^3.13.3 | Réactivité frontend |
-| Tailwind CSS | ^3.3.5 | Styles utilitaires |
-| vite-plugin-html | ^3.2.2 | Templates EJS + minification HTML |
-| @supabase/supabase-js | ^2.39.0 | Client DB/Auth |
-| html5-qrcode | ^2.3.8 | Lecture QR code |
-| qrcode | ^1.5.4 | Génération QR code |
-| Supabase CLI | latest | Migrations et Edge Functions |
-| Deno | latest | Runtime des Edge Functions |
+| Outil                 | Version | Usage                             |
+| --------------------- | ------- | --------------------------------- |
+| Node.js               | 20+     | Runtime de build                  |
+| Vite                  | ^7.3.0  | Bundler + dev server              |
+| Alpine.js             | ^3.13.3 | Réactivité frontend               |
+| Tailwind CSS          | ^3.3.5  | Styles utilitaires                |
+| vite-plugin-html      | ^3.2.2  | Templates EJS + minification HTML |
+| @supabase/supabase-js | ^2.39.0 | Client DB/Auth                    |
+| html5-qrcode          | ^2.3.8  | Lecture QR code                   |
+| qrcode                | ^1.5.4  | Génération QR code                |
+| Supabase CLI          | latest  | Migrations et Edge Functions      |
+| Deno                  | latest  | Runtime des Edge Functions        |
 
 ---
 
@@ -112,6 +167,7 @@ cagnotte_transactions -- Transactions de crédit/débit bénévoles
 ### Rôles utilisateurs
 
 Les rôles sont stockés dans `benevoles.role` :
+
 - `benevole` — accès page principale
 - `referent` — voir les inscriptions de ses postes
 - `admin` — accès complet
@@ -120,6 +176,7 @@ Les rôles sont stockés dans `benevoles.role` :
 - `officiel` — page officiels, **sans** accès cagnotte
 
 ### Feature flags (table `config`)
+
 - `cagnotte_active` : active/désactive l'affichage cagnotte
 - `tarif_degaines_juge` : montant crédité par dégainé juge (défaut 10.00)
 
@@ -130,13 +187,16 @@ Les rôles sont stockés dans `benevoles.role` :
 Ce projet n'avait pas de conventions formelles initialement. Voici celles à adopter pour tout nouveau code :
 
 ### Structure d'une nouvelle page
+
 Chaque nouvelle page suit ce patron :
+
 1. Un fichier HTML racine (`ma-page.html`) — template EJS
 2. Un fichier JS d'entrée (`src/js/ma-page.js`) — initialise Alpine.js
 3. Des partials HTML dans `src/partials/sections/ma-page/`
 4. Déclaration dans `vite.config.js` (plugins + rollupOptions)
 
 ### JavaScript
+
 - **Alpine.js** pour tout ce qui est réactif dans le DOM
 - **Pas de classes JS** — utiliser des objets littéraux retournés par des fonctions
 - **Services** (`api.js`, `auth.js`) pour tout accès Supabase — ne jamais appeler `supabase` directement dans un module
@@ -145,18 +205,21 @@ Chaque nouvelle page suit ce patron :
 - Les méthodes qui modifient des données doivent afficher un toast de confirmation ou d'erreur
 
 ### HTML / Partials
+
 - Les partials sont des fragments EJS (`<%- include('chemin') %>`)
 - Ne pas mettre de logique métier dans les templates HTML
 - Les attributs Alpine.js (`x-data`, `x-on:click`, etc.) en kebab-case
 - Utiliser les classes Tailwind, pas de CSS inline
 
 ### SQL / Migrations
+
 - Nommer les fichiers de migration : `YYYYMMDDHHMMSS_description_courte.sql`
 - Toujours inclure `-- Migration: description` en en-tête
 - Tester mentalement l'impact RLS avant toute migration
 - Ne jamais modifier une migration déjà appliquée en prod — créer une nouvelle
 
 ### Tailwind CSS
+
 - Utiliser les tokens custom : `brutal-black`, `brutal-ice`, `brutal-white`
 - Ombres : `shadow-brutal`, `shadow-brutal-sm`, `shadow-brutal-hover`
 - Police body : `font-sans` (Space Grotesk), titres : `font-heading` (Inter)
@@ -167,39 +230,46 @@ Chaque nouvelle page suit ce patron :
 ## Pièges et points d'attention
 
 ### Client Supabase unique
+
 Le client Supabase est initialisé dans `src/js/config.js` (ES module npm). C'est le seul client — ne pas en créer un second.
 
 ### Singleton de refresh Supabase
+
 `src/js/config.js` contient un mécanisme de déduplication des appels de refresh de token. Ne pas le modifier — il évite des race conditions lors du chargement de pages avec plusieurs appels Supabase simultanés.
 
 ### Triggers PostgreSQL — ne pas contourner
+
 Les triggers `check_capacity()` et `check_time_conflict()` sont en base. Si un INSERT dans `inscriptions` échoue, c'est normal — afficher l'erreur à l'utilisateur. Ne pas gérer cette logique côté frontend.
 
 ### Anonymisation des données publiques
+
 La vue `public_planning` affiche "Prénom + Initiale" (ex: "Marie D."). Ne jamais exposer les noms complets dans une vue ou requête publique.
 
 ### Timeout RLS recursion
+
 Les politiques RLS utilisent des fonctions sécurisées pour éviter la récursion infinie. Si tu modifies une politique RLS et que des requêtes commencent à timeout, c'est probablement une récursion. Voir les migrations 006 à 008.
 
 ### `npm run dev` pointe sur la prod
+
 Voir avertissement critique #1. Conséquence pratique : les inscriptions, profils et transactions créées en dev sont réels. Utiliser des emails de test et nettoyer après.
 
 ### Le dossier `dist/` est dans git
+
 Résidu d'architecture. Le pipeline CI/CD (GitHub Actions) rebuild depuis les sources et ne lit pas ce dossier. Ne pas s'y fier pour comprendre l'état de production.
 
 ---
 
 ## Ce qu'il NE faut PAS modifier sans précaution
 
-| Élément | Risque | Précaution |
-|---------|--------|------------|
-| Triggers SQL (`check_capacity`, `check_time_conflict`) | Inscriptions en double ou sans contrôle | Tester sur une copie de la DB |
-| Politiques RLS sur `benevoles`, `inscriptions` | Fuite de données personnelles | Lire les migrations 006-008 avant |
-| `src/js/config.js` — singleton refresh | Race conditions d'authentification | Ne pas simplifier sans comprendre |
-| Table `config` — `cagnotte_active` | Désactiver la cagnotte en production | Confirmer avec l'utilisateur |
-| Schema `auth.users` (Supabase) | Casse l'authentification | Ne jamais modifier directement |
-| `vite.config.js` — `base: "./"` | Chemins cassés sur GitHub Pages | Garder `"./"` pour déploiement relatif |
-| Politiques RLS sur `cagnotte_transactions` | Accès non autorisé aux soldes | Tester avec différents rôles |
+| Élément                                                | Risque                                  | Précaution                             |
+| ------------------------------------------------------ | --------------------------------------- | -------------------------------------- |
+| Triggers SQL (`check_capacity`, `check_time_conflict`) | Inscriptions en double ou sans contrôle | Tester sur une copie de la DB          |
+| Politiques RLS sur `benevoles`, `inscriptions`         | Fuite de données personnelles           | Lire les migrations 006-008 avant      |
+| `src/js/config.js` — singleton refresh                 | Race conditions d'authentification      | Ne pas simplifier sans comprendre      |
+| Table `config` — `cagnotte_active`                     | Désactiver la cagnotte en production    | Confirmer avec l'utilisateur           |
+| Schema `auth.users` (Supabase)                         | Casse l'authentification                | Ne jamais modifier directement         |
+| `vite.config.js` — `base: "./"`                        | Chemins cassés sur GitHub Pages         | Garder `"./"` pour déploiement relatif |
+| Politiques RLS sur `cagnotte_transactions`             | Accès non autorisé aux soldes           | Tester avec différents rôles           |
 
 ---
 
@@ -208,11 +278,13 @@ Résidu d'architecture. Le pipeline CI/CD (GitHub Actions) rebuild depuis les so
 Deux fonctions Deno dans `supabase/functions/` :
 
 **`send-planning`** — Envoie le planning par email
+
 - Requiert headers `Authorization: Bearer <jwt>`
 - Timeout RPC : 30 secondes
 - Variables d'environnement : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
 
 **`create-benevole`** — Création de compte par l'admin
+
 - Vérifie que l'appelant a le rôle `admin`
 - Utilise la Service Role Key pour créer des comptes Auth
 - Ne pas exposer la Service Role Key au frontend
@@ -230,11 +302,13 @@ Dernière migration en date : `20260316083700_add_fk_postes_referent_id.sql`
 ## Tests
 
 Il n'y a pas de suite de tests automatisés. Les validations se font :
+
 - Manuellement dans l'interface
 - Via les contraintes PostgreSQL (triggers, RLS)
 - Via la page `admin-connexions.html` pour le diagnostic
 
 Avant tout déploiement d'une migration, vérifier mentalement :
+
 1. L'impact sur les politiques RLS existantes
 2. Les données existantes (migration rétrocompatible ?)
 3. Les vues qui dépendent des tables modifiées

@@ -386,6 +386,89 @@ arbitrées lors de la clôture de la Phase 1.10 »).
 
 ---
 
+## Validation 3NF et séparation des domaines (Phase 2.7)
+
+> Analyse menée le **2026-05-27** sur l'état post-Phase 2.6 de l'instance Supabase locale.
+> Périmètre : 13 tables physiques du schéma `public` (les 5 objets `admin_*` et `public_planning` sont des **vues** et hors-scope 3NF par définition — données dérivées par construction).
+
+### Méthode
+
+- **PK** : chaque table doit avoir une PK (1NF).
+- **2NF** : pour les PK composites, chaque attribut non-clé doit dépendre de la clé entière.
+- **3NF** : aucun attribut non-clé ne doit dépendre d'un autre attribut non-clé (pas de dépendance transitive).
+- **Duplication** : aucune information ne doit être stockée à deux endroits sans justification (perf, RLS, historisation).
+
+### Résultats table par table
+
+| # | Table | PK | 2NF | 3NF | Verdict | Notes |
+|---|---|---|---|---|---|---|
+| 1 | `benevoles` | `id` (UUID) | N/A (PK simple) | ✅ | **CONFORME** (avec note 1NF) | `cagnotte_forcee_jours` est un `ARRAY` (date[]) — voir §Dénormalisations §D-3. |
+| 2 | `benevole_cagnotte_periodes` | `(benevole_id, periode_id)` | ✅ | ✅ | **CONFORME** | Table de jonction pure (aucun attribut non-clé). |
+| 3 | `benevole_repas` | `(benevole_id, repas_id)` | ✅ | ✅ | **CONFORME** | `is_vegetarien` dépend bien du couple (87/88 bénévoles constants, **1/88 varie** par repas — vérifié 2026-05-27). |
+| 4 | `cagnotte_transactions` | `id` (UUID) | N/A | ⚠️ **Dénormalisation acceptée** | **CONFORME avec note** | `user_id` est strictement dérivable via `benevole_id → benevoles.user_id` (189/189 lignes cohérentes). Voir §D-1. |
+| 5 | `config` | `key` (text) | N/A | ✅ | **CONFORME** | Pattern key/value avec `value` en `jsonb`. |
+| 6 | `inscriptions` | `id` (UUID) + UNIQUE `(poste_id, benevole_id)` | N/A | ✅ | **CONFORME** | Aucun attribut dénormalisé (pas de `nom_benevole`, pas de `titre_poste` cachés — vérifié). |
+| 7 | `jours` | `date_ref` (date) | N/A | ✅ | **CONFORME** | Table de référence simple. |
+| 8 | `orphan_relances` | `user_id` (UUID) | N/A | ✅ | **CONFORME** | `telephone` ici ≠ `benevoles.telephone` (par construction : un orphan n'a pas de ligne `benevoles`). Voir §D-2. |
+| 9 | `periodes` | `id` (UUID) + UNIQUE `nom`, UNIQUE `ordre` | N/A | ✅ | **CONFORME** | `montant_credit` est un attribut métier du référentiel période. |
+| 10 | `postes` | `id` (UUID) | N/A | ✅ | **CONFORME** | Aucun `titre`/`description` ici : déjà déplacés vers `type_postes` (séparation propre). |
+| 11 | `programmes` | `id` (UUID) + UNIQUE `(date_ref, heure)` | N/A | ✅ | **CONFORME** | Clé surrogate `id` + clé naturelle `(date_ref, heure)` — choix de design assumé. |
+| 12 | `repas` | `id` (UUID) + UNIQUE `nom` | N/A | ✅ | **CONFORME** | Table de référence. |
+| 13 | `type_postes` | `id` (UUID) + UNIQUE `(date_ref, titre)` | N/A | ✅ | **CONFORME** | Séparation `postes` (instance temporelle) ↔ `type_postes` (référentiel de tâche) **strictement respectée**. |
+
+**Synthèse 3NF** : **13/13 tables** ont une PK ; **12/13 strictement 3NF** ; **1/13** en 3NF avec dénormalisation explicitement acceptée (§D-1).
+
+### Dénormalisations identifiées (toutes justifiées)
+
+#### D-1 — `cagnotte_transactions.user_id` (dérivable de `benevole_id`)
+
+- **Constat** : `user_id` est techniquement redondant avec `benevoles[benevole_id].user_id` (vérifié : 189/189 transactions ont `ct.user_id = b.user_id` au 2026-05-27).
+- **Justification conservée** :
+  1. **RLS performance** — les policies RLS sur `cagnotte_transactions` peuvent filtrer par `auth.uid() = user_id` sans JOIN sur `benevoles`, évitant un parcours imbriqué à chaque requête.
+  2. **Sémantique du domaine** — un utilisateur (`auth.users`) peut avoir plusieurs bénévoles rattachés (famille — cf. `benevoles_user_prenom_nom_uniq` qui n'inclut PAS user_id seul). `user_id` représente "le titulaire du compte qui possède la cagnotte", `benevole_id` "le destinataire de la transaction".
+  3. **Cohérence FK** — les deux FK sont en `ON DELETE CASCADE` (D6.b — Phase 2.3). La suppression d'un user purge bien la transaction même si `benevole_id` était SET NULL historiquement.
+- **Décision** : **conserver** la colonne. Pas de remédiation prévue.
+
+#### D-2 — `orphan_relances.telephone` (cohabite avec `benevoles.telephone`)
+
+- **Constat** : deux tables stockent un téléphone.
+- **Justification** : par définition métier, un `auth.users` est soit dans `benevoles`, soit dans `orphan_relances` (état mutuellement exclusif). Aucun téléphone n'existe simultanément dans les deux pour le même `user_id`. → **Pas de duplication réelle.**
+
+#### D-3 — `benevoles.cagnotte_forcee_jours` en `ARRAY` (date[])
+
+- **Constat** : violation 1NF stricte (attribut multivalué).
+- **Justification** : pattern PostgreSQL natif accepté pour listes simples sans cardinalité forte et sans intégrité référentielle requise (les jours référencés ne sont pas validés contre `jours.date_ref`). Volumétrie attendue très faible (0–10 jours/bénévole).
+- **Asymétrie notée** : `cagnotte_forcee_periodes_ids` est, lui, modélisé par la table de jonction `benevole_cagnotte_periodes` (avec FK). Cette asymétrie est **fonctionnellement justifiée** :
+  - Les périodes ont besoin de garantir l'existence (FK + ON DELETE CASCADE pour propagation).
+  - Les jours sont des dates "libres" pré-validées par la table `jours` au niveau UI, sans propagation requise.
+- **Décision** : **conserver** en l'état. Une refonte en table `benevole_cagnotte_jours` serait possible mais hors-scope (pas de gain fonctionnel).
+
+#### D-4 — Vues `admin_*` et `public_planning` (champs agrégés/joints)
+
+- `admin_benevoles.nb_inscriptions`, `admin_benevoles.nb_postes_referent`, `admin_benevoles.repas` (jsonb)
+- `public_planning.referent_nom/email/telephone`, `nb_inscrits_actuels`, `liste_benevoles`
+- **Statut** : **N/A 3NF** — ce sont des **vues**, agrégats/jointures calculés à la demande. Aucune duplication physique de données.
+
+### Vérifications explicites menées (pas de fausses positives)
+
+| Vérification | Résultat |
+|---|---|
+| `postes.titre` / `postes.description` (dupliqués de `type_postes`) ? | ❌ **Absents** — séparation propre. |
+| `inscriptions.nom_benevole` / `inscriptions.poste_titre` (dénormalisation classique) ? | ❌ **Absents** — `inscriptions` contient uniquement les FK. |
+| Compteurs/totaux pré-calculés sur tables physiques (ex : `benevoles.nb_inscriptions`) ? | ❌ **Aucun** — uniquement présents dans la vue `admin_benevoles`. |
+| Colonnes calculées redondantes (ex : `montant_total` = `montant * qty`) ? | ❌ **Aucune détectée**. |
+| Données d'audit dupliquées (`created_at` vs `updated_at` cohérence) ? | ✅ Conforme — chaque table a 0, 1 ou 2 timestamps, pas de redondance. |
+
+### Conclusion 2.7
+
+- **3NF** : ✅ **13/13 tables conformes** (1 avec dénormalisation explicitement documentée et justifiée — D-1).
+- **Duplication** : ✅ **Aucune duplication injustifiée** détectée. Les 4 cas analysés (D-1 à D-4) sont tous documentés avec leur motif fonctionnel.
+- **Séparation des domaines** : ✅ La séparation `postes` (instance) / `type_postes` (référentiel) est nette, `benevoles` / `auth.users` est respectée via FK unique, et les tables de jonction (`inscriptions`, `benevole_repas`, `benevole_cagnotte_periodes`) ne contiennent que les attributs pertinents au couple.
+
+**Aucune migration corrective n'est requise pour 2.7.** L'audit valide le schéma post-Phase 2.6 comme prêt pour la consolidation `init.sql` en 2.8.
+
+---
+
 ## Références
 
 | Rapport | Fichier |

@@ -6,6 +6,49 @@
 
 ---
 
+## Statut des entrées — synthèse 2026-05-30
+
+> Le corps du fichier garde l'ordre chronologique d'origine (journal). Ce tableau permet de filtrer rapidement ce qui reste à faire vs ce qui est résolu, sans rien déplacer.
+
+### Actif — à traiter (rattaché au plan)
+
+| Date | Entrée | Action plan |
+|---|---|---|
+| 2026-05-25 | [Divergence `master` local vs `origin/master` (22 commits non poussés)](#2026-05-25--divergence-master-local-vs-originmaster) | Phase 8.0 (push à effectuer après merge `refactor/production-hardening` → `master`) |
+| 2026-05-25 | [Règle `*.md` du `.gitignore` trop large](#2026-05-25--règle-md-du-gitignore-trop-large-à-corriger-avant-phase-8) | Phase 6.1.1 ✅ (corrigé 2026-05-31) |
+| 2026-05-26 | [Génération de `prod_migration_YYYYMMDD.sql` via diff schéma prod ↔ `init.sql` cible (D8)](#d8--stratégie-phase-81--hybride-2-fichiers) | Phase 8.1 |
+| 2026-05-27 | [Recommandation `.gitattributes` `*.sql text eol=lf`](#2026-05-27--recommandation-gitattributes-post-phase-29) | Phase 6.1.2 ✅ (créé 2026-05-31) |
+| 2026-05-28 | [Phase 4.3.3 — 10 variables `no-unused-vars` détectées par ESLint](#2026-05-28--phase-433--variables-locales-non-utilisées-détectées-par-eslint) | Phase 6.3.1 ✅ (vérifié 2026-05-31 : `npx eslint src/` → 0/0) |
+| 2026-05-28 | [Phase 5.0.5 — Edge Function `send-relance-orphelin/index.ts:150` cassée (`auth_user_id` → `user_id` en interne, contrat HTTP conservé)](#2026-05-28--phase-505--edge-function-send-relance-orphelin-cassée-hors-périmètre-50) | Phase 6.4.2 ✅ (code fixé 2026-06-01) — reste déploiement `supabase functions deploy` en Phase 8 |
+| 2026-05-30 | [Anomalies ARCHITECTURE.md (admin-timeline orphelin, html5-qrcode manualChunks, utils.js vs utils/)](#2026-05-30--anomalies-repérées-pendant-rédaction-de-architecturemd-phase-72) | Phase 6.2.1 / 6.2.2 / 6.2.3 ✅ (résolues 2026-05-31) |
+
+### Résolu — archivé (référence historique, conservé pour traçabilité)
+
+| Date | Entrée | Résolution |
+|---|---|---|
+| 2026-05-25 | Stratégie de migration vers la prod (Phase 8.1) | D8 retenue (hybride 2 fichiers) — appliqué Phases 2.8/2.9 ; reste prod_migration en Phase 8 |
+| 2026-05-25 | Caractéristiques du dump data (0.2 #5) | Tranché en 0.3 #4 |
+| 2026-05-25 | Limite du dump `--role-only` (0.2 #6) | DoD reformulée dans le plan |
+| 2026-05-25 | Bug majeur : historique migrations non reproductible | Contournement appliqué en Phase 0.3 (dump prod = source de vérité) |
+| 2026-05-26 | Statut réel des rôles juge/admin-juge/officiel | D1 — suppression appliquée Phase 2.3 |
+| 2026-05-26 | Bug requête CHECK constraints en Partie 1.5.1 | Filtre corrigé, 5 CHECK révélés en 1.5.4 |
+| 2026-05-26 | Simplification du DoD 1.3 #2 (taxonomie colonnes) | Validé par mainteneur |
+| 2026-05-26 | Décisions de nommage validées (Phase 1.8 → 2.6) | Appliqué Phase 2.6 |
+| 2026-05-26 | Bugs hors-RLS détectés en Phase 1.9 (B1, B2) | Corrigé Phase 3.3 (helper supprimé, search_path fixé) |
+| 2026-05-26 | Décisions mainteneur D1-D8 (clôture Phase 1.10) | Toutes appliquées — **référence pérenne pour Phase 7 (doc)** |
+| 2026-05-26 | Divergence D4 vs réalité (`programme.(date_ref, heure)`) | DELETE doublons intégré à la migration UNIQUE |
+| 2026-05-27 | Privilèges PostgREST manquants dans `init.sql` | Migration `restore_postgrest_grants` appliquée Phase 3.4 |
+| 2026-05-27 | Clé OpenRouter exposée côté client | Phase 4.2.1 — clé révoquée + secret retiré + code supprimé |
+| 2026-05-28 | Phase 4.2 — Récap suppressions code mort | Historique |
+| 2026-05-28 | Scanner T-shirt : impossible de changer la taille | 5.2.9 Patch B (option SANS + placeholder) |
+| 2026-05-29 | Scanner T-shirt : absence de feedback récupéré | 5.2.9 Patch A (propagation 2.6 oubliée) |
+| 2026-05-29 | RPC `get_family_tshirt_info_smart` détection famille | 5.2.9 Patch C (faux positif, libellé conditionnel) |
+| 2026-05-29 | Phase 5.3.1 — Cartographie patterns DRY | Helpers `toast.js` + `confirm.js` extraits |
+| 2026-05-29 | Phase 5.3.2 — Revue SRP des services | `refreshSession` migré vers AuthService |
+| 2026-05-29 | Phase 5.3.3 — Appels directs `supabase` hors services | D2 retenu — `PublicApiService` créé, scanner-tshirt migré |
+
+---
+
 ## 2026-05-25 — Stratégie de migration vers la prod (Phase 8.1)
 
 **Contexte** : la Phase 2.8 consolide tout le schéma dans un unique `00000000000000_init.sql` et archive les anciennes migrations dans `supabase/migrations/_archive/`. La Phase 8.1 actuelle prévoit ensuite un `supabase db push --linked --force-prod`.
@@ -505,6 +548,8 @@ sur la table `orphan_relances`. La colonne `auth_user_id` a été renommée en `
 
 Bug à intégrer dans le plan Phase 8 (déploiement / Edge Functions) ou Phase 6 (tests Edge Functions). Pour mémoire pendant les tests 5.0.8 : le smoke test 5 « Relance orphelin » échouera tant que ce correctif n'est pas appliqué — l'échec est attendu et n'invalide pas 5.0.5.
 
+**✅ Résolu 2026-06-01 — Tâche 6.4.2** : ligne 150 reformulée → `.upsert({ user_id: auth_user_id, relance_sent_at: now }, { onConflict: 'user_id' });`. Le param HTTP `auth_user_id` reste l'entrée du body JSON (contrat préservé avec `src/js/admin-connexions.js:222`), mais l'écriture cible la nouvelle colonne `orphan_relances.user_id`. Le déploiement (`supabase functions deploy send-relance-orphelin`) reste en Phase 8, synchronisé avec l'application de `prod_migration_YYYYMMDD.sql`.
+
 ---
 
 ## 2026-05-28 — Scanner T-shirt : impossible de changer la taille (hors périmètre 5.0)
@@ -748,3 +793,24 @@ Justification mainteneur : « Pas besoin de savoir quel utilisateur a utilisé l
 - `supabase.*` hors `config.js` et `services/*.js` → 0 hit ✅
 
 Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateur connecté en parallèle).
+
+---
+
+## 2026-05-30 — Anomalies repérées pendant rédaction de ARCHITECTURE.md (Phase 7.2)
+
+**Contexte** : inspection du repo pour rédiger `ARCHITECTURE.md` depuis la réalité (et non depuis la version cible précédemment documentée).
+
+1. **`src/js/admin-timeline.js` orphelin de `vite.config.js`**
+   - Le fichier existe (`src/js/admin-timeline.js`) mais n'est pas déclaré comme entrée Vite dans `vite.config.js` (ni dans `pages[]`, ni dans `rollupOptions.input`).
+   - Soit il est importé par `admin.js` (à confirmer), soit c'est un entrypoint mort.
+   - **À traiter** : vérification + suppression ou déclaration explicite. Hors Phase 7 (documentation) — à programmer.
+
+2. **`html5-qrcode` référencé dans `vite.config.js` mais pas dans `package.json`**
+   - `vite.config.js:112` mentionne `id.includes('html5-qrcode')` dans `manualChunks`.
+   - `package.json` ne liste plus `html5-qrcode` dans les `dependencies` (seul `qrcode` y figure).
+   - Si le scanner T-shirt utilise réellement html5-qrcode, l'app casse au runtime. Si la lib est chargée via CDN dans le HTML, la règle `manualChunks` est inutile mais inoffensive.
+   - **À traiter** : confirmer le mode de chargement de la lib QR scan et nettoyer la règle `manualChunks` ou ajouter la dépendance. Hors Phase 7.
+
+3. **Coexistence `src/js/utils.js` (monolithe) et `src/js/utils/` (dossier thématique)**
+   - Connu : couvert par la Phase 5.3 du plan. Mentionné ici uniquement parce que ARCHITECTURE.md doit refléter cet état transitoire.
+

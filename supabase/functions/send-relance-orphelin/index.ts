@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     const { error: upsertError } = await supabaseAdmin
       .from('orphan_relances')
-      .upsert({ auth_user_id, relance_sent_at: now }, { onConflict: 'auth_user_id' });
+      .upsert({ user_id: auth_user_id, relance_sent_at: now }, { onConflict: 'user_id' });
 
     if (upsertError) {
       console.error("Erreur mise à jour orphan_relances:", upsertError);
