@@ -544,6 +544,7 @@
 
 - [ ] Pousser le tag de pré-refacto sur le remote : `git push origin pre-refactor-YYYYMMDD`. **DoD :** `git ls-remote --tags origin pre-refactor-*` retourne un SHA.
 - [ ] Pousser la branche `refactor/production-hardening` sur le remote avec `-u` : `git push -u origin refactor/production-hardening`. **DoD :** `git ls-remote --heads origin refactor/production-hardening` retourne un SHA.
+- [ ] **(Ajout 2026-06-01)** Créer un workflow CI de branche `.github/workflows/ci.yml` (lint ESLint + check Prettier + build) déclenché sur `push` des branches `refactor/**` et sur `pull_request`, car `deploy.yml` ne se déclenche que sur `push` vers `master` (aucun check sur la branche refactor sinon). Scope volontairement limité à `src/**` (cf. `audit/notes.md` 2026-06-01 — 4 fichiers config racine non formatés, hors scope). **DoD :** le fichier existe et les étapes du workflow passent en local (`npx eslint src/`, `npx prettier --check "src/**/*.{js,html,css,json,md}"`, `npm run build`).
 - [ ] Vérifier que le CI (GitHub Actions) passe au vert sur la branche poussée. **DoD :** la PR (ou le commit) affiche un check `success`.
 
 ### 8.1 Application en production

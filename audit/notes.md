@@ -21,6 +21,7 @@
 | 2026-05-28 | [Phase 4.3.3 — 10 variables `no-unused-vars` détectées par ESLint](#2026-05-28--phase-433--variables-locales-non-utilisées-détectées-par-eslint) | Phase 6.3.1 ✅ (vérifié 2026-05-31 : `npx eslint src/` → 0/0) |
 | 2026-05-28 | [Phase 5.0.5 — Edge Function `send-relance-orphelin/index.ts:150` cassée (`auth_user_id` → `user_id` en interne, contrat HTTP conservé)](#2026-05-28--phase-505--edge-function-send-relance-orphelin-cassée-hors-périmètre-50) | Phase 6.4.2 ✅ (code fixé 2026-06-01) — reste déploiement `supabase functions deploy` en Phase 8 |
 | 2026-05-30 | [Anomalies ARCHITECTURE.md (admin-timeline orphelin, html5-qrcode manualChunks, utils.js vs utils/)](#2026-05-30--anomalies-repérées-pendant-rédaction-de-architecturemd-phase-72) | Phase 6.2.1 / 6.2.2 / 6.2.3 ✅ (résolues 2026-05-31) |
+| 2026-06-01 | [4 fichiers de config racine non formatés Prettier (eslint/postcss/tailwind/jsconfig)](#2026-06-01--phase-80--4-fichiers-config-racine-non-formatés-prettier) | Hors scope CI branche (CI scopé `src/**`) — formatage groupé à programmer |
 
 ### Résolu — archivé (référence historique, conservé pour traçabilité)
 
@@ -813,4 +814,23 @@ Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateu
 
 3. **Coexistence `src/js/utils.js` (monolithe) et `src/js/utils/` (dossier thématique)**
    - Connu : couvert par la Phase 5.3 du plan. Mentionné ici uniquement parce que ARCHITECTURE.md doit refléter cet état transitoire.
+
+---
+
+## 2026-06-01 — Phase 8.0 — 4 fichiers config racine non formatés Prettier
+
+**Contexte** : mise en place du workflow CI de branche (`.github/workflows/ci.yml`, tâche ajoutée en Phase 8.0). Le CI exécute `npx prettier --check`. Vérification du scope :
+
+- `npx prettier --check "src/**/*.{js,html,css,json,md}"` → **All matched files use Prettier code style** ✅
+- `npx prettier --check "*.{js,json,md}"` (racine) → **4 fichiers non conformes** :
+  - `eslint.config.js`
+  - `jsconfig.json`
+  - `postcss.config.js`
+  - `tailwind.config.js`
+
+**Cause** : ces fichiers de config préexistent à la mise en place de Husky/lint-staged (Phase 5.5). `lint-staged` ne formate que les fichiers **staged** lors d'un commit ; ces 4 fichiers n'ayant pas été modifiés depuis, ils n'ont jamais été reformatés. Leur glob `*.{js,json,md}` est pourtant couvert par lint-staged → ils seront formatés automatiquement à leur prochaine modification.
+
+**Décision (atomicity first, règle 7)** : ne PAS reformater ces 4 fichiers dans la tâche Phase 8.0 (refacto opportuniste hors scope « synchronisation Git remote »). Le `ci.yml` scope donc volontairement son check Prettier sur **`src/**`** (zone enforced et propre), et son ESLint sur `src/` (idem `npx eslint src/`). Le CI reste significatif (il garde la zone source verte) sans introduire de churn sur des fichiers de config non liés au push.
+
+**Action différée** : formatage groupé des 4 fichiers racine (`npx prettier --write eslint.config.js jsconfig.json postcss.config.js tailwind.config.js`) à programmer comme tâche isolée — ou laisser lint-staged les corriger à leur prochaine modification.
 
