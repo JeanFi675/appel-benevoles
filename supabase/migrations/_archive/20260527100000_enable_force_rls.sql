@@ -1,0 +1,25 @@
+-- Migration: FORCE ROW LEVEL SECURITY sur toutes les tables publiques
+-- Phase: 3.1 (RLS universelle)
+-- Anomalie: H03
+--
+-- Contenu prévu (à remplir en Phase 3.1) :
+--
+--   DO $$
+--   DECLARE r record;
+--   BEGIN
+--     FOR r IN
+--       SELECT relname
+--       FROM pg_class
+--       WHERE relkind = 'r'
+--         AND relnamespace = 'public'::regnamespace
+--     LOOP
+--       EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.relname);
+--       EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY;', r.relname);
+--     END LOOP;
+--   END $$;
+--
+-- Effet de bord : RLS s'applique désormais même au propriétaire de la table (postgres),
+--                 fermant le contournement BYPASSRLS.
+-- Prérequis : phases 2.2 → 2.6 appliquées (table mentions droppée, etc.).
+-- Risque : toute opération admin via le rôle postgres devra passer par des fonctions
+--          SECURITY DEFINER explicites. Vérifier les Edge Functions / scripts.

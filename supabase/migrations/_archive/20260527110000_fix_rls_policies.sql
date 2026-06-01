@@ -1,0 +1,50 @@
+-- Migration: refonte des policies RLS (corrections audit + harmonisation is_admin)
+-- Phase: 3.3 (Implémentation des policies)
+-- Anomalies couvertes: C02, H04 (caduque par D1), H05 (D7), H06, H07, M05, M06
+--
+-- Contenu prévu (à remplir en Phase 3.3) :
+--
+--   -- C02 — fermeture de la fuite nominative sur inscriptions
+--   DROP POLICY IF EXISTS "Lecture publique des inscriptions" ON public.inscriptions;
+--   CREATE POLICY "Lecture own + admins" ON public.inscriptions
+--     FOR SELECT USING (
+--       benevole_id IN (SELECT id FROM public.benevoles WHERE user_id = auth.uid())
+--       OR public.is_admin()
+--       OR public.is_referent_for_benevole(benevole_id)
+--     );
+--
+--   -- H05/D7 — suppression policy + fonction mortes
+--   DROP POLICY IF EXISTS "Referents can view volunteers" ON public.benevoles;
+--   DROP FUNCTION IF EXISTS public.check_referent_access();
+--
+--   -- H06 — fermeture SELECT publique sur benevole_repas
+--   DROP POLICY IF EXISTS "Lecture publique benevole_repas" ON public.benevole_repas;
+--   CREATE POLICY "Lecture own + admins benevole_repas" ON public.benevole_repas
+--     FOR SELECT USING (
+--       benevole_id IN (SELECT id FROM public.benevoles WHERE user_id = auth.uid())
+--       OR public.is_admin()
+--     );
+--
+--   -- H07 — restreindre INSERT config aux admins
+--   DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.config;
+--   CREATE POLICY "Admin insert config" ON public.config
+--     FOR INSERT WITH CHECK (public.is_admin());
+--
+--   -- M05 — statuer sur benevole_cagnotte_periodes SELECT publique
+--   -- (à arbitrer : si table contient montants individuels => fermer, sinon INTENTIONAL)
+--   -- DROP POLICY IF EXISTS "..." ON public.benevole_cagnotte_periodes;
+--   -- CREATE POLICY ... (selon décision Phase 3)
+--
+--   -- M06 — uniformiser via is_admin() sur 6 tables
+--   --   inscriptions, repas, jours, type_postes, orphan_relances, benevole_cagnotte_periodes
+--   -- Remplacer les EXISTS (SELECT 1 FROM benevoles WHERE user_id = auth.uid() AND role = 'admin')
+--   -- par public.is_admin().
+--
+-- Note H04 : la fonction is_admin_juge() est SUPPRIMÉE par la migration
+-- 20260526130300_drop_juges_officiels.sql (D1). Le problème de search_path
+-- devient donc caduque.
+--
+-- Prérequis :
+--   - 20260527100000_enable_force_rls.sql appliquée
+--   - 20260526130300_drop_juges_officiels.sql appliquée
+-- Effet de bord : à tester exhaustivement via security/rls_tests.sql (Phase 3.4).

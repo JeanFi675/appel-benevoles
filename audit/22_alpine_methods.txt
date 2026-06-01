@@ -1,0 +1,46 @@
+# Alpine.js dead-method audit
+# Generated: 2026-05-27T21:21:00.468Z
+# Declarations scanned: 12
+# Names scanned: 408
+# Candidates with <=1 reference: 25
+
+## Declarations
+- Alpine.data("adminConnexionsApp")  [src/js/admin-connexions.js]  (39 top-level names)
+- Alpine.data("adminTimelineApp")  [src/js/admin-timeline.js]  (37 top-level names)
+- Alpine.data("adminApp")  [src/js/admin.js]  (1 top-level names)
+- Alpine.data("debitApp")  [src/js/debit.js]  (15 top-level names)
+- module AdminModule  [src/js/modules/admin/index.js]  (185 top-level names)
+- Alpine.data("app")  [src/js/modules/store.js]  (25 top-level names)
+- module CagnotteModule  [src/js/modules/user/cagnotte.js]  (10 top-level names)
+- module PlanningModule  [src/js/modules/user/planning.js]  (48 top-level names)
+- module ProfilesModule  [src/js/modules/user/profiles.js]  (4 top-level names)
+- module TshirtModule  [src/js/modules/user/tshirt.js]  (1 top-level names)
+- module WizardModule  [src/js/modules/user/wizard.js]  (37 top-level names)
+- Alpine.data("tshirtScanner")  [src/js/scanner-tshirt.js]  (6 top-level names)
+
+## Candidates (name, refs, declared in)
+- addVisualLine  refs=1  module AdminModule  src/js/modules/admin/index.js
+- addVisualPeriod  refs=1  module AdminModule  src/js/modules/admin/index.js
+- addVisualShift  refs=1  module AdminModule  src/js/modules/admin/index.js
+- closePosteInscritsModal  refs=1  module AdminModule  src/js/modules/admin/index.js
+- closeRegistrationModal  refs=1  module PlanningModule  src/js/modules/user/planning.js
+- deleteVisualPeriod  refs=1  module AdminModule  src/js/modules/admin/index.js
+- deleteVisualShift  refs=1  module AdminModule  src/js/modules/admin/index.js
+- generateRapportIA  refs=1  module AdminModule  src/js/modules/admin/index.js
+- getFilteredPostes  refs=1  module AdminModule  src/js/modules/admin/index.js
+- getPeriodeInscritsColor  refs=1  module AdminModule  src/js/modules/admin/index.js
+- getPeriodesCritiques  refs=1  module AdminModule  src/js/modules/admin/index.js
+- getPostesCountForPeriode  refs=1  module AdminModule  src/js/modules/admin/index.js
+- getPostesCritiques  refs=1  module AdminModule  src/js/modules/admin/index.js
+- getRepasName  refs=1  Alpine.data("app")  src/js/modules/store.js
+- getTauxCouleur  refs=1  module AdminModule  src/js/modules/admin/index.js
+- isReferentInscritPeriode  refs=1  module AdminModule  src/js/modules/admin/index.js
+- loadBenevoles  refs=1  module AdminModule  src/js/modules/admin/index.js
+- openRegistrationModal  refs=1  module PlanningModule  src/js/modules/user/planning.js
+- resetDay  refs=1  Alpine.data("adminTimelineApp")  src/js/admin-timeline.js
+- savingConfig  refs=1  module AdminModule  src/js/modules/admin/index.js
+- toggleView  refs=1  module PlanningModule  src/js/modules/user/planning.js
+- toggleWizardProfile  refs=1  module WizardModule  src/js/modules/user/wizard.js
+- updatePosteReferent  refs=1  module AdminModule  src/js/modules/admin/index.js
+- validateStep1  refs=1  module WizardModule  src/js/modules/user/wizard.js
+- viewPosteInscrits  refs=1  module AdminModule  src/js/modules/admin/index.js

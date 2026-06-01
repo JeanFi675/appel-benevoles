@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/js/admin.js",
+    "src/js/admin-connexions.js",
+    "src/js/besoins.js",
+    "src/js/debit.js",
+    "src/js/scanner-tshirt.js",
+    "check-role.js"
+  ],
+  "project": ["src/**/*.{js,mjs,cjs}", "*.{js,mjs,cjs}"],
+  "ignoreBinaries": ["supabase"]
+}

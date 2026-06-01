@@ -1,0 +1,57 @@
+# Orphan EJS partials audit
+# Generated: 2026-05-27T21:34:29.576Z
+# Partials scanned: 20
+# Orphans (refs=0): 1
+
+## Orphans
+- src/partials/sections/admin/tab-rapport-ia.html
+
+## All partials (refs, file, referers)
+- refs=1  src/partials/components/confirm-modal.html
+    ↳ index.html (as '/src/partials/components/confirm-modal.html')
+- refs=2  src/partials/components/post-card-details.html
+    ↳ src/partials/sections/index/planning-list.html (as '../../components/post-card-details.html')
+    ↳ src/partials/wizard.html (as 'components/post-card-details.html')
+- refs=4  src/partials/components/toast.html
+    ↳ admin-connexions.html (as '/src/partials/components/toast.html')
+    ↳ admin.html (as '/src/partials/components/toast.html')
+    ↳ besoins.html (as '/src/partials/components/toast.html')
+    ↳ index.html (as '/src/partials/components/toast.html')
+- refs=4  src/partials/layout/head.html
+    ↳ admin-connexions.html (as '/src/partials/layout/head.html')
+    ↳ admin.html (as '/src/partials/layout/head.html')
+    ↳ besoins.html (as '/src/partials/layout/head.html')
+    ↳ index.html (as '/src/partials/layout/head.html')
+- refs=1  src/partials/layout/header.html
+    ↳ index.html (as '/src/partials/layout/header.html')
+- refs=2  src/partials/sections/admin-timeline/chart.html
+    ↳ besoins.html (as '/src/partials/sections/admin-timeline/chart.html')
+    ↳ src/partials/sections/admin/tab-rapport-ia.html (as '/src/partials/sections/admin-timeline/chart.html')
+- refs=2  src/partials/sections/admin-timeline/day-picker.html
+    ↳ besoins.html (as '/src/partials/sections/admin-timeline/day-picker.html')
+    ↳ src/partials/sections/admin/tab-rapport-ia.html (as '/src/partials/sections/admin-timeline/day-picker.html')
+- refs=1  src/partials/sections/admin/tab-benevoles.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-benevoles.html')
+- refs=1  src/partials/sections/admin/tab-cagnotte-forcee.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-cagnotte-forcee.html')
+- refs=1  src/partials/sections/admin/tab-heures.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-heures.html')
+- refs=1  src/partials/sections/admin/tab-mailing.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-mailing.html')
+- refs=0  src/partials/sections/admin/tab-rapport-ia.html
+- refs=1  src/partials/sections/admin/tab-recap.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-recap.html')
+- refs=1  src/partials/sections/admin/tab-referents.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-referents.html')
+- refs=1  src/partials/sections/admin/tab-visual-creator.html
+    ↳ admin.html (as '/src/partials/sections/admin/tab-visual-creator.html')
+- refs=1  src/partials/sections/admin/tabs.html
+    ↳ admin.html (as '/src/partials/sections/admin/tabs.html')
+- refs=1  src/partials/sections/index/login.html
+    ↳ index.html (as '/src/partials/sections/index/login.html')
+- refs=1  src/partials/sections/index/planning-calendar.html
+    ↳ src/partials/sections/index/planning-list.html (as '/src/partials/sections/index/planning-calendar.html')
+- refs=1  src/partials/sections/index/planning-list.html
+    ↳ index.html (as '/src/partials/sections/index/planning-list.html')
+- refs=1  src/partials/wizard.html
+    ↳ index.html (as '/src/partials/wizard.html')
