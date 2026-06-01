@@ -16,12 +16,12 @@
 |---|---|---|
 | 2026-05-25 | [Divergence `master` local vs `origin/master` (22 commits non poussés)](#2026-05-25--divergence-master-local-vs-originmaster) | Phase 8.0 (push à effectuer après merge `refactor/production-hardening` → `master`) |
 | 2026-05-25 | [Règle `*.md` du `.gitignore` trop large](#2026-05-25--règle-md-du-gitignore-trop-large-à-corriger-avant-phase-8) | Phase 6.1.1 ✅ (corrigé 2026-05-31) |
-| 2026-05-26 | [Génération de `prod_migration_YYYYMMDD.sql` via diff schéma prod ↔ `init.sql` cible (D8)](#d8--stratégie-phase-81--hybride-2-fichiers) | Phase 8.1 |
+| 2026-05-26 | [Génération de `prod_migration_YYYYMMDD.sql` via diff schéma prod ↔ `init.sql` cible (D8)](#d8--stratégie-phase-81--hybride-2-fichiers) | Phase 8.1 ✅ **intégré au plan 2026-06-01** : 2 cases (génération du diff + application `psql` avec backup/transaction). 8.1 #1 reformulée — `supabase db push` écarté (inopérant). |
 | 2026-05-27 | [Recommandation `.gitattributes` `*.sql text eol=lf`](#2026-05-27--recommandation-gitattributes-post-phase-29) | Phase 6.1.2 ✅ (créé 2026-05-31) |
 | 2026-05-28 | [Phase 4.3.3 — 10 variables `no-unused-vars` détectées par ESLint](#2026-05-28--phase-433--variables-locales-non-utilisées-détectées-par-eslint) | Phase 6.3.1 ✅ (vérifié 2026-05-31 : `npx eslint src/` → 0/0) |
-| 2026-05-28 | [Phase 5.0.5 — Edge Function `send-relance-orphelin/index.ts:150` cassée (`auth_user_id` → `user_id` en interne, contrat HTTP conservé)](#2026-05-28--phase-505--edge-function-send-relance-orphelin-cassée-hors-périmètre-50) | Phase 6.4.2 ✅ (code fixé 2026-06-01) — reste déploiement `supabase functions deploy` en Phase 8 |
+| 2026-05-28 | [Phase 5.0.5 — Edge Function `send-relance-orphelin/index.ts:150` cassée (`auth_user_id` → `user_id` en interne, contrat HTTP conservé)](#2026-05-28--phase-505--edge-function-send-relance-orphelin-cassée-hors-périmètre-50) | Phase 6.4.2 ✅ (code fixé 2026-06-01) — déploiement `supabase functions deploy` **intégré au plan 8.1 #2 (2026-06-01)** |
 | 2026-05-30 | [Anomalies ARCHITECTURE.md (admin-timeline orphelin, html5-qrcode manualChunks, utils.js vs utils/)](#2026-05-30--anomalies-repérées-pendant-rédaction-de-architecturemd-phase-72) | Phase 6.2.1 / 6.2.2 / 6.2.3 ✅ (résolues 2026-05-31) |
-| 2026-06-01 | [4 fichiers de config racine non formatés Prettier (eslint/postcss/tailwind/jsconfig)](#2026-06-01--phase-80--4-fichiers-config-racine-non-formatés-prettier) | Hors scope CI branche (CI scopé `src/**`) — formatage groupé à programmer |
+| 2026-06-01 | [4 fichiers de config racine non formatés Prettier (eslint/postcss/tailwind/jsconfig)](#2026-06-01--phase-80--4-fichiers-config-racine-non-formatés-prettier) | **Non-actionnable** — auto-résolu par lint-staged à leur prochaine modif ; CI scopé `src/**`. Pas de case plan. |
 
 ### Résolu — archivé (référence historique, conservé pour traçabilité)
 
