@@ -487,52 +487,52 @@
 
 ### 7.1bis docs/deployment.md
 
-- [ ] Créer `docs/deployment.md` documentant le déploiement frontend (GitHub Pages / GitHub Actions), les variables d'environnement de prod requises, et la procédure de déploiement des Edge Functions Supabase (`supabase functions deploy`). **DoD :** le fichier existe et est référencé depuis le README (tâche 7.1).
+- [x] Créer `docs/deployment.md` documentant le déploiement frontend (GitHub Pages / GitHub Actions), les variables d'environnement de prod requises, et la procédure de déploiement des Edge Functions Supabase (`supabase functions deploy`). **DoD :** le fichier existe et est référencé depuis le README (tâche 7.1). _(Référencement README à finaliser en 7.1.)_
 
 ### 7.1 README principal
 
-- [ ] Rédiger `README.md` avec :
-  - Description du projet
-  - Prérequis (Node 20+, Supabase CLI, Deno)
-  - Installation (`npm install`)
-  - Configuration (`.env.example` → `.env.local`)
-  - Lancement dev (`npm run dev`)
-  - Build prod (`npm run build`)
-  - Déploiement (lien vers `docs/deployment.md`)
+- [x] Rédiger `README.md` orienté **prod-first** (le cycle normal = PR → CI/CD, le dev local est un filet de sécurité pour hotfix), dans cet ordre :
+  1. Description du projet
+  2. Prérequis (Node 20+, Supabase CLI, Deno, Docker)
+  3. Installation (`npm install`)
+  4. Configuration (`.env.example` → `.env.local`)
+  5. **Déploiement (production)** — flux normal, lien vers `docs/deployment.md`
+  6. **Hotfix / correction urgente** — checklist courte : brancher local, reproduire, fix, PR
+  7. Développement local (reproduire / tester) — `supabase start`, `npm run dev`, `npm run build`, `npm run preview`
 
-  **DoD :** un contributeur peut cloner et lancer le projet en < 15 minutes en suivant uniquement le README.
+  **DoD :** un mainteneur peut, en suivant uniquement le README : (a) déployer un correctif en < 10 min via le flux normal, (b) reproduire un bug en local en < 15 min en cas de doute.
 
 ### 7.2 ARCHITECTURE.md
 
-- [ ] Documenter la vue d'ensemble (frontend Vite/Alpine + backend Supabase). **DoD :** un diagramme (Mermaid ou ASCII) est inclus.
-- [ ] Documenter les choix techniques et leurs justifications. **DoD :** chaque dépendance majeure est expliquée.
-- [ ] Documenter la structure des dossiers. **DoD :** chaque dossier de `src/` a une description.
+- [x] Documenter la vue d'ensemble (frontend Vite/Alpine + backend Supabase). **DoD :** un diagramme (Mermaid ou ASCII) est inclus.
+- [x] Documenter les choix techniques et leurs justifications. **DoD :** chaque dépendance majeure est expliquée.
+- [x] Documenter la structure des dossiers. **DoD :** chaque dossier de `src/` a une description.
 
 ### 7.3 DATABASE.md
 
-- [ ] Décrire chaque table avec son but, ses colonnes principales et ses relations. **DoD :** chaque table de `public` est documentée.
-- [ ] Inclure un diagramme ERD (Mermaid `erDiagram` ou export dbdiagram.io). **DoD :** le diagramme est lisible et à jour.
-- [ ] Documenter chaque policy RLS en langage naturel ("qui peut faire quoi"). **DoD :** la matrice RLS est intégrée.
-- [ ] Documenter les triggers et fonctions PL/pgSQL. **DoD :** chaque trigger a une description de sa logique métier.
+- [x] Décrire chaque table avec son but, ses colonnes principales et ses relations. **DoD :** chaque table de `public` est documentée.
+- [x] Inclure un diagramme ERD (Mermaid `erDiagram` ou export dbdiagram.io). **DoD :** le diagramme est lisible et à jour.
+- [x] Documenter chaque policy RLS en langage naturel ("qui peut faire quoi"). **DoD :** la matrice RLS est intégrée.
+- [x] Documenter les triggers et fonctions PL/pgSQL. **DoD :** chaque trigger a une description de sa logique métier.
 
 ### 7.4 CONTRIBUTING.md
 
-- [ ] Documenter les conventions de code (linter, formatter, nommage). **DoD :** le fichier référence ESLint et Prettier.
-- [ ] Documenter le workflow Git (branches, commits conventionnels, PR). **DoD :** un exemple de message de commit est inclus.
-- [ ] Documenter le processus de revue de PR. **DoD :** une checklist de revue est incluse.
+- [x] Documenter les conventions de code (linter, formatter, nommage). **DoD :** le fichier référence ESLint et Prettier.
+- [x] Documenter le workflow Git (branches, commits conventionnels, PR). **DoD :** un exemple de message de commit est inclus.
+- [x] Documenter le processus de revue de PR. **DoD :** une checklist de revue est incluse.
 
 ### 7.5 CHANGELOG.md
 
-- [ ] Créer `CHANGELOG.md` au format Keep a Changelog avec une entrée `[1.0.0] - YYYY-MM-DD` listant le refactoring. **DoD :** le fichier existe et est lié depuis le README.
+- [x] Créer `CHANGELOG.md` au format Keep a Changelog avec une entrée `[1.0.0] - YYYY-MM-DD` listant le refactoring. **DoD :** le fichier existe et est lié depuis le README. — **2026-06-01** : entrée `[1.0.0] - 2026-06-01` créée (sections Added/Changed/Fixed/Removed/Security couvrant Phases 0-7). Lien depuis `README.md` déjà présent (§ Documentation complémentaire).
 
 ### 7.6 Documentation inline
 
-- [ ] Ajouter des JSDoc sur les fonctions publiques des services et stores. **DoD :** chaque fonction exportée a au minimum `@param` et `@returns`.
-- [ ] Ajouter des commentaires SQL sur les fonctions et triggers complexes. **DoD :** chaque trigger a un bloc `-- Purpose:` en en-tête.
+- [x] Ajouter des JSDoc sur les fonctions publiques des services et stores. **DoD :** chaque fonction exportée a au minimum `@param` et `@returns`. — **2026-06-01** : services (`api.js`, `auth.js`, `public-api.js`) déjà entièrement JSDoc'd avec `@param`/`@returns` depuis Phase 5.3. Complément posé sur `stores/admin-store.js` : `@returns` sur la factory `createAdminStore`, blocs JSDoc sur les helpers publics (`showToast`, `getReferents`, `calculateStats`, `initReferentAssignments`) et les 8 loaders (`loadData`, `loadTypePostes`, `loadJours`, `loadPostes`, `loadBenevolesAndStats`, `loadPeriodes`, `loadProgramme`, `loadConfig`, `loadRepas`). `npx eslint src/js/stores/admin-store.js` OK ; `npm run build` OK.
+- [x] Ajouter des commentaires SQL sur les fonctions et triggers complexes. **DoD :** chaque trigger a un bloc `-- Purpose:` en en-tête. — **2026-06-01** : 5 blocs `-- Purpose:` posés directement dans `supabase/migrations/00000000000000_init.sql` (Option B validée — pas de migration cosmétique séparée car `init.sql` n'est pas encore en prod) : `check_capacity` (trigger capacité), `check_time_conflict` (trigger conflit horaire), `prevent_role_change` (trigger anti privilege escalation), `debit_cagnotte_public` (RPC publique Smart Debit), `manage_inscriptions_transaction` (RPC batch atomique inscriptions, FOR UPDATE + permissions + timeout 30s). Aucun changement de comportement SQL (uniquement commentaires).
 
 ### 7.7 Mise à jour de CLAUDE.md
 
-- [ ] Mettre à jour `CLAUDE.md` pour refléter la nouvelle architecture et supprimer les avertissements obsolètes (ex : un environnement Supabase local reproductible existe désormais). **DoD :** le fichier est à jour avec la nouvelle réalité.
+- [x] Mettre à jour `CLAUDE.md` pour refléter la nouvelle architecture et supprimer les avertissements obsolètes (ex : un environnement Supabase local reproductible existe désormais). **DoD :** le fichier est à jour avec la nouvelle réalité. — **2026-06-01** : 10 sections révisées. **Avertissements critiques** : #1 reformulé (`.env.local` override actif par défaut, fallback prod si absent) ; #3 référence désormais les 4 migrations `20260527*.sql` + les 5 helpers DEFINER ; #4 supprimé (`dist/` retiré du repo en Phase 4.2) et remplacé par doc du garde-fou `scripts/check-env.js`. **Migrations** : section réécrite pour décrire `init.sql` + 4 RLS + `_archive/` (Phase 2) et `migrations_archive_pre_refactor/` (historiques). **Stack** : `html5-qrcode` retirée (désinstallée Phase 4.2.2) ; ESLint/Prettier/Husky ajoutés. **Commandes** : ajout `npm run dev:local`, `npx eslint`, `npx prettier`, `npx knip`, mention du garde-fou prod. **Tables** : liste complète à jour + lien vers `DATABASE.md` ; rôles `juge`/`admin-juge`/`officiel` supprimés (Phase 2.3) ; feature flags réalignés sur `cagnotte_active`, `tshirt_question_active`, `tarif_cagnotte_journee`. **Conventions JS** : mention `Alpine.data`/`Alpine.store`, 3 services (`ApiService`/`AuthService`/`PublicApiService`), liens vers ARCHITECTURE/CONTRIBUTING. **SQL** : ajout obligation `-- Purpose:` + `SET search_path = public` sur DEFINER. **Pièges** : triggers renommés (`trg_*`), récursion RLS via helpers, dossier `dist/` retiré. **Tableau "Ne pas modifier"** : 11 entrées (+4) couvrant policies cagnotte immuables, helpers DEFINER, garde-fou, `init.sql`. **Edge Functions** : 5 fonctions listées (vs 2 obsolètes). **Tests** : ajout du script `security/rls_tests.sql`. **Nouvelle section "Documentation complémentaire"** liant README/ARCHITECTURE/DATABASE/CONTRIBUTING/CHANGELOG/deployment. Tous les fichiers liés vérifiés présents. **Phase 7 close.**
 
 ---
 
@@ -558,12 +558,14 @@
 - [ ] Vérifier que toutes les variables d'environnement de production sont configurées (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, etc.). **DoD :** le dashboard de déploiement montre toutes les variables.
 - [ ] Vérifier que le domaine est en HTTPS avec certificat valide. **DoD :** `curl -I https://<domaine>` retourne `200` avec en-tête `strict-transport-security`.
 - [ ] Vérifier les en-têtes de sécurité (CSP, X-Frame-Options, Referrer-Policy). **DoD :** un test sur `securityheaders.com` retourne au minimum un grade `B`.
+- [ ] Mettre à jour `docs/deployment.md` avec les en-têtes de sécurité réels appliqués (CSP, HSTS, X-Frame-Options, Referrer-Policy) et la valeur de chacun. **DoD :** une section "En-têtes de sécurité" est présente et reflète la config prod réelle.
 
 ### 8.3 Monitoring
 
 - [ ] Activer les logs Supabase (Database, Auth, Edge Functions) et vérifier qu'ils sont consultables. **DoD :** une requête de test apparaît dans les logs dans la minute.
 - [ ] Intégrer Sentry (ou équivalent) côté frontend pour capturer les erreurs JS. **DoD :** une erreur volontaire est visible dans le dashboard Sentry.
 - [ ] Configurer une alerte email sur les erreurs critiques. **DoD :** un test d'erreur déclenche un email.
+- [ ] Documenter dans `docs/deployment.md` l'intégration Sentry (DSN, configuration des alertes, procédure d'investigation d'une erreur prod) et les commandes de consultation des logs Supabase. **DoD :** une section "Monitoring" cite Sentry, les alertes configurées et les commandes utiles.
 
 ### 8.4 Sauvegardes automatiques
 
@@ -575,9 +577,35 @@
 
 - [ ] Tous les rôles peuvent se connecter et accéder à leurs pages respectives. **DoD :** validation croisée par au moins un utilisateur réel par rôle.
 - [ ] Aucune erreur n'apparaît dans Sentry sur les 24 premières heures. **DoD :** le dashboard est vide d'erreurs critiques.
-- [ ] Le `CHANGELOG.md` est mis à jour avec la date de mise en production. **DoD :** un tag `v1.0.0` est créé sur `master`.
+- [ ] Mettre à jour le `CHANGELOG.md` pour la release effective : changer la date de `[1.0.0]` (actuellement `2026-06-01`, anticipée) pour la date réelle de mise en production, intégrer dans `[1.0.0]` les ajouts Phase 8.2-8.4 (en-têtes de sécurité, Sentry/monitoring, backups automatiques + `docs/disaster_recovery.md`), garder `## [Unreleased]` vide pour les futurs hotfix. **DoD :** la section `[1.0.0]` reflète l'état réel mis en prod, `[Unreleased]` est vide, un tag `v1.0.0` est créé sur `master`.
 - [ ] Un email d'annonce est envoyé aux utilisateurs clés. **DoD :** l'email est envoyé (capture archivée dans `docs/launch.md`).
 - [ ] Le mainteneur signe le bon de livraison final. **DoD :** un commit `chore: v1.0.0 release` est mergé sur `master` avec sa signature.
+
+### 8.6 Clôture — V1 propre
+
+> Objectif : livrer une V1 sans trace de refactoring. Le repo doit ressembler à un projet neuf, pas à un chantier de rénovation.
+
+- [ ] Re-consolider `supabase/migrations/` en un seul fichier `init.sql` représentant l'état prod final (validation Q1 du 2026-06-01) :
+  1. Sur la base prod désormais alignée, exécuter `pg_dump --schema-only --no-owner --no-privileges --schema=public` pour générer le nouveau dump.
+  2. Écraser `supabase/migrations/00000000000000_init.sql` avec ce dump.
+  3. Régénérer la section GRANTs (`restore_postgrest_grants`) à fusionner dans le même fichier (ou re-dump **sans** `--no-privileges`).
+  4. Déplacer les 4 migrations Phase 3 (`20260527100000_*` à `20260527120000_*`) vers `supabase/migrations/_archive/`.
+  5. Vérifier en local : `supabase db reset` rejoue à partir du seul `init.sql` et l'état résultant est identique à la prod.
+
+  **DoD :** `ls supabase/migrations/*.sql` retourne exactement 1 fichier, et `supabase db reset` local aboutit sans erreur.
+
+- [ ] Revue finale de la documentation : relire `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`, `DATABASE.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/deployment.md`, `docs/disaster_recovery.md` pour :
+  - supprimer toute mention "à faire en Phase X" ou "actuellement en cours de refactoring" ;
+  - aligner sur la réalité prod (URL, secrets configurés, backups actifs, monitoring en place) ;
+  - vérifier que le diagramme `supabase/migrations/` dans `ARCHITECTURE.md` et `DATABASE.md` reflète le `init.sql` consolidé final.
+
+  **DoD :** une relecture est cochée fichier par fichier, aucune occurrence de "Phase 0-7", "refactoring en cours", "à faire ultérieurement" ne subsiste hors du `CHANGELOG.md` (qui peut légitimement les mentionner dans `[1.0.0]`).
+
+- [ ] Supprimer le `plan_refactoring.md` du repo (ou le déplacer en `archive/plan_refactoring_2026.md`). **DoD :** le fichier n'apparaît plus à la racine ; un commit `chore: archive refactor plan after v1.0.0 go-live` est mergé.
+
+- [ ] Supprimer le dossier `audit/` (livrables de la Phase 1) ou le déplacer en `archive/audit_2026/`. **DoD :** le dossier n'est plus à la racine du repo.
+
+- [ ] Vérification finale "œil neuf" : un développeur extérieur clonant le repo doit pouvoir lancer le projet en suivant uniquement `README.md`, sans deviner qu'un refactoring a eu lieu. **DoD :** test mental ou pair-review explicite.
 
 ---
 

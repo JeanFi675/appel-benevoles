@@ -92,6 +92,10 @@ END$idem$;
 --
 -- Name: check_capacity(); Type: FUNCTION; Schema: public; Owner: -
 --
+-- Purpose: Trigger BEFORE INSERT sur `inscriptions`. Compte les inscriptions
+-- existantes du poste et refuse l'insertion si `nb_max` est atteint.
+-- Source de vérité de la capacité (jamais dupliquée côté frontend).
+--
 
 CREATE OR REPLACE FUNCTION public.check_capacity() RETURNS trigger
     LANGUAGE plpgsql
@@ -136,6 +140,11 @@ $$;
 --
 -- Name: check_time_conflict(); Type: FUNCTION; Schema: public; Owner: -
 --
+-- Purpose: Trigger BEFORE INSERT/UPDATE sur `inscriptions`. Refuse l'opération
+-- si le bénévole est déjà inscrit sur un autre poste dont la plage horaire
+-- (`periode_debut`, `periode_fin`) chevauche celle du poste cible.
+-- Règle métier critique — ne pas dupliquer côté frontend.
+--
 
 CREATE OR REPLACE FUNCTION public.check_time_conflict() RETURNS trigger
     LANGUAGE plpgsql
@@ -167,6 +176,13 @@ $$;
 
 --
 -- Name: debit_cagnotte_public(uuid, numeric, text); Type: FUNCTION; Schema: public; Owner: -
+--
+-- Purpose: RPC publique (SECURITY DEFINER) appelée par `debit.html` après scan QR
+-- d'un bénévole. Smart Debit : débite ce qui est disponible sur le solde famille
+-- (`get_user_balance(user_id)`), insère une transaction négative dans
+-- `cagnotte_transactions`, et retourne JSON {success, debited_amount, new_balance,
+-- remainder_to_pay, message}. Refuse si solde ≤ 0. Le rôle `anon` peut l'exécuter ;
+-- les contrôles sont internes à la fonction.
 --
 
 CREATE OR REPLACE FUNCTION public.debit_cagnotte_public(target_benevole_id uuid, montant_input numeric, description_input text DEFAULT 'Debit Public'::text) RETURNS jsonb
@@ -589,6 +605,14 @@ $$;
 --
 -- Name: manage_inscriptions_transaction(uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
+-- Purpose: RPC SECURITY DEFINER appelée par le wizard d'inscription. Applique en
+-- une seule transaction atomique un batch JSONB d'actions `{action: 'add'|'remove',
+-- poste_id, benevole_id}`. Verrouille chaque poste cible (`SELECT ... FOR UPDATE`)
+-- pour éviter les race conditions sur la capacité, re-vérifie capacité + conflit
+-- horaire (défense en profondeur vs triggers), et refuse toute action ne portant
+-- pas sur les bénévoles du `user_id` appelant (sauf admin). Rollback total au
+-- moindre échec. Timeout statement = 30s.
+--
 
 CREATE OR REPLACE FUNCTION public.manage_inscriptions_transaction(target_user_id uuid, modifications jsonb) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -699,6 +723,10 @@ $$;
 
 --
 -- Name: prevent_role_change(); Type: FUNCTION; Schema: public; Owner: -
+--
+-- Purpose: Trigger BEFORE UPDATE sur `benevoles`. Empêche tout utilisateur
+-- authentifié de modifier sa propre colonne `role` (anti privilege escalation).
+-- Un admin reste libre de changer le rôle d'autres bénévoles via les policies.
 --
 
 CREATE OR REPLACE FUNCTION public.prevent_role_change() RETURNS trigger

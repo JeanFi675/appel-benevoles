@@ -1,6 +1,6 @@
 # Architecture — appel-benevoles
 
-Document de référence décrivant l'architecture **réelle** du projet à la date d'écriture (2026-05-30). Il documente ce qui existe aujourd'hui ; les écarts par rapport à la cible visée par le refactoring sont signalés explicitement.
+Document de référence décrivant l'architecture **réelle** du projet à la date d'écriture (2026-06-01, fin Phase 6 du refactoring). Il documente ce qui existe aujourd'hui ; les écarts résiduels par rapport à la cible sont signalés explicitement.
 
 > **Portée** : frontend (Vite + Alpine.js) et intégration backend (Supabase managé). Le schéma de base de données détaillé (tables, RLS, triggers) est documenté dans `DATABASE.md` (Phase 7.3).
 
@@ -25,7 +25,10 @@ Toute la logique backend critique (autorisations, contraintes métier) vit dans 
 │  Sources HTML/JS/CSS  ─► Vite 7 + vite-plugin-html (EJS)       │
 │  Tailwind CSS         ─► dist/  (minification esbuild,         │
 │                                  hash, sourcemap caché,        │
-│                                  manualChunks vendor)          │
+│                                  manualChunks :                │
+│                                  vendor-supabase /             │
+│                                  vendor-alpine /               │
+│                                  vendor-qrcode / vendor)       │
 │  Secrets VITE_*       ─► injectés dans le bundle               │
 └──────────────────────────────┬─────────────────────────────────┘
                                │ upload-pages-artifact
@@ -122,8 +125,6 @@ Toute la logique backend critique (autorisations, contraintes métier) vit dans 
 | `alpinejs`              | ^3.13.3 | Réactivité DOM, `Alpine.data()` + `Alpine.store()`                      |
 | `qrcode`                | ^1.5.4  | **Génération** de QR codes (page bénévole, scanner)                     |
 
-> ⚠️ **Anomalie connue** : `vite.config.js:112` référence `html5-qrcode` (scan QR) dans `manualChunks`, mais la lib **n'est plus dans `package.json`**. À investiguer (voir `audit/notes.md` 2026-05-30).
-
 ### Dépendances majeures (build / qualité)
 
 | Dépendance         | Version  | Rôle                                                            |
@@ -168,7 +169,8 @@ appel-benevoles/
 src/
 ├── js/             # tout le JavaScript
 ├── partials/       # fragments HTML (EJS)
-├── styles/         # CSS / Tailwind entrypoints
+├── styles/         # CSS / Tailwind entrypoints (main.css)
+├── css/            # CSS spécifiques par page (extraits des styles inline en Phase 6)
 └── data/           # (vide actuellement)
 ```
 
@@ -177,8 +179,7 @@ src/
 ```
 src/js/
 ├── config.js              # 🔒 SINGLETON : client Supabase + mécanisme refresh token
-├── constants.js           # (legacy) — exports d'env, à rapatrier dans config/services (Phase 5.3)
-├── utils.js               # (legacy) — monolithe en cours d'éclatement vers utils/
+├── constants.js           # Re-export VITE_SUPABASE_URL / ANON_KEY + check dev
 │
 ├── main.js                # Entrypoint page index.html
 ├── admin.js               # Entrypoint page admin.html
@@ -197,17 +198,19 @@ src/js/
 │   └── admin-store.js     #   (seul store actuel — autres domaines encore inline)
 │
 ├── components/            # Alpine.data() — composants Alpine isolés
-│   ├── admin/             #   Sous-composants des onglets admin (7 fichiers)
+│   ├── admin/             #   7 onglets admin (benevoles, cagnotte-forcee,
+│   │                      #     heures, mailing, recap, referents, visual-creator)
 │   └── user/              #   Widgets côté bénévole (cagnotte, t-shirt)
 │
-├── modules/               # (legacy) — sera dissout vers components/stores/utils (Phase 5.2)
+├── modules/               # (legacy) — à dissoudre vers components/stores/utils (Phase 5.2)
 │   ├── store.js
 │   └── user/              #   planning.js, profiles.js, wizard.js
 │
-└── utils/                 # Helpers purs (cible de l'éclatement de utils.js legacy)
+└── utils/                 # Helpers purs
     ├── admin-shift-validation.js
     ├── admin-time.js
     ├── confirm.js         #   Helper modale de confirmation
+    ├── format-date.js     #   Formatage de dates (extrait de l'ancien utils.js en Phase 6)
     └── toast.js           #   Helper toast (succès/erreur)
 ```
 
@@ -253,6 +256,16 @@ src/styles/
 
 Pas de CSS inline dans les templates. Tokens custom déclarés dans `tailwind.config.js`.
 
+### `src/css/`
+
+```
+src/css/
+├── debit.css            # CSS spécifique à la page de débit cagnotte
+└── scanner-tshirt.css   # CSS spécifique au scanner de QR codes t-shirt
+```
+
+Ces feuilles ont été extraites des blocs `<style>` inline en Phase 6 et sont importées par leur entrypoint JS respectif (`src/js/debit.js`, `src/js/scanner-tshirt.js`).
+
 ### `src/data/`
 
 Vide actuellement. Réservé à d'éventuelles données statiques importées au build (JSON figés, listes de référence).
@@ -262,8 +275,14 @@ Vide actuellement. Réservé à d'éventuelles données statiques importées au 
 ```
 supabase/
 ├── config.toml                          # Config CLI Supabase locale (ports, auth, edge runtime)
-├── migrations/                          # Migrations actives (actuellement vide — refactoring en cours)
-├── migrations_archive_pre_refactor/     # Ancien historique (non rejouable from scratch)
+├── migrations/                          # Migrations actives (post-consolidation Phase 2.8)
+│   ├── 00000000000000_init.sql                       # Consolidation complète du schéma
+│   ├── 20260527100000_enable_force_rls.sql           # Active FORCE ROW LEVEL SECURITY
+│   ├── 20260527110000_create_rls_helpers.sql         # Helpers SECURITY DEFINER pour RLS
+│   ├── 20260527110100_rls_policies.sql               # Policies RLS définitives
+│   ├── 20260527120000_restore_postgrest_grants.sql   # Grants nécessaires à PostgREST
+│   └── _archive/                                     # Migrations correctives obsolètes
+├── migrations_archive_pre_refactor/     # Ancien historique pré-refactoring (non rejouable from scratch)
 ├── functions/                           # Edge Functions Deno
 │   ├── deno.json
 │   ├── send-planning/
@@ -274,7 +293,7 @@ supabase/
 └── snippets/                            # Snippets SQL utilitaires
 ```
 
-> **État transitoire** : `supabase/migrations/` est vide à dessein pendant les Phases 0-2 du refactoring. La Phase 2.8 consolidera tout le schéma dans un `init.sql`. Stratégie de bascule prod : voir `audit/notes.md` (2026-05-25).
+La consolidation de Phase 2.8 (`00000000000000_init.sql`) rend l'historique reproductible from scratch sur une instance Supabase locale fraîche. Les migrations postérieures correspondent aux durcissements RLS de Phase 2.9-2.10.
 
 ### `scripts/`
 
@@ -297,19 +316,16 @@ scripts/
 
 ---
 
-## 4. État vs cible (refactoring en cours)
+## 4. État vs cible (écarts résiduels)
 
-Plusieurs éléments du code reflètent un état transitoire piloté par `plan_refactoring.md`. À jour au 2026-05-30 :
+Éléments transitoires encore présents après Phase 6 — à jour au 2026-06-01 :
 
 | Élément actuel                                  | Statut                          | Phase de résolution |
 | ----------------------------------------------- | ------------------------------- | ------------------- |
 | Entrypoints à plat dans `src/js/` (vs `pages/`) | Cible déplacement vers `pages/` | Phase 5.4           |
 | `src/js/modules/` (legacy)                      | À dissoudre                     | Phase 5.2           |
-| `src/js/utils.js` (monolithe)                   | À éclater dans `utils/`         | Phase 5.3           |
-| `src/js/constants.js`                           | À rapatrier                     | Phase 5.3           |
+| `src/js/constants.js`                           | À rapatrier dans `config.js`    | Phase 5.3           |
 | Stores limités à `admin-store.js`               | Création progressive            | Phase 5.2           |
-| `supabase/migrations/` vide                     | Consolidation `init.sql`        | Phase 2.8           |
-| Ref `html5-qrcode` orpheline dans Vite          | À investiguer                   | Hors phase actuelle |
 | `admin-timeline.js` hors `vite.config.js`       | À investiguer                   | Hors phase actuelle |
 
 ---
@@ -320,7 +336,7 @@ Plusieurs éléments du code reflètent un état transitoire piloté par `plan_r
 | ---------------------------------------------- | ----------------------------------------------------- |
 | Installation, dev, build local                 | [`README.md`](README.md)                              |
 | Déploiement (CI/CD, secrets, rollback)         | [`docs/deployment.md`](docs/deployment.md)            |
-| Schéma DB, RLS, triggers, fonctions PL/pgSQL   | [`DATABASE.md`](DATABASE.md) (à créer en 7.3)         |
+| Schéma DB, RLS, triggers, fonctions PL/pgSQL   | [`DATABASE.md`](DATABASE.md) (à valider en 7.3)       |
 | Conventions de code, workflow Git, revue PR    | [`CONTRIBUTING.md`](CONTRIBUTING.md) (à créer en 7.4) |
 | Historique des versions                        | [`CHANGELOG.md`](CHANGELOG.md) (à créer en 7.5)       |
 | Avertissements critiques (prod, RLS, triggers) | [`CLAUDE.md`](CLAUDE.md)                              |

@@ -15,6 +15,10 @@ import { ApiService } from '../services/api.js';
 import { pushToast } from '../utils/toast.js';
 import { createConfirmModalState, askConfirm, handleConfirm } from '../utils/confirm.js';
 
+/**
+ * Factory de l'objet exposé via `Alpine.store('admin', ...)`.
+ * @returns {object} Store admin (state + loaders + helpers).
+ */
 export function createAdminStore() {
   return {
     // --- State partagé ---
@@ -80,6 +84,12 @@ export function createAdminStore() {
 
     // --- Helpers globaux ---
 
+    /**
+     * Empile un toast dans `this.toasts` (consommé par `partials/components/toast.html`).
+     * @param {string} message
+     * @param {'success'|'error'|'warning'|'info'} [type='success']
+     * @returns {void}
+     */
     showToast(message, type = 'success') {
       pushToast(this.toasts, message, type);
     },
@@ -99,10 +109,19 @@ export function createAdminStore() {
       handleConfirm(this.confirmModal, result);
     },
 
+    /**
+     * Sous-liste des bénévoles éligibles au rôle de référent (referent + admin).
+     * @returns {object[]}
+     */
     getReferents() {
       return this.benevoles.filter((b) => ['referent', 'admin'].includes(b.role));
     },
 
+    /**
+     * Recalcule `this.stats` (tshirts par taille, repas normal/végé, cagnotte distribué/consommé/restant)
+     * à partir de `this.benevoles` et `this.repasList`. Idempotent — appelé en fin de `loadBenevolesAndStats`.
+     * @returns {void}
+     */
     calculateStats() {
       const tshirts = {};
       let total_tshirts = 0;
@@ -173,6 +192,11 @@ export function createAdminStore() {
 
     // --- Loaders transverses ---
 
+    /**
+     * Charge tout le state admin en parallèle puis reconstruit `referentAssignments`.
+     * Appelé une fois au mount (`admin.js → init`).
+     * @returns {Promise<void>}
+     */
     async loadData() {
       await Promise.all([
         this.loadBenevolesAndStats(),
@@ -187,6 +211,7 @@ export function createAdminStore() {
       this.initReferentAssignments();
     },
 
+    /** @returns {Promise<void>} */
     async loadTypePostes() {
       try {
         const { data, error } = await ApiService.fetch('type_postes', {
@@ -200,10 +225,13 @@ export function createAdminStore() {
       }
     },
 
-    // Reconstruit `referentAssignments` depuis l'état courant des postes :
-    // pour chaque référent, regroupe les postes assignés (referent_id = ref.id)
-    // par titre → liste de periode_id. Appelé en fin de `loadData`
-    // et exposé pour le bouton "Recharger" de l'onglet referents.
+    /**
+     * Reconstruit `referentAssignments` depuis l'état courant des postes :
+     * pour chaque référent, regroupe les postes assignés (referent_id = ref.id)
+     * par titre → liste de periode_id. Appelé en fin de `loadData`
+     * et exposé pour le bouton "Recharger" de l'onglet referents.
+     * @returns {void}
+     */
     initReferentAssignments() {
       const assignments = {};
       this.getReferents().forEach((ref) => {
@@ -222,6 +250,7 @@ export function createAdminStore() {
       this.referentAssignments = assignments;
     },
 
+    /** @returns {Promise<void>} */
     async loadJours() {
       try {
         const { data, error } = await ApiService.fetch('jours', {
@@ -234,6 +263,7 @@ export function createAdminStore() {
       }
     },
 
+    /** @returns {Promise<void>} */
     async loadPostes() {
       try {
         const { data, error } = await ApiService.fetch('postes', {
@@ -286,6 +316,12 @@ export function createAdminStore() {
       }
     },
 
+    /**
+     * Charge la vue `admin_benevoles` + cagnotte (transactions + crédits inscriptions/forced),
+     * agrège par famille (`user_id`) avec un seul "head of family" porteur du solde restant,
+     * puis déclenche `calculateStats`.
+     * @returns {Promise<void>}
+     */
     async loadBenevolesAndStats() {
       try {
         const { data: benevoleRaw, error: benevolesError } = await ApiService.fetch(
@@ -441,6 +477,7 @@ export function createAdminStore() {
       }
     },
 
+    /** @returns {Promise<void>} */
     async loadPeriodes() {
       try {
         const { data, error } = await ApiService.fetch('periodes', {
@@ -453,6 +490,7 @@ export function createAdminStore() {
       }
     },
 
+    /** @returns {Promise<void>} */
     async loadProgramme() {
       try {
         const { data, error } = await ApiService.fetch('programmes', {
@@ -495,6 +533,7 @@ export function createAdminStore() {
       }
     },
 
+    /** @returns {Promise<void>} */
     async loadConfig() {
       try {
         const { data, error } = await ApiService.fetch('config', {
@@ -518,6 +557,7 @@ export function createAdminStore() {
       }
     },
 
+    /** @returns {Promise<void>} */
     async loadRepas() {
       try {
         const { data, error } = await ApiService.fetch('repas', {

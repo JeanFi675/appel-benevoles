@@ -79,9 +79,43 @@ Vite charge `.env` puis `.env.local` — les valeurs du second écrasent celles 
 
 ---
 
-## Lancement en développement
+## Déploiement (cycle normal)
 
-### Avec instance Supabase locale (recommandé)
+Le mode de fonctionnement standard du projet est **prod-first** : toute modification passe par une PR sur `master`, le pipeline GitHub Actions builde et publie sur GitHub Pages automatiquement.
+
+```text
+git checkout -b fix/xxx       →  modifs  →  PR  →  merge sur master
+                                                        ↓
+                                          GitHub Actions: build + deploy
+                                                        ↓
+                                              GitHub Pages (prod)
+```
+
+Les autres composants (migrations SQL, Edge Functions) se déploient manuellement via la CLI Supabase, **hors** du pipeline frontend.
+
+➡️ **Procédure complète** : [`docs/deployment.md`](docs/deployment.md) — secrets GitHub Actions, déploiement Edge Functions, application des migrations en prod (avec le garde-fou `--force-prod` + `PHASE=8`), rollback.
+
+---
+
+## Hotfix / correction urgente
+
+Quand un bug critique survient en production (l'événement est en cours, un référent ne peut pas se connecter, un email ne part pas), suivre cette boucle courte :
+
+1. **Reproduire en local** : `supabase start` puis `npm run dev` (voir § Développement local).
+2. **Restaurer un dump à jour** si la repro nécessite des données réelles : voir `backups/README.md`.
+3. **Corriger** : modifier le code, **tester** dans le navigateur local sur http://localhost:5173.
+4. **PR + merge** sur `master` → le déploiement frontend se fait automatiquement.
+5. **Si la correction touche la base ou une Edge Function**, déployer manuellement (voir `docs/deployment.md`).
+
+> ⚠️ Ne **jamais** modifier directement la prod (Studio Supabase, SQL ad-hoc) sans avoir reproduit et validé localement. Voir `CLAUDE.md` §1.
+
+---
+
+## Développement local
+
+Section technique pour reproduire la prod sur le poste de dev (hotfix, test de migration, refonte).
+
+### Lancer l'environnement complet
 
 ```bash
 supabase start              # Démarre Postgres, Auth, Studio en local (~30 s)
@@ -96,18 +130,16 @@ URLs locales standards (cf. `supabase status`) :
 
 Arrêt : `supabase stop` (conserve les données) ou `supabase stop --no-backup` (purge complète).
 
-### Sans instance locale (pointe sur la prod)
+### Pointer le dev sur la prod (déconseillé)
 
-> ⚠️ Toute opération de données affecte les vrais utilisateurs. Voir `CLAUDE.md` §1.
+> ⚠️ Toute opération de données affecte les vrais utilisateurs. Utiliser uniquement pour observer la prod en lecture. Voir `CLAUDE.md` §1.
 
 ```bash
 mv .env.local .env.local.disabled
 npm run dev
 ```
 
----
-
-## Build de production
+### Build et preview
 
 ```bash
 npm run build              # Génère dist/ optimisé (minification, code-split)
@@ -116,9 +148,7 @@ npm run preview            # Sert dist/ sur http://localhost:4173
 
 `vite.config.js` conserve `base: "./"` pour un déploiement à chemin relatif (GitHub Pages).
 
----
-
-## Qualité de code
+### Qualité de code
 
 ```bash
 npx eslint src/            # Lint
@@ -128,19 +158,17 @@ npx knip                   # Détection de code mort
 
 Le hook `pre-commit` (Husky + lint-staged) applique `eslint --fix` et `prettier --write` sur les fichiers stagés.
 
----
-
-## Base de données
+### Base de données
 
 ```bash
-npm run db:push            # Vérifie .env puis exécute `supabase db push`
+npm run db:push            # Cible locale par défaut (tant que .env.local pointe sur 127.0.0.1)
 ```
+
+Le script passe par `scripts/check-env.js` qui **bloque** par défaut toute opération ciblant la prod : pousser en prod nécessite `--force-prod` + `PHASE=8` (voir `docs/deployment.md` § Migrations).
 
 Les migrations vivent dans `supabase/migrations/` (nommage chronologique, jamais modifiées après application en prod). Voir `DATABASE.md` pour le schéma, les policies RLS et les triggers.
 
----
-
-## Edge Functions
+### Edge Functions
 
 Cinq fonctions Deno dans `supabase/functions/` :
 
@@ -158,12 +186,6 @@ Déploiement individuel :
 supabase functions deploy send-planning
 supabase secrets set SMTP_HOST=... SMTP_PORT=... SMTP_USER=... SMTP_PASS=...
 ```
-
----
-
-## Déploiement
-
-Voir [`docs/deployment.md`](docs/deployment.md) pour la procédure complète (CI/CD frontend GitHub Actions, variables d'environnement de prod, déploiement des Edge Functions, application des migrations en prod, rollback).
 
 ---
 
