@@ -834,3 +834,17 @@ Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateu
 
 **Action différée** : formatage groupé des 4 fichiers racine (`npx prettier --write eslint.config.js jsconfig.json postcss.config.js tailwind.config.js`) à programmer comme tâche isolée — ou laisser lint-staged les corriger à leur prochaine modification.
 
+---
+
+## 2026-06-01 — Phase 8.0 — Actions GitHub sur Node 20 dépréciées
+
+**Contexte** : premier run du workflow `ci.yml` (run #26780214013, vert). Annotation GitHub Actions non bloquante :
+
+> Node.js 20 actions are deprecated. `actions/checkout@v4`, `actions/setup-node@v4` [...] Actions will be forced to run with Node.js 24 by default starting June 16th, 2026.
+
+**Périmètre** : concerne **les deux** workflows — `ci.yml` (nouveau) ET `deploy.yml` (existant, `checkout@v4` + `setup-node@v4` + `configure-pages@v4` + `upload-pages-artifact@v3` + `deploy-pages@v4`).
+
+**Impact** : nul à court terme (warning uniquement). À partir du 16 juin 2026, les runners forceront Node 24 ; après le 16 septembre 2026, Node 20 sera retiré.
+
+**Action différée (atomicity first, hors scope 8.0)** : bumper les actions vers leurs versions majeures supportant Node 24 (probablement `actions/checkout@v5`, `actions/setup-node@v5`, et versions à jour des actions Pages) dans `ci.yml` **et** `deploy.yml`, en une passe dédiée. Non bloquant pour le go-live.
+
