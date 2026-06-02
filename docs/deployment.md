@@ -43,7 +43,7 @@ Le workflow [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) se
 Étapes du pipeline :
 
 1. Checkout du code
-2. Setup Node 20 avec cache npm
+2. Setup Node 24 avec cache npm
 3. `npm ci` (install reproductible)
 4. `npm run build` avec injection des secrets Vite
 5. Création de `dist/.nojekyll` (désactive le traitement Jekyll de GitHub Pages)
@@ -77,6 +77,67 @@ npm run build
 # Le dossier dist/ peut ensuite être uploadé manuellement vers la branche gh-pages
 # (ou tout autre hébergeur statique).
 ```
+
+---
+
+## En-têtes de sécurité
+
+> ⚠️ **Contrainte d'hébergement.** GitHub Pages **ne permet pas de définir des en-têtes HTTP de réponse personnalisés** (pas de `Content-Security-Policy`, `X-Frame-Options`, `Referrer-Policy` côté serveur). Cette limite est structurelle et définitive sur cette plateforme. La sécurité applicable est donc partagée entre ce que GitHub fournit nativement et ce qu'on injecte via des balises `<meta>` dans le HTML.
+
+### Ce que GitHub Pages fournit nativement
+
+| En-tête                     | Valeur réelle (prod)            | Vérif                                                        |
+| --------------------------- | ------------------------------- | ------------------------------------------------------------ |
+| `Strict-Transport-Security` | `max-age=31556952`              | `curl -I https://jeanfi675.github.io/appel-benevoles/`       |
+| TLS / HTTPS                 | Certificat Let's Encrypt valide | Cadenas navigateur + `curl -I` retourne `200` sur `https://` |
+
+### Ce qu'on applique via `<meta>` (à défaut d'en-têtes HTTP)
+
+Deux directives sont posées dans le `<head>` de chaque page :
+
+- **`Content-Security-Policy`** (`<meta http-equiv>`) — appliquée par le navigateur (mais **invisible** aux scanners type `securityheaders.com`, qui ne lisent que les en-têtes HTTP).
+- **`Referrer-Policy`** (`<meta name="referrer" content="strict-origin-when-cross-origin">`).
+
+La CSP existe en **deux variantes** :
+
+| Pages                                           | Source CSP                       | Particularité                                            |
+| ----------------------------------------------- | -------------------------------- | -------------------------------------------------------- |
+| `index`, `admin`, `admin-connexions`, `besoins` | `src/partials/layout/head.html`  | CSP stricte (pas de CDN externe)                         |
+| `debit`, `scanner-tshirt`                       | `<head>` propre à chaque fichier | + `https://cdn.tailwindcss.com` autorisé en `script-src` |
+
+CSP standard (pages partageant `head.html`) :
+
+```
+default-src 'self';
+script-src 'self' 'unsafe-eval';
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+font-src 'self' https://fonts.gstatic.com;
+img-src 'self' data: blob:;
+connect-src 'self' https://pulrflaantftaogvgtnc.supabase.co wss://pulrflaantftaogvgtnc.supabase.co;
+object-src 'none'; base-uri 'self'; form-action 'self'
+```
+
+Justification des assouplissements :
+
+- **`script-src 'unsafe-eval'`** : Alpine.js v3 (build standard) évalue les expressions `x-data`/`x-on` via un mécanisme type `eval`. Sans cette directive, toute l'interactivité casse. _(Mitigation possible : passer au build CSP d'Alpine — voir `plan_refactoring.md`.)_
+- **`style-src 'unsafe-inline'`** : Alpine pose des styles inline (`x-show` → `style="display:none"`, bindings `:style`) et le CDN Tailwind injecte un `<style>` runtime.
+- **`connect-src`** : REST, Auth et Realtime (`wss://`) du projet Supabase de production.
+- **`script-src https://cdn.tailwindcss.com`** (pages `debit`/`scanner-tshirt` uniquement) : ces deux pages chargent le Tailwind runtime CDN au lieu du CSS compilé par Vite. _(Anti-pattern à corriger — voir `plan_refactoring.md` ; sa suppression permettrait de durcir la CSP de ces pages.)_
+
+### Limitations connues
+
+- **Anti-clickjacking non couvert** : `X-Frame-Options` et la directive CSP `frame-ancestors` exigent un **vrai en-tête HTTP** ; en `<meta>`, les navigateurs **ignorent** `frame-ancestors`. Impossible sur GitHub Pages en l'état.
+- **Grade `securityheaders.com` plafonné** : le scanner ne note que les en-têtes HTTP, pas les `<meta>`. Le grade restera bas malgré la CSP réellement active dans le navigateur.
+- **Mitigation future** (si un durcissement est requis) : placer un proxy **Cloudflare (gratuit) derrière un domaine personnalisé**, qui injecterait de vrais en-têtes HTTP (CSP, `X-Frame-Options`, `Referrer-Policy`). Cela change l'URL de prod et ajoute une dépendance infra — non retenu pour la V1.
+
+### Vérifier la CSP en production
+
+```bash
+# La CSP est servie dans le HTML (meta), pas en en-tête :
+curl -s https://jeanfi675.github.io/appel-benevoles/ | grep -i "Content-Security-Policy"
+```
+
+Validation navigateur : ouvrir chaque famille de page, console DevTools → aucune violation `Content Security Policy` ne doit apparaître (hors connexion à une Supabase locale en preview, non listée dans `connect-src`).
 
 ---
 

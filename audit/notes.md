@@ -878,3 +878,20 @@ Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateu
 
 **Action** : case ajoutée en **Phase 8.6** (2026-06-02) — `git add --renormalize .` + commit `chore: renormalize .sql line endings to LF`.
 
+
+---
+
+## 2026-06-02 — Phase 8.2 #3 — Tailwind runtime CDN sur debit.html / scanner-tshirt.html
+
+**Contexte** : mise en place des en-têtes de sécurité (8.2 #3). GitHub Pages ne permet aucun en-tête HTTP custom → CSP posée en `<meta>`. En cartographiant les origines à autoriser, découverte que `debit.html` et `scanner-tshirt.html` chargent `<script src="https://cdn.tailwindcss.com">` (Tailwind **runtime** CDN), alors que le reste du projet compile Tailwind via Vite/PostCSS.
+
+**Cause** : ces deux pages (hors `head.html` partagé) ont gardé leur `<head>` historique avec le CDN, jamais migré pendant les Phases 4–5.
+
+**Impact** :
+1. **Perf** : compilation Tailwind dans le navigateur à chaque chargement (au lieu d'un CSS statique minifié).
+2. **Sécurité** : force `script-src https://cdn.tailwindcss.com 'unsafe-eval'` + `style-src 'unsafe-inline'` dans la CSP de ces deux pages → CSP plus permissive que celle des autres pages (`head.html`).
+3. Empêche d'unifier la CSP sur une seule variante stricte.
+
+**Mitigation immédiate (8.2 #3)** : CSP en deux variantes — stricte pour les pages `head.html`, + `cdn.tailwindcss.com` pour `debit`/`scanner-tshirt`. Documenté dans `docs/deployment.md` §En-têtes de sécurité.
+
+**Action** : case ajoutée en **Phase 8.6** (2026-06-02) — supprimer le CDN runtime au profit du CSS buildé, puis aligner la CSP de ces pages sur la variante stricte.
