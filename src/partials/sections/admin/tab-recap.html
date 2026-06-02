@@ -1,110 +1,56 @@
-<div x-show="activeTab === 'recap'" class="brutal-card bg-brutal-white p-6">
+<div x-show="activeTab === 'recap'" x-data="adminRecapTab" class="brutal-card bg-brutal-white p-6">
   <h2 class="text-3xl font-black mb-6">📊 Récapitulatif</h2>
 
-  <!-- MAIL DE RAPPEL -->
-  <div class="mb-8 p-4 md:p-6 bg-brutal-white border-4 border-brutal-black shadow-brutal">
-    <h3 class="text-xl font-black mb-2">📧 Mail de rappel — tous les bénévoles</h3>
-    <p class="text-sm text-gray-600 mb-4">
-      Envoie le planning personnalisé à chaque bénévole inscrit à au moins un poste
-      (juges, officiels et admins reçoivent le mail quel que soit leur nombre d'inscriptions).
-    </p>
-    <div class="flex gap-3 flex-wrap items-center">
-      <button
-        @click="sendRappelAll(true)"
-        :disabled="sendingRappel"
-        class="brutal-btn px-4 py-2 font-bold border-2 border-brutal-black bg-white hover:bg-gray-100 shadow-brutal-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span x-show="!sendingRappel">🔍 Vérifier (dry run)</span>
-        <span x-show="sendingRappel">⏳ En cours…</span>
-      </button>
-      <button
-        @click="if (confirm('Envoyer le mail de rappel à TOUS les bénévoles ?')) sendRappelAll(false)"
-        :disabled="sendingRappel"
-        class="brutal-btn px-4 py-2 font-bold border-2 border-brutal-black bg-yellow-400 hover:bg-yellow-300 shadow-brutal-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span x-show="!sendingRappel">📧 Envoyer à tous</span>
-        <span x-show="sendingRappel">⏳ Envoi en cours…</span>
-      </button>
-    </div>
-    <div x-show="rappelResult" class="mt-4 text-xs font-mono bg-gray-50 border border-gray-300 p-3 max-h-64 overflow-y-auto rounded">
-      <pre x-text="JSON.stringify(rappelResult, null, 2)"></pre>
-    </div>
-  </div>
-
   <!-- CONFIGURATION -->
-  <div class="mb-8 p-4 md:p-6 bg-brutal-white border-4 border-brutal-black shadow-brutal flex flex-col gap-6">
+  <div
+    class="mb-8 p-4 md:p-6 bg-brutal-white border-4 border-brutal-black shadow-brutal flex flex-col gap-6"
+  >
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
       <div class="text-center md:text-left">
         <h3 class="text-2xl font-black">⚙️ Configuration</h3>
-        <p class="text-gray-600 font-bold">
-          Gérer les fonctionnalités globales de l'application.
-        </p>
+        <p class="text-gray-600 font-bold">Gérer les fonctionnalités globales de l'application.</p>
       </div>
-      <div class="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto justify-center md:justify-end">
-        <div class="md:mr-8 text-right flex flex-col gap-1 w-full md:w-auto items-center md:items-end"
-          x-show="stats.cagnotte">
-          <div class="flex items-center justify-end gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
+      <div
+        class="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto justify-center md:justify-end"
+      >
+        <div
+          class="md:mr-8 text-right flex flex-col gap-1 w-full md:w-auto items-center md:items-end"
+          x-show="stats.cagnotte"
+        >
+          <div
+            class="flex items-center justify-end gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider"
+          >
             <span>Distribué</span>
             <span class="text-xs">vs</span>
             <span class="text-red-600">Consommé</span>
           </div>
           <div class="text-xl font-black flex items-center justify-end gap-2">
-            <span class="text-brutal-black" x-text="(stats.cagnotte.total_distribue || 0) + ' D'"></span>
+            <span
+              class="text-brutal-black"
+              x-text="(stats.cagnotte.total_distribue || 0) + ' D'"
+            ></span>
             <span class="text-gray-300">|</span>
-            <span class="text-red-600" x-text="'-' + (stats.cagnotte.total_consomme || 0) + ' D'"></span>
+            <span
+              class="text-red-600"
+              x-text="'-' + (stats.cagnotte.total_consomme || 0) + ' D'"
+            ></span>
           </div>
           <div class="text-xs font-bold text-gray-400 mt-1 flex justify-end gap-1">
             <span>Reste:</span>
-            <span class="text-emerald-600" x-text="(stats.cagnotte.total_restant || 0) + ' D'"></span>
+            <span
+              class="text-emerald-600"
+              x-text="(stats.cagnotte.total_restant || 0) + ' D'"
+            ></span>
           </div>
         </div>
-
-        <span class="font-bold text-lg"
-          x-text="config.cagnotte_active ? 'Cagnotte ACTIVÉE' : 'Cagnotte DÉSACTIVÉE'"></span>
-        <button @click="toggleCagnotte()"
-          class="relative inline-flex h-8 w-14 items-center rounded-full border-2 border-brutal-black transition-colors focus:outline-none"
-          :class="config.cagnotte_active ? 'bg-green-400' : 'bg-gray-300'">
-          <span class="sr-only">Activer la cagnotte</span>
-          <span
-            class="inline-block h-6 w-6 transform rounded-full bg-white border-2 border-brutal-black transition-transform"
-            :class="config.cagnotte_active ? 'translate-x-7' : 'translate-x-0.5'"></span>
-        </button>
       </div>
-    </div>
-
-    <!-- TARIFS DES CAGNOTTES -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t-2 border-brutal-black pt-4">
-      <!-- Config Juges -->
-      <form @submit.prevent="updateConfigJuges()" class="flex flex-col gap-2">
-        <label class="font-bold uppercase text-sm flex items-center gap-2">⚖️ Cagnotte Juges / Jour (€)</label>
-        <div class="flex gap-2">
-            <input type="number" step="0.5" x-model="config.tarif_degaines_juge" class="brutal-input w-full px-4 py-2" required />
-            <button type="submit" class="brutal-btn bg-yellow-400 py-2 px-4 shadow-brutal border-2 border-brutal-black font-black uppercase whitespace-nowrap" :disabled="savingConfig">
-                 <span x-show="!savingConfig">💾</span>
-                 <span x-show="savingConfig">⏳</span>
-            </button>
-        </div>
-      </form>
-      <!-- Config Officiels -->
-      <form @submit.prevent="updateConfigOfficiels()" class="flex flex-col gap-2">
-        <label class="font-bold uppercase text-sm flex items-center gap-2">🏅 Cagnotte Officiels / Week-end (€)</label>
-        <div class="flex gap-2">
-            <input type="number" step="0.5" x-model="config.tarif_degaines_officiel" class="brutal-input w-full px-4 py-2" required />
-            <button type="submit" class="brutal-btn bg-yellow-400 py-2 px-4 shadow-brutal border-2 border-brutal-black font-black uppercase whitespace-nowrap" :disabled="savingConfig">
-                 <span x-show="!savingConfig">💾</span>
-                 <span x-show="savingConfig">⏳</span>
-            </button>
-        </div>
-      </form>
     </div>
   </div>
 
   <div class="grid md:grid-cols-2 gap-8">
     <!-- T-SHIRTS -->
     <div class="border-4 border-brutal-black p-4 bg-blue-50">
-      <h3 class="text-2xl font-black mb-4 border-b-2 border-brutal-black pb-2">
-        👕 T-Shirts
-      </h3>
+      <h3 class="text-2xl font-black mb-4 border-b-2 border-brutal-black pb-2">👕 T-Shirts</h3>
 
       <template x-if="stats.tshirts && Object.keys(stats.tshirts).length > 0">
         <table class="w-full text-left border-collapse">
@@ -123,13 +69,15 @@
             </template>
             <tr class="bg-brutal-black text-brutal-white">
               <td class="py-2 pl-2 font-black">TOTAL</td>
-              <td class="py-2 pr-2 text-right font-mono text-lg"
-                x-text="stats.total_tshirts"></td>
+              <td class="py-2 pr-2 text-right font-mono text-lg" x-text="stats.total_tshirts"></td>
             </tr>
           </tbody>
         </table>
       </template>
-      <div x-show="!stats.tshirts || Object.keys(stats.tshirts).length === 0" class="italic text-gray-500">
+      <div
+        x-show="!stats.tshirts || Object.keys(stats.tshirts).length === 0"
+        class="italic text-gray-500"
+      >
         Aucune donnée de T-shirt.
       </div>
     </div>
@@ -142,26 +90,25 @@
 
       <table class="w-full text-left border-collapse">
         <tbody>
-          <tr class="border-b-2 border-brutal-black">
-            <td class="py-4 font-bold text-lg">Vendredi soir (15 mai)</td>
-            <td class="py-4 text-right">
-              <span class="font-black text-2xl" x-text="stats.repas.vendredi.total"></span>
-              <div class="text-sm text-gray-600 font-bold mt-1">
-                <span x-text="stats.repas.vendredi.normal"></span> normaux, 
-                <span class="text-green-600" x-text="stats.repas.vendredi.vege"></span> végé
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="py-4 font-bold text-lg">Samedi soir (16 mai)</td>
-            <td class="py-4 text-right">
-              <span class="font-black text-2xl" x-text="stats.repas.samedi.total"></span>
-              <div class="text-sm text-gray-600 font-bold mt-1">
-                <span x-text="stats.repas.samedi.normal"></span> normaux, 
-                <span class="text-green-600" x-text="stats.repas.samedi.vege"></span> végé
-              </div>
-            </td>
-          </tr>
+          <template x-for="(repStat, repasId) in stats.repas" :key="repasId">
+            <tr class="border-b-2 border-brutal-black last:border-b-0">
+              <td class="py-4 font-bold text-lg" x-text="repStat.nom"></td>
+              <td class="py-4 text-right">
+                <span class="font-black text-2xl" x-text="repStat.total"></span>
+                <div class="text-sm text-gray-600 font-bold mt-1">
+                  <span x-text="repStat.normal"></span> normaux,
+                  <span class="text-green-600" x-text="repStat.vege"></span> végé
+                </div>
+              </td>
+            </tr>
+          </template>
+          <template x-if="Object.keys(stats.repas || {}).length === 0">
+            <tr>
+              <td colspan="2" class="py-4 text-center italic text-gray-500 font-bold">
+                Aucun repas configuré.
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>

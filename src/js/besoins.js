@@ -1,7 +1,7 @@
-import Alpine from "alpinejs";
-import { initAdminTimelineApp } from "./admin-timeline.js";
+import Alpine from 'alpinejs';
+import { initAdminTimelineApp } from './admin-timeline.js';
 
-document.addEventListener("alpine:init", () => {
+document.addEventListener('alpine:init', () => {
   initAdminTimelineApp();
 });
 

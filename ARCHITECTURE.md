@@ -1,283 +1,345 @@
-# Architecture — Appel Bénévoles
+# Architecture — appel-benevoles
+
+Document de référence décrivant l'architecture **réelle** du projet à la date d'écriture (2026-06-01, fin Phase 6 du refactoring). Il documente ce qui existe aujourd'hui ; les écarts résiduels par rapport à la cible sont signalés explicitement.
+
+> **Portée** : frontend (Vite + Alpine.js) et intégration backend (Supabase managé). Le schéma de base de données détaillé (tables, RLS, triggers) est documenté dans `DATABASE.md` (Phase 7.3).
 
 ---
 
-## Vue d'ensemble
+## 1. Vue d'ensemble
 
-Application web statique hébergée sur **GitHub Pages**, sans serveur applicatif. Toute la logique backend repose sur **Supabase** (PostgreSQL managé, Auth, Row Level Security, Edge Functions).
+Application web **statique multi-pages** buildée avec **Vite** et déployée sur **GitHub Pages** via GitHub Actions. Aucun serveur applicatif intermédiaire — le navigateur appelle directement Supabase pour l'authentification, les données et les fonctions serveur.
+
+Toute la logique backend critique (autorisations, contraintes métier) vit dans **Supabase** :
+
+- **PostgreSQL** + **RLS** (Row Level Security) pour les règles d'accès ligne par ligne.
+- **Triggers PL/pgSQL** pour les invariants métier (capacités de poste, conflits horaires).
+- **Edge Functions Deno** pour les opérations nécessitant un secret serveur (envoi d'emails, création de compte admin avec service role).
+
+### Diagramme d'architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     NAVIGATEUR                          │
-│                                                         │
-│  Alpine.js + Tailwind CSS                               │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ index    │ │ admin    │ │ juges    │ │ debit    │  │
-│  │ (main.js)│ │(admin.js)│ │(juges.js)│ │(debit.js)│  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘  │
-│       └────────────┴────────────┴─────────────┘        │
-│                    @supabase/supabase-js                │
-└───────────────────────────┬─────────────────────────────┘
-                            │ HTTPS
-┌───────────────────────────▼─────────────────────────────┐
-│                      SUPABASE                           │
-│                                                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌────────────────┐  │
-│  │   Auth      │  │  PostgreSQL │  │ Edge Functions │  │
-│  │ Magic Link  │  │  + RLS      │  │ (Deno/TS)      │  │
-│  │ OTP email   │  │  + Triggers │  │ send-planning  │  │
-│  └─────────────┘  └─────────────┘  │ create-benevole│  │
-│                                    └────────────────┘  │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                   BUILD (CI — GitHub Actions)                  │
+│                                                                │
+│  Sources HTML/JS/CSS  ─► Vite 7 + vite-plugin-html (EJS)       │
+│  Tailwind CSS         ─► dist/  (minification esbuild,         │
+│                                  hash, sourcemap caché,        │
+│                                  manualChunks :                │
+│                                  vendor-supabase /             │
+│                                  vendor-alpine /               │
+│                                  vendor-qrcode / vendor)       │
+│  Secrets VITE_*       ─► injectés dans le bundle               │
+└──────────────────────────────┬─────────────────────────────────┘
+                               │ upload-pages-artifact
+┌──────────────────────────────▼─────────────────────────────────┐
+│            GitHub Pages (CDN statique — base "./")             │
+│                                                                │
+│  6 pages multi-entrypoints :                                   │
+│   index.html  admin.html  debit.html                           │
+│   scanner-tshirt.html  admin-connexions.html  besoins.html     │
+└──────────────────────────────┬─────────────────────────────────┘
+                               │ HTTPS
+┌──────────────────────────────▼─────────────────────────────────┐
+│                          NAVIGATEUR                            │
+│                                                                │
+│  Alpine.js 3 (réactivité)  +  Tailwind CSS 3                   │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Entrypoint /page.js → Alpine.data + Alpine.store        │   │
+│  │ Composants Alpine (src/js/components/)                  │   │
+│  │ Stores Alpine (src/js/stores/)                          │   │
+│  │ Services (src/js/services/) ── seul accès Supabase ──┐  │   │
+│  └──────────────────────────────────────────────────────┼──┘   │
+│                @supabase/supabase-js (client unique)    │      │
+└─────────────────────────────────────────────────────────┼──────┘
+                                                          │
+                                                  HTTPS   │
+              (REST PostgREST / RPC / Realtime WS / Auth) │
+                                                          ▼
+┌────────────────────────────────────────────────────────────────┐
+│                            SUPABASE                            │
+│                                                                │
+│  ┌──────────┐  ┌───────────────────┐  ┌────────────────────┐   │
+│  │   Auth   │  │   PostgreSQL 17   │  │   Edge Functions   │   │
+│  │ OTP 6 ch.│  │  + RLS policies   │  │      (Deno 2)      │   │
+│  │  (email) │  │  + Triggers       │  │  • send-planning   │   │
+│  └──────────┘  │  + Fonctions RPC  │  │  • send-rappel-all │   │
+│                │  + Vues publiques │  │  • send-relance    │   │
+│                └───────────────────┘  │  • send-relance-   │   │
+│                                       │      orphelin      │   │
+│                                       │  • create-benevole │   │
+│                                       └────────────────────┘   │
+└────────────────────────────────────────────────────────────────┘
 ```
+
+### Flux typiques
+
+| Action utilisateur              | Chemin technique                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Connexion (OTP email)           | Navigateur → Supabase Auth (OTP 6 chiffres)                                                                            |
+| Affichage planning              | Navigateur → vues PostgreSQL anonymisées (REST PostgREST, filtré par RLS)                                              |
+| Inscription à un poste          | Navigateur → INSERT dans `inscriptions` → triggers `check_capacity` + `check_time_conflict` côté DB                    |
+| Envoi du planning par email     | Navigateur → Edge Function `send-planning` → SMTP                                                                      |
+| Création de compte par un admin | Navigateur (admin) → Edge Function `create-benevole` (vérifie rôle, utilise service_role pour créer dans `auth.users`) |
+| Débit cagnotte (buvette)        | Navigateur → RPC PostgreSQL → INSERT `cagnotte_transactions`                                                           |
 
 ---
 
-## Choix techniques
+## 2. Choix techniques et justifications
 
-### Pourquoi pas React/Vue/Next.js ?
-Contrainte d'hébergement gratuit (GitHub Pages = fichiers statiques uniquement). Alpine.js offre la réactivité nécessaire sans SSR ni build complexe. Le projet est mono-événement, sans besoin d'évolutivité à grande échelle.
+### Pourquoi Vite ?
+
+| Critère                       | Apport de Vite 7                                            |
+| ----------------------------- | ----------------------------------------------------------- |
+| Build statique multi-pages    | Support natif `rollupOptions.input` pour 6 entrées HTML     |
+| Dev server rapide             | ES modules natifs en dev, pas de bundling                   |
+| Tree-shaking & code splitting | `manualChunks` configuré pour isoler les vendors            |
+| Templates EJS                 | Via `vite-plugin-html` (factoring des `<head>`, `<header>`) |
+| Variables d'env scopées       | Préfixe `VITE_*` pour ce qui entre dans le bundle public    |
+
+### Pourquoi Alpine.js (et pas React/Vue) ?
+
+- **Contrainte d'hébergement** : GitHub Pages = fichiers statiques. Pas de SSR, pas de runtime serveur → un framework lourd avec hydratation est superflu.
+- **Volume de logique modeste** : 6 pages d'admin/utilisateur, pas de SPA complexe. Alpine couvre les besoins (réactivité, stores, persist) sans coût d'apprentissage.
+- **Performances** : runtime Alpine ~17 KB gzippé vs ~45 KB pour React minimal. Premier paint plus rapide.
 
 ### Pourquoi Supabase ?
-- Authentification sans serveur (Magic Link)
-- RLS (Row Level Security) : la sécurité est dans la base, pas dans le code frontend
-- Triggers PostgreSQL pour la logique métier critique (conflits, capacité)
-- Free tier suffisant pour un événement ponctuel
-- Edge Functions Deno pour les cas qui nécessitent un serveur (envoi d'email, création de compte admin)
 
-### Pourquoi le build est commité dans git (`dist/`) ?
-Résidu d'architecture. Le déploiement se fait via GitHub Actions qui rebuild depuis les sources. Le dossier `dist/` versionné n'est pas utilisé par le pipeline CI/CD.
+- **RLS = sécurité dans la base** : les règles d'accès sont vérifiées par PostgreSQL, pas par du code applicatif. Impossible de contourner depuis le navigateur.
+- **Auth managée** : OTP 6 chiffres par email, sessions JWT, refresh token. Aucun code de gestion d'auth côté serveur à maintenir.
+- **Triggers PL/pgSQL** : invariants métier (capacité, conflits horaires) appliqués atomiquement à l'INSERT/UPDATE.
+- **Edge Functions Deno** : runtime serverless pour les cas qui exigent un secret (SMTP, service_role).
+- **Free tier suffisant** : événement ponctuel, charge limitée.
+
+### Pourquoi Tailwind CSS ?
+
+- Cohérence visuelle via tokens custom (`brutal-black`, `brutal-ice`, `brutal-white`, `shadow-brutal*`).
+- Purge automatique des classes non utilisées (build léger).
+- Pas de fichiers CSS éparpillés à maintenir.
+
+### Dépendances majeures (runtime)
+
+| Dépendance              | Version | Rôle                                                                    |
+| ----------------------- | ------- | ----------------------------------------------------------------------- |
+| `@supabase/supabase-js` | ^2.39.0 | Client unique Auth + REST + Realtime, instancié dans `src/js/config.js` |
+| `alpinejs`              | ^3.13.3 | Réactivité DOM, `Alpine.data()` + `Alpine.store()`                      |
+| `qrcode`                | ^1.5.4  | **Génération** de QR codes (page bénévole, scanner)                     |
+
+### Dépendances majeures (build / qualité)
+
+| Dépendance         | Version  | Rôle                                                            |
+| ------------------ | -------- | --------------------------------------------------------------- |
+| `vite`             | ^7.3.0   | Bundler + dev server                                            |
+| `vite-plugin-html` | ^3.2.2   | Templates EJS, minification HTML, multi-pages                   |
+| `tailwindcss`      | ^3.3.5   | Framework CSS utility-first                                     |
+| `postcss`          | ^8.4.31  | Pipeline CSS (utilisé par Tailwind)                             |
+| `autoprefixer`     | ^10.4.16 | Préfixes vendeurs CSS                                           |
+| `eslint`           | ^10.4.0  | Linter JavaScript                                               |
+| `prettier`         | ^3.8.3   | Formateur                                                       |
+| `husky`            | ^9.1.7   | Hooks Git locaux (pre-commit)                                   |
+| `lint-staged`      | ^17.0.5  | Lance ESLint/Prettier sur les fichiers stagés uniquement        |
+| `knip`             | ^6.14.2  | Détection de code mort (exports inutilisés, deps non utilisées) |
 
 ---
 
-## Structure des fichiers source
+## 3. Structure des dossiers
+
+### Racine
 
 ```
 appel-benevoles/
+├── index.html, admin.html, debit.html, scanner-tshirt.html,
+│   admin-connexions.html, besoins.html       # 6 pages d'entrée Vite
+├── vite.config.js                            # 6 entrypoints, base "./"
+├── package.json                              # scripts + deps
+├── tailwind.config.js, postcss.config.js     # config CSS
+├── eslint.config.js, .prettierrc             # config qualité
+├── src/                                      # voir détail ci-dessous
+├── supabase/                                 # config CLI + migrations + Edge Functions
+├── scripts/                                  # outils Node (check-env, audits)
+├── docs/                                     # documentation (deployment, ...)
+├── audit/                                    # rapports d'audit (DB, Lighthouse, notes)
+├── backups/                                  # dumps DB (cf. backups/README.md)
+└── .github/workflows/deploy.yml              # CI/CD GitHub Pages
+```
+
+### `src/` — code source frontend
+
+```
+src/
+├── js/             # tout le JavaScript
+├── partials/       # fragments HTML (EJS)
+├── styles/         # CSS / Tailwind entrypoints (main.css)
+├── css/            # CSS spécifiques par page (extraits des styles inline en Phase 6)
+└── data/           # (vide actuellement)
+```
+
+### `src/js/` — état réel
+
+```
+src/js/
+├── config.js              # 🔒 SINGLETON : client Supabase + mécanisme refresh token
+├── constants.js           # Re-export VITE_SUPABASE_URL / ANON_KEY + check dev
 │
-├── src/
-│   ├── js/
-│   │   ├── config.js              # Client Supabase (npm), singleton avec refresh dédupliqué
-│   │   ├── constants.js           # Exports des variables d'env
-│   │   ├── utils.js               # Formatage dates/heures
-│   │   ├── main.js                # Point d'entrée page bénévoles
-│   │   ├── admin.js               # Point d'entrée admin
-│   │   ├── juges.js               # Point d'entrée juges
-│   │   ├── debit.js               # Point d'entrée débit cagnotte
-│   │   ├── officiels.js           # Point d'entrée officiels
-│   │   ├── scanner-tshirt.js      # Point d'entrée scanner
-│   │   ├── admin-juges.js         # Point d'entrée admin juges
-│   │   ├── admin-connexions.js    # Point d'entrée diagnostic
-│   │   │
-│   │   ├── services/
-│   │   │   ├── api.js             # Couche d'accès données (fetch/insert/update/delete/rpc)
-│   │   │   └── auth.js            # Couche authentification (OTP, session, signOut)
-│   │   │
-│   │   └── modules/
-│   │       ├── store.js           # Store central Alpine.js (état global + init)
-│   │       ├── admin/
-│   │       │   └── index.js       # Module admin (postes, périodes, bénévoles, stats)
-│   │       └── user/
-│   │           ├── profiles.js    # Gestion des profils bénévoles
-│   │           ├── planning.js    # Planning, inscriptions, vue calendrier
-│   │           ├── wizard.js      # Assistant d'inscription multi-étapes
-│   │           ├── cagnotte.js    # Solde et QR code cagnotte
-│   │           └── tshirt.js      # Suivi distribution T-shirts
-│   │
-│   ├── partials/
-│   │   ├── layout/
-│   │   │   ├── head.html          # <head> HTML (fonts, meta)
-│   │   │   └── header.html        # Navigation
-│   │   ├── components/
-│   │   │   ├── toast.html         # Notifications toast
-│   │   │   ├── confirm-modal.html # Modale de confirmation
-│   │   │   └── post-card-details.html
-│   │   └── sections/
-│   │       ├── index/             # Sections page bénévoles
-│   │       ├── admin/             # Tabs admin
-│   │       ├── juges/             # Formulaire juges
-│   │       └── officiels/         # Formulaire officiels
-│   │
-│   └── styles/
-│       └── main.css               # CSS custom (complément Tailwind)
+├── main.js                # Entrypoint page index.html
+├── admin.js               # Entrypoint page admin.html
+├── debit.js               # Entrypoint page debit.html
+├── scanner-tshirt.js      # Entrypoint page scanner-tshirt.html
+├── admin-connexions.js    # Entrypoint page admin-connexions.html
+├── besoins.js             # Entrypoint page besoins.html
+├── admin-timeline.js      # ⚠️ Non déclaré dans vite.config.js (voir audit/notes.md)
 │
-├── public/
-│   └── config.js                  # Client Supabase alternatif (CDN window.supabase)
-│                                  # ⚠️ Voir section "Double client Supabase"
+├── services/              # Accès Supabase — passage obligé pour tout JS
+│   ├── api.js             #   CRUD métier (benevoles, postes, inscriptions, cagnotte)
+│   ├── auth.js            #   OTP, session, rôle utilisateur courant
+│   └── public-api.js      #   Accès anonyme (planning public sans login)
 │
-├── supabase/
-│   ├── migrations/                # 26 fichiers SQL (ordre chronologique)
-│   └── functions/
-│       ├── send-planning/index.ts
-│       └── create-benevole/index.ts
+├── stores/                # Alpine.store() — état partagé global
+│   └── admin-store.js     #   (seul store actuel — autres domaines encore inline)
 │
-├── index.html                     # Template EJS (injecté par vite-plugin-html)
-├── admin.html
-├── ... (1 fichier HTML par page)
+├── components/            # Alpine.data() — composants Alpine isolés
+│   ├── admin/             #   7 onglets admin (benevoles, cagnotte-forcee,
+│   │                      #     heures, mailing, recap, referents, visual-creator)
+│   └── user/              #   Widgets côté bénévole (cagnotte, t-shirt)
 │
-└── vite.config.js                 # 8 points d'entrée, base "./" pour GitHub Pages
+├── modules/               # (legacy) — à dissoudre vers components/stores/utils (Phase 5.2)
+│   ├── store.js
+│   └── user/              #   planning.js, profiles.js, wizard.js
+│
+└── utils/                 # Helpers purs
+    ├── admin-shift-validation.js
+    ├── admin-time.js
+    ├── confirm.js         #   Helper modale de confirmation
+    ├── format-date.js     #   Formatage de dates (extrait de l'ancien utils.js en Phase 6)
+    └── toast.js           #   Helper toast (succès/erreur)
 ```
+
+#### Conventions de `src/js/` (résumé)
+
+| Règle                                                                                            | Référence                |
+| ------------------------------------------------------------------------------------------------ | ------------------------ |
+| **Un seul client Supabase** : `createClient()` uniquement dans `config.js`                       | `CLAUDE.md` §"Singleton" |
+| **Pas d'accès `supabase.*` hors `services/`** : composants et stores passent par un service      | Conv. projet             |
+| **Pas de classes JS** : objets littéraux retournés par des fonctions (compatibles `Alpine.data`) | `CLAUDE.md`              |
+| **Pas de `x-data` inline > 3 lignes** : extraire dans `components/`                              | `CLAUDE.md`              |
+| **Préfixes méthodes** : `load…` pour chargement, `save…` pour persistance, toast après save      | `CLAUDE.md`              |
+| **ES modules natifs uniquement**, pas de barrel files (`index.js` ré-exportateurs)               | Convention               |
+
+### `src/partials/` — fragments HTML EJS
+
+```
+src/partials/
+├── layout/                # Layout commun (head, header)
+│   ├── head.html          #   Balises <head> communes
+│   └── header.html        #   En-tête réutilisable
+├── components/            # Fragments UI réutilisables
+│   ├── cagnotte-widget.html
+│   ├── confirm-modal.html
+│   ├── post-card-details.html
+│   ├── toast.html
+│   └── tshirt-widget.html
+├── sections/              # Sections spécifiques à une page
+│   ├── index/             #   login, planning-calendar, planning-list
+│   ├── admin/             #   8 onglets (tabs.html + tab-*.html)
+│   └── admin-timeline/    #   chart, day-picker
+└── wizard.html            # Wizard d'inscription (utilisé par index)
+```
+
+Inclusion via `<%- include('chemin/relatif.html') %>`. Aucune logique métier dans les templates — uniquement des attributs Alpine référençant un `x-data="<nom>"` défini dans `src/js/components/`.
+
+### `src/styles/`
+
+```
+src/styles/
+└── main.css       # Entrypoint Tailwind (directives @tailwind base/components/utilities)
+```
+
+Pas de CSS inline dans les templates. Tokens custom déclarés dans `tailwind.config.js`.
+
+### `src/css/`
+
+```
+src/css/
+├── debit.css            # CSS spécifique à la page de débit cagnotte
+└── scanner-tshirt.css   # CSS spécifique au scanner de QR codes t-shirt
+```
+
+Ces feuilles ont été extraites des blocs `<style>` inline en Phase 6 et sont importées par leur entrypoint JS respectif (`src/js/debit.js`, `src/js/scanner-tshirt.js`).
+
+### `src/data/`
+
+Vide actuellement. Réservé à d'éventuelles données statiques importées au build (JSON figés, listes de référence).
+
+### `supabase/`
+
+```
+supabase/
+├── config.toml                          # Config CLI Supabase locale (ports, auth, edge runtime)
+├── migrations/                          # Migrations actives (post-consolidation Phase 2.8)
+│   ├── 00000000000000_init.sql                       # Consolidation complète du schéma
+│   ├── 20260527100000_enable_force_rls.sql           # Active FORCE ROW LEVEL SECURITY
+│   ├── 20260527110000_create_rls_helpers.sql         # Helpers SECURITY DEFINER pour RLS
+│   ├── 20260527110100_rls_policies.sql               # Policies RLS définitives
+│   ├── 20260527120000_restore_postgrest_grants.sql   # Grants nécessaires à PostgREST
+│   └── _archive/                                     # Migrations correctives obsolètes
+├── migrations_archive_pre_refactor/     # Ancien historique pré-refactoring (non rejouable from scratch)
+├── functions/                           # Edge Functions Deno
+│   ├── deno.json
+│   ├── send-planning/
+│   ├── send-rappel-all/
+│   ├── send-relance/
+│   ├── send-relance-orphelin/
+│   └── create-benevole/
+└── snippets/                            # Snippets SQL utilitaires
+```
+
+La consolidation de Phase 2.8 (`00000000000000_init.sql`) rend l'historique reproductible from scratch sur une instance Supabase locale fraîche. Les migrations postérieures correspondent aux durcissements RLS de Phase 2.9-2.10.
+
+### `scripts/`
+
+```
+scripts/
+├── check-env.js                # Vérifie la présence des variables d'env requises
+├── generate_sql.cjs            # Génération SQL utilitaire
+├── audit-alpine-methods.js     # Audit des méthodes Alpine référencées
+├── audit-orphan-partials.js    # Détecte les partials EJS non inclus
+└── README.md                   # Documentation locale des scripts
+```
+
+### `docs/`, `audit/`, `backups/`
+
+| Dossier    | Rôle                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `docs/`    | Documentation utilisateur (`deployment.md`)                                                 |
+| `audit/`   | Sortie d'analyses : tables/colonnes/RLS extraits, rapports Lighthouse, knip, notes vivantes |
+| `backups/` | Dumps PostgreSQL périodiques de la prod (cf. `backups/README.md`)                           |
 
 ---
 
-## Flux de données
+## 4. État vs cible (écarts résiduels)
 
-### Authentification
-```
-1. Utilisateur saisit son email
-2. Supabase Auth envoie un OTP 6 chiffres par email
-3. L'utilisateur saisit l'OTP → session JWT stockée en localStorage
-4. Alpine.js store récupère la session et charge les données
-```
+Éléments transitoires encore présents après Phase 6 — à jour au 2026-06-01 :
 
-### Inscription à un créneau
-```
-1. Lecture des postes (table postes + vue public_planning)
-2. Clic "S'inscrire" → INSERT dans inscriptions
-3. Trigger check_capacity() : bloque si poste complet
-4. Trigger check_time_conflict() : bloque si chevauchement horaire
-5. Mise à jour de l'affichage (reload des postes)
-```
-
-### Débit cagnotte (sur le terrain)
-```
-1. QR code scanné depuis la page cagnotte d'un bénévole
-2. Redirection vers /debit.html?id=<benevole_id>
-3. Opérateur saisit le montant sur le clavier
-4. INSERT dans cagnotte_transactions
-```
+| Élément actuel                                  | Statut                          | Phase de résolution |
+| ----------------------------------------------- | ------------------------------- | ------------------- |
+| Entrypoints à plat dans `src/js/` (vs `pages/`) | Cible déplacement vers `pages/` | Phase 5.4           |
+| `src/js/modules/` (legacy)                      | À dissoudre                     | Phase 5.2           |
+| `src/js/constants.js`                           | À rapatrier dans `config.js`    | Phase 5.3           |
+| Stores limités à `admin-store.js`               | Création progressive            | Phase 5.2           |
+| `admin-timeline.js` hors `vite.config.js`       | À investiguer                   | Hors phase actuelle |
 
 ---
 
-## Schéma de la base de données
+## 5. Documents liés
 
-```
-auth.users (Supabase Auth)
-    │
-    ├─── benevoles (1:1)
-    │         id, email, prenom, nom, telephone
-    │         taille_tshirt, role
-    │         repas_vendredi, repas_samedi, vegetarien
-    │         presence_samedi, presence_dimanche  (juges)
-    │         t_shirt_recupere
-    │
-    ├─── cagnotte_transactions (1:N)
-    │         user_id, montant, created_at
-    │
-    └─── inscriptions (via benevoles)
-              poste_id ──────────────── postes
-              benevole_id                    │
-                                             ├── periode_id ── periodes
-                                             │       nom, ordre
-                                             │
-                                             └── referent_id ── benevoles
-                                                     titre, description
-                                                     nb_min, nb_max
-                                                     periode_debut, periode_fin
-
-config
-    key, value  (feature flags : cagnotte_active, tarif_degaines_juge)
-```
-
-### Vues importantes
-
-| Vue | Usage |
-|-----|-------|
-| `public_planning` | Affichage public anonymisé (Prénom + Initiale) avec compteur d'inscrits |
-| `admin_benevoles` | Tous les bénévoles avec détails complets (admin uniquement) |
-| `admin_inscriptions` | Toutes les inscriptions avec détails croisés |
-| `admin_periodes` | Périodes avec compteur de postes |
-
-### Triggers critiques (logique métier en base)
-
-**`check_capacity()`** — BEFORE INSERT sur `inscriptions`
-- Compte les inscrits existants sur le poste
-- Bloque si `COUNT >= nb_max`
-- Message : "Ce créneau est complet"
-
-**`check_time_conflict()`** — BEFORE INSERT/UPDATE sur `inscriptions`
-- Vérifie les chevauchements pour le même bénévole
-- Formule : `(debut_A < fin_B) AND (fin_A > debut_B)`
-- Message : "Conflit horaire"
-
----
-
-## Row Level Security (RLS)
-
-| Table | Lecture | Écriture |
-|-------|---------|----------|
-| `postes` | PUBLIC | Admin uniquement |
-| `benevoles` | Ses propres données | Ses propres données / Admin full |
-| `inscriptions` | PUBLIC | Ses propres inscriptions / Admin full |
-| `periodes` | PUBLIC | Admin uniquement |
-| `config` | PUBLIC | Admin uniquement |
-| `cagnotte_transactions` | Ses propres données | Admin full |
-
----
-
-## Système de modules Alpine.js
-
-Le store central (`modules/store.js`) agrège plusieurs modules par mixin :
-
-```
-Alpine.store('app', {
-  ...ProfilesModule,      // profils bénévoles
-  ...PlanningModule,      // planning et inscriptions
-  ...WizardModule,        // assistant d'inscription
-  ...CagnotteModule,      // solde et QR
-  ...TshirtModule,        // distribution T-shirts
-  // + état global (user, loading, toasts, confirmModal)
-})
-```
-
-Chaque module expose son propre state et ses méthodes. L'état est plat dans le store (pas de namespace imbriqué).
-
----
-
-## Client Supabase
-
-Le client Supabase est initialisé dans `src/js/config.js` (ES module npm, via `@supabase/supabase-js`). C'est le seul point d'initialisation — toutes les pages l'utilisent via les services `api.js` et `auth.js`.
-
----
-
-## Build et déploiement
-
-### Pipeline Vite
-
-`vite-plugin-html` compile les templates EJS (partials HTML) lors du build. Chaque page HTML est un point d'entrée Rollup indépendant avec son propre bundle JS.
-
-```
-index.html (EJS template)
-    ├── <%- include('src/partials/layout/head.html') %>
-    ├── <%- include('src/partials/sections/index/login.html') %>
-    └── <script> → src/js/main.js → bundle séparé dans dist/assets/
-```
-
-### Variables d'environnement
-
-Les variables préfixées `VITE_` sont injectées dans le bundle lors du build. Les variables sans préfixe (`SUPABASE_SERVICE_ROLE_KEY`) ne sont jamais exposées au frontend.
-
----
-
-## Design — Neo-Brutalism
-
-Palette et conventions visuelles définies dans `tailwind.config.js` :
-
-```js
-colors: {
-  'brutal-black': '#000000',
-  'brutal-ice':   '#8bbfd5',  // accent principal
-  'brutal-white': '#ffffff',
-}
-boxShadow: {
-  'brutal':       '4px 4px 0px black',
-  'brutal-sm':    '2px 2px 0px black',
-  'brutal-hover': '1px 1px 0px black',
-}
-fontFamily: {
-  sans:    ['Space Grotesk'],
-  heading: ['Inter'],
-}
-```
-
-Règles visuelles : bordures noires épaisses, ombres sans flou, pas de dégradés, typographie bold/uppercase pour les titres.
+| Sujet                                          | Document                                              |
+| ---------------------------------------------- | ----------------------------------------------------- |
+| Installation, dev, build local                 | [`README.md`](README.md)                              |
+| Déploiement (CI/CD, secrets, rollback)         | [`docs/deployment.md`](docs/deployment.md)            |
+| Schéma DB, RLS, triggers, fonctions PL/pgSQL   | [`DATABASE.md`](DATABASE.md) (à valider en 7.3)       |
+| Conventions de code, workflow Git, revue PR    | [`CONTRIBUTING.md`](CONTRIBUTING.md) (à créer en 7.4) |
+| Historique des versions                        | [`CHANGELOG.md`](CHANGELOG.md) (à créer en 7.5)       |
+| Avertissements critiques (prod, RLS, triggers) | [`CLAUDE.md`](CLAUDE.md)                              |
+| Plan de refactoring (source de vérité)         | [`plan_refactoring.md`](plan_refactoring.md)          |
+| Audit DB existant                              | [`audit_db.md`](audit_db.md)                          |
+| Notes hors-scope & arbitrages en cours         | [`audit/notes.md`](audit/notes.md)                    |

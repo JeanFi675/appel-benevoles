@@ -9,8 +9,8 @@ const corsHeaders = {
 };
 
 const BASE_URL = "https://jeanfi675.github.io/appel-benevoles/";
-const ROLES_NO_MISSIONS_TABLE = new Set(["juge", "admin-juge", "officiel"]);
-const ROLES_ALWAYS_SEND = new Set(["admin", "juge", "admin-juge", "officiel"]);
+const ROLES_NO_MISSIONS_TABLE = new Set([]);
+const ROLES_ALWAYS_SEND = new Set(["admin"]);
 
 async function generateQRBuffer(url: string): Promise<Buffer> {
   const dataUrl: string = await QRCode.toDataURL(url, { width: 200, margin: 2 });

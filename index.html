@@ -41,20 +41,15 @@
             </div>
 
             <!-- Widgets Group (Milieu sur desktop) -->
-            <div class="w-full xl:w-auto flex-1 grid grid-cols-2 xl:flex xl:flex-row gap-2">
+            <div
+              class="w-full xl:w-auto flex-1 xl:flex xl:flex-row gap-2"
+              :class="config.cagnotte_active ? 'grid grid-cols-2' : 'grid grid-cols-1'"
+            >
               <!-- Cagnotte Widget -->
-              <div
-                id="cagnotte-widget-container"
-                class="w-full xl:w-64 shrink-0"
-                x-effect="if(user) renderWidget($el, user.id)"
-              ></div>
+              <%- include('/src/partials/components/cagnotte-widget.html') %>
 
               <!-- Tshirt Widget -->
-              <div
-                id="tshirt-widget-container"
-                class="w-full xl:w-64 shrink-0"
-                x-effect="if(user) renderTshirtWidget($el, user.id)"
-              ></div>
+              <%- include('/src/partials/components/tshirt-widget.html') %>
             </div>
 
             <!-- Buttons Grid (Droite sur desktop) -->
@@ -79,13 +74,6 @@
               </button>
 
               <button
-                @click="toggleProfileSection()"
-                class="brutal-btn bg-brutal-white text-brutal-black px-3 py-2 text-sm shadow-brutal-sm border-2 border-brutal-black flex items-center justify-center font-bold whitespace-nowrap"
-              >
-                👤 Profils
-              </button>
-
-              <button
                 @click="logout()"
                 class="brutal-btn bg-brutal-black text-brutal-white px-3 py-2 text-sm shadow-brutal-sm flex items-center justify-center font-bold whitespace-nowrap"
               >
@@ -95,7 +83,6 @@
           </div>
         </div>
 
-        <%- include('/src/partials/sections/index/profile-list.html') %>
         <%- include('/src/partials/sections/index/planning-list.html') %>
       </section>
     </main>

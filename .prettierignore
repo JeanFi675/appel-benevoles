@@ -1,0 +1,11 @@
+dist/
+node_modules/
+supabase/
+archive/
+backups/
+audit/
+tests/
+data/
+*.min.js
+*.min.css
+package-lock.json

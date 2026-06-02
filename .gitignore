@@ -28,12 +28,18 @@ logs/
 vite.config.js.timestamp-*.mjs
 
 # Claude Code — configuration locale et skills téléchargés
-.claude/settings.local.json
-.claude/skills/
+.claude/
 .claude-octopus/
 .agent/
 .agents/
 skills-lock.json
+
+# Audit — snapshots éphémères et données privées (UUIDs prod)
+# Les analyses .md sont conservées (livrables Phase 1).
+audit/_*
+audit/*.csv
+audit/lighthouse/*.html
+audit/lighthouse/*.json
 
 # Artefacts de pentest / sécurité
 .sb-pentest-*
@@ -43,7 +49,7 @@ skills-lock.json
 Thumbs.db
 
 # Build outputs
-# dist/ est utilisé pour GitHub Pages, ne pas ignorer
+dist/
 build/
 out/
 .next/
@@ -59,11 +65,17 @@ coverage/
 supabase/.temp/
 supabase/migrations_backup/
 
-# Documentation (sauf fichiers racine et données événement)
+# Documentation (sauf fichiers racine, livrables doc et données événement)
 *.md
 !README.md
 !ARCHITECTURE.md
 !CLAUDE.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!DATABASE.md
+!audit/**/*.md
+!security/**/*.md
+!docs/**/*.md
 !src/data/programme.md
 
 # Scripts locaux & exports JSON
@@ -73,3 +85,11 @@ adherents_non_benevoles.json
 tools/
 benevoles.json
 
+# Backups de la base de données et du dépôt Git
+# IMPORTANT : ce dossier contient des données personnelles (RGPD)
+# et des credentials Auth en clair. À ne JAMAIS commiter ni partager hors du poste de dev.
+backups/
+
+
+# Artefacts one-shot de migration prod (D8 — jamais archivés)
+prod_migration_*.sql

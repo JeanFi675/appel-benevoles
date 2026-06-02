@@ -4,9 +4,7 @@
   x-transition.opacity
   style="display: none"
 >
-  <div
-    class="brutal-card bg-brutal-white w-full max-w-5xl relative flex flex-col max-h-[90vh]"
-  >
+  <div class="brutal-card bg-brutal-white w-full max-w-5xl relative flex flex-col max-h-[90vh]">
     <!-- Header Wizard -->
     <div
       class="border-b-4 border-brutal-black p-4 flex justify-between items-center bg-brutal-ice sticky top-0 z-10"
@@ -14,17 +12,11 @@
       <div>
         <h2 class="text-2xl font-black uppercase">Assistant d'inscription</h2>
         <div class="flex items-center gap-2 text-sm font-bold text-gray-600">
-          <span :class="{'text-black underline': wizardStep === 1}"
-            >1. Profil</span
-          >
+          <span :class="{'text-black underline': wizardStep === 1}">1. Profil</span>
           <span>→</span>
-          <span :class="{'text-black underline': wizardStep === 2}"
-            >2. Choix des Postes</span
-          >
+          <span :class="{'text-black underline': wizardStep === 2}">2. Choix des Postes</span>
           <span>→</span>
-          <span :class="{'text-black underline': wizardStep === 3}"
-            >3. Confirmation</span
-          >
+          <span :class="{'text-black underline': wizardStep === 3}">3. Confirmation</span>
         </div>
       </div>
       <button
@@ -79,12 +71,11 @@
                   class="w-full border-2 border-brutal-black p-2 font-bold focus:shadow-brutal focus:outline-none text-sm"
                 />
               </div>
-              <div>
-                <label class="block font-bold mb-1 text-sm"
-                  >Taille T-Shirt *</label
-                >
+              <div x-show="config.tshirt_question_active">
+                <label class="block font-bold mb-1 text-sm">Taille T-Shirt *</label>
                 <select
                   x-model="wizardProfileForm.taille_tshirt"
+                  :required="config.tshirt_question_active"
                   class="w-full border-2 border-brutal-black p-2 font-bold focus:shadow-brutal focus:outline-none bg-white text-sm"
                 >
                   <option value="">Choisir...</option>
@@ -99,53 +90,54 @@
               </div>
             </div>
 
-            <div class="p-2 bg-yellow-50 border-2 border-yellow-400">
-              <h3 class="font-bold text-sm mb-2">🍽️ Repas Bénévoles (soir)</h3>
-              <div class="grid sm:grid-cols-2 gap-2 mb-2">
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="wizard_repas_vendredi"
-                    x-model="wizardProfileForm.repas_vendredi"
-                    class="w-5 h-5 accent-brutal-black"
-                  />
-                  <label
-                    for="wizard_repas_vendredi"
-                    class="font-bold cursor-pointer text-sm"
-                    >Repas Ven. soir 15/05</label
-                  >
-                </div>
+            <template x-if="repasList && repasList.length > 0">
+              <div class="p-3 bg-yellow-50 border-2 border-yellow-400 space-y-3 text-left">
+                <h3 class="font-bold text-sm mb-1">🍽️ Option Repas</h3>
+                <p class="text-xs text-gray-500 font-bold mb-2">
+                  Sélectionnez vos repas. Cochez 🥬 si vous mangez végétarien pour ce repas.
+                </p>
 
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="wizard_repas_samedi"
-                    x-model="wizardProfileForm.repas_samedi"
-                    class="w-5 h-5 accent-brutal-black"
-                  />
-                  <label
-                    for="wizard_repas_samedi"
-                    class="font-bold cursor-pointer text-sm"
-                    >Repas Sam. soir 16/05</label
-                  >
+                <div class="grid sm:grid-cols-2 gap-3">
+                  <template x-for="repas in repasList" :key="repas.id">
+                    <div class="p-2 bg-white border-2 border-brutal-black space-y-1.5">
+                      <div class="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          :id="'wizard_repas_' + repas.id"
+                          :checked="isWizardRepasSelected(repas.id)"
+                          @change="toggleWizardRepas(repas.id, $event.target.checked)"
+                          class="w-5 h-5 accent-brutal-black cursor-pointer"
+                        />
+                        <label
+                          :for="'wizard_repas_' + repas.id"
+                          class="font-black cursor-pointer text-sm"
+                          x-text="repas.nom"
+                        ></label>
+                      </div>
+
+                      <!-- Option végé par repas -->
+                      <div
+                        class="flex items-center gap-2 pl-7"
+                        x-show="isWizardRepasSelected(repas.id)"
+                      >
+                        <input
+                          type="checkbox"
+                          :id="'wizard_repas_vege_' + repas.id"
+                          :checked="isWizardRepasVege(repas.id)"
+                          @change="setWizardRepasVege(repas.id, $event.target.checked)"
+                          class="w-4 h-4 accent-green-600 cursor-pointer"
+                        />
+                        <label
+                          :for="'wizard_repas_vege_' + repas.id"
+                          class="font-bold cursor-pointer text-xs text-green-800"
+                          >🥬 Repas Végétarien</label
+                        >
+                      </div>
+                    </div>
+                  </template>
                 </div>
               </div>
-              <div
-                class="flex items-center gap-2 pt-2 border-t border-yellow-200"
-              >
-                <input
-                  type="checkbox"
-                  id="wizard_vegetarien"
-                  x-model="wizardProfileForm.vegetarien"
-                  class="w-5 h-5 accent-green-600"
-                />
-                <label
-                  for="wizard_vegetarien"
-                  class="font-bold cursor-pointer text-sm text-green-800"
-                  >🥬 Option Végétarien</label
-                >
-              </div>
-            </div>
+            </template>
 
             <div
               class="flex justify-between items-center mt-6 pt-4 border-t-2 border-gray-100 gap-4"
@@ -186,17 +178,14 @@
               class="text-3xl font-black mb-6 uppercase"
               x-text="modalTitle || 'Profil Créé ! ✅'"
             ></h4>
-            <p class="font-bold text-xl mb-8">
-              Que souhaitez-vous faire maintenant ?
-            </p>
+            <p class="font-bold text-xl mb-8">Que souhaitez-vous faire maintenant ?</p>
 
             <div class="flex flex-col gap-4">
               <button
                 @click="handlePostProfileCreation('add')"
                 class="brutal-btn bg-white text-brutal-black px-6 py-4 border-2 border-brutal-black font-bold hover:bg-gray-100 flex items-center justify-center gap-2"
               >
-                <span>➕</span> Ajouter un autre bénévole <br /><span
-                  class="text-xs font-normal"
+                <span>➕</span> Ajouter un autre bénévole <br /><span class="text-xs font-normal"
                   >(ex: conjoint, enfant...)</span
                 >
               </button>
@@ -212,10 +201,7 @@
         </div>
 
         <!-- Existing Profiles List -->
-        <div
-          x-show="profiles.length > 0 && !showWizardProfileForm"
-          class="grid gap-4"
-        >
+        <div x-show="profiles.length > 0 && !showWizardProfileForm" class="grid gap-4">
           <p class="font-bold text-xl mb-4">Vos bénévoles enregistrés :</p>
           <template x-for="profile in profiles" :key="profile.id">
             <div
@@ -251,10 +237,7 @@
         <div
           class="mb-6 bg-brutal-black text-brutal-white p-3 rounded-none shadow-brutal-sm text-center"
         >
-          <h3
-            class="text-xl font-black uppercase"
-            x-text="getCurrentWizardPeriodName()"
-          ></h3>
+          <h3 class="text-xl font-black uppercase" x-text="getCurrentWizardPeriodName()"></h3>
         </div>
 
         <!-- Liste des Postes pour la période active (GROUPÉE) -->
@@ -279,15 +262,8 @@
               </div>
 
               <!-- Posts inside Subgroup -->
-              <div
-                class="grid gap-6 pl-0 md:pl-2"
-                x-show="openSub"
-                x-transition
-              >
-                <template
-                  x-for="poste in subgroup.postes"
-                  :key="poste.poste_id"
-                >
+              <div class="grid gap-6 pl-0 md:pl-2" x-show="openSub" x-transition>
+                <template x-for="poste in subgroup.postes" :key="poste.poste_id">
                   <div class="wizard-card-wrapper">
                     <%- include('components/post-card-details.html') %>
                   </div>
@@ -307,30 +283,19 @@
 
       <!-- STEP 3: CONFIRMATION -->
       <div x-show="wizardStep === 3" class="max-w-3xl mx-auto">
-        <h3 class="text-3xl font-black mb-8 text-center">
-          Récapitulatif de vos choix
-        </h3>
+        <h3 class="text-3xl font-black mb-8 text-center">Récapitulatif de vos choix</h3>
 
         <!-- Step 3 Content: Summary -->
-        <div
-          class="bg-white border-2 border-brutal-black p-6 shadow-brutal mb-8"
-        >
+        <div class="bg-white border-2 border-brutal-black p-6 shadow-brutal mb-8">
           <!-- ADDITIONS -->
           <template x-if="wizardSelections.length > 0">
             <div class="mb-4">
-              <h4
-                class="font-bold uppercase text-green-600 border-b-2 border-green-600 mb-2"
-              >
+              <h4 class="font-bold uppercase text-green-600 border-b-2 border-green-600 mb-2">
                 À Ajouter
               </h4>
               <div class="grid gap-4">
-                <template
-                  x-for="selection in wizardSelections"
-                  :key="selection.key"
-                >
-                  <div
-                    class="flex justify-between items-center border-b border-gray-100 pb-2"
-                  >
+                <template x-for="selection in wizardSelections" :key="selection.key">
+                  <div class="flex justify-between items-center border-b border-gray-100 pb-2">
                     <div>
                       <p class="font-black" x-text="selection.posteTitle"></p>
                       <p class="text-sm text-gray-600">
@@ -357,9 +322,7 @@
           <!-- REMOVALS -->
           <template x-if="wizardRemovals.length > 0">
             <div>
-              <h4
-                class="font-bold uppercase text-red-600 border-b-2 border-red-600 mb-2"
-              >
+              <h4 class="font-bold uppercase text-red-600 border-b-2 border-red-600 mb-2">
                 À Supprimer
               </h4>
               <div class="grid gap-4">
@@ -368,10 +331,7 @@
                     class="flex justify-between items-center border-b border-gray-100 pb-2 bg-red-50 p-2"
                   >
                     <div>
-                      <p
-                        class="font-black line-through text-gray-500"
-                        x-text="rem.posteTitle"
-                      ></p>
+                      <p class="font-black line-through text-gray-500" x-text="rem.posteTitle"></p>
                       <p class="text-sm text-gray-400">
                         <span x-text="formatDate(rem.debut)"></span>
                       </p>
@@ -392,12 +352,8 @@
             </div>
           </template>
 
-          <template
-            x-if="wizardSelections.length === 0 && wizardRemovals.length === 0"
-          >
-            <p class="text-center italic text-gray-500">
-              Aucun changement pour le moment.
-            </p>
+          <template x-if="wizardSelections.length === 0 && wizardRemovals.length === 0">
+            <p class="text-center italic text-gray-500">Aucun changement pour le moment.</p>
           </template>
         </div>
 
@@ -446,9 +402,7 @@
           @click="wizardStep = 3; scrollWizardToTop()"
           class="brutal-btn bg-yellow-400 text-black px-8 py-3 font-bold shadow-brutal border-2 border-black"
         >
-          Vérifier et Valider (<span
-            x-text="wizardSelections.length + wizardRemovals.length"
-          ></span
+          Vérifier et Valider (<span x-text="wizardSelections.length + wizardRemovals.length"></span
           >)
         </button>
 

@@ -6,6 +6,7 @@
   <body class="bg-brutal-ice min-h-screen" x-data="adminApp()" x-init="init()">
 
     <%- include('/src/partials/components/toast.html') %>
+    <%- include('/src/partials/components/confirm-modal.html') %>
 
       <!-- Header -->
       <header class="bg-brutal-black text-brutal-white py-6 mb-6 border-b-4 border-brutal-black">
@@ -20,9 +21,6 @@
             <div class="flex flex-wrap gap-2 text-sm font-bold">
               <a href="admin-connexions.html" class="brutal-btn bg-brutal-white text-brutal-black px-3 py-2 border-2 border-brutal-black shadow-brutal-sm flex items-center gap-2">
                 🔌 Connexions
-              </a>
-              <a href="admin-juges.html" class="brutal-btn bg-yellow-400 text-brutal-black px-3 py-2 border-2 border-brutal-black shadow-brutal-sm flex items-center gap-2">
-                ⚖️ Juges
               </a>
 
               <a href="index.html" class="brutal-btn bg-brutal-ice text-brutal-black px-3 py-2 border-2 border-transparent shadow-brutal-sm flex items-center gap-2">
@@ -55,17 +53,17 @@
 
           <%- include('/src/partials/sections/admin/tabs.html') %>
 
-            <%- include('/src/partials/sections/admin/tab-postes.html') %>
-
-              <%- include('/src/partials/sections/admin/tab-periodes.html') %>
+            <%- include('/src/partials/sections/admin/tab-visual-creator.html') %>
 
                 <%- include('/src/partials/sections/admin/tab-referents.html') %>
 
                 <%- include('/src/partials/sections/admin/tab-benevoles.html') %>
 
-                <%- include('/src/partials/sections/admin/tab-recap.html') %>
+                <%- include('/src/partials/sections/admin/tab-cagnotte-forcee.html') %>
 
-                <%- include('/src/partials/sections/admin/tab-rapport-ia.html') %>
+                <%- include('/src/partials/sections/admin/tab-mailing.html') %>
+
+                <%- include('/src/partials/sections/admin/tab-recap.html') %>
 
                 <%- include('/src/partials/sections/admin/tab-heures.html') %>
 

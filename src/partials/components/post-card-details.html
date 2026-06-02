@@ -15,17 +15,12 @@
     </p>
 
     <div x-show="poste.referent_nom" class="md:ml-auto">
-      <p class="font-bold">
-        👤 Référent : <span x-text="poste.referent_nom"></span>
-      </p>
+      <p class="font-bold">👤 Référent : <span x-text="poste.referent_nom"></span></p>
     </div>
   </div>
 
   <!-- Description -->
-  <div
-    x-show="poste.description"
-    class="mb-4 p-3 bg-gray-100 border-2 border-brutal-black"
-  >
+  <div x-show="poste.description" class="mb-4 p-3 bg-gray-100 border-2 border-brutal-black">
     <p class="font-bold" x-text="poste.description"></p>
   </div>
 
@@ -33,10 +28,7 @@
   <div class="mb-4">
     <div class="flex justify-between mb-8">
       <span class="font-bold">Inscrits</span>
-      <span
-        class="font-black"
-        x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"
-      ></span>
+      <span class="font-black" x-text="poste.inscrits_actuels + ' / ' + poste.nb_max"></span>
     </div>
 
     <div class="progress-bar relative overflow-visible">
@@ -74,10 +66,7 @@
       <div x-show="poste.liste_benevoles && poste.liste_benevoles.length > 0">
         <p class="font-bold mb-2">Bénévoles inscrits :</p>
         <div class="flex flex-wrap gap-2">
-          <template
-            x-for="(benevole, index) in poste.liste_benevoles"
-            :key="index"
-          >
+          <template x-for="(benevole, index) in poste.liste_benevoles" :key="index">
             <span
               class="px-3 py-1 bg-brutal-black text-brutal-white font-bold text-sm border-2 border-brutal-black"
             >
