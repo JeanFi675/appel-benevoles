@@ -558,8 +558,8 @@
 
 ### 8.2 Configuration production
 
-- [ ] Vérifier que toutes les variables d'environnement de production sont configurées (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, etc.). **DoD :** le dashboard de déploiement montre toutes les variables.
-- [ ] Vérifier que le domaine est en HTTPS avec certificat valide. **DoD :** `curl -I https://<domaine>` retourne `200` avec en-tête `strict-transport-security`.
+- [x] Vérifier que toutes les variables d'environnement de production sont configurées (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, etc.). **DoD :** le dashboard de déploiement montre toutes les variables. — **2026-06-02 : VÉRIFIÉ**. `gh secret list` ⇒ les 3 secrets consommés par `deploy.yml` sont présents : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_URL_PRODUCTION` (aucune autre var référencée dans le bloc `env:` du workflow). Confirmation indirecte : le site live se connecte à Supabase ⇒ valeurs valides.
+- [x] Vérifier que le domaine est en HTTPS avec certificat valide. **DoD :** `curl -I https://<domaine>` retourne `200` avec en-tête `strict-transport-security`. — **2026-06-02 : VÉRIFIÉ**. `curl -I https://jeanfi675.github.io/appel-benevoles/` ⇒ `HTTP/1.1 200 OK` + `Strict-Transport-Security: max-age=31556952`. Certificat TLS GitHub Pages valide (domaine `*.github.io`, HSTS preload géré par GitHub).
 - [ ] Vérifier les en-têtes de sécurité (CSP, X-Frame-Options, Referrer-Policy). **DoD :** un test sur `securityheaders.com` retourne au minimum un grade `B`.
 - [ ] Mettre à jour `docs/deployment.md` avec les en-têtes de sécurité réels appliqués (CSP, HSTS, X-Frame-Options, Referrer-Policy) et la valeur de chacun. **DoD :** une section "En-têtes de sécurité" est présente et reflète la config prod réelle.
 
