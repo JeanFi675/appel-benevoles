@@ -22,6 +22,8 @@
 | 2026-05-28 | [Phase 5.0.5 — Edge Function `send-relance-orphelin/index.ts:150` cassée (`auth_user_id` → `user_id` en interne, contrat HTTP conservé)](#2026-05-28--phase-505--edge-function-send-relance-orphelin-cassée-hors-périmètre-50) | Phase 6.4.2 ✅ (code fixé 2026-06-01) — déploiement `supabase functions deploy` **intégré au plan 8.1 #2 (2026-06-01)** |
 | 2026-05-30 | [Anomalies ARCHITECTURE.md (admin-timeline orphelin, html5-qrcode manualChunks, utils.js vs utils/)](#2026-05-30--anomalies-repérées-pendant-rédaction-de-architecturemd-phase-72) | Phase 6.2.1 / 6.2.2 / 6.2.3 ✅ (résolues 2026-05-31) |
 | 2026-06-01 | [4 fichiers de config racine non formatés Prettier (eslint/postcss/tailwind/jsconfig)](#2026-06-01--phase-80--4-fichiers-config-racine-non-formatés-prettier) | **Non-actionnable** — auto-résolu par lint-staged à leur prochaine modif ; CI scopé `src/**`. Pas de case plan. |
+| 2026-06-02 | [CLI Supabase skippe les migrations nommées « init »](#2026-06-02--phase-81--le-cli-supabase-skippe-les-migrations-nommées-init) | Plan 8.6 — renommer `init.sql` → `baseline.sql` (case ajoutée 2026-06-02) |
+| 2026-06-02 | [Migrations `.sql` en CRLF malgré `.gitattributes` (renormalize jamais lancé)](#2026-06-02--phase-81--migrations-sql-en-crlf-malgré-gitattributes) | Plan 8.6 — `git add --renormalize` (case ajoutée 2026-06-02) |
 
 ### Résolu — archivé (référence historique, conservé pour traçabilité)
 
@@ -847,4 +849,32 @@ Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateu
 **Impact** : nul à court terme (warning uniquement). À partir du 16 juin 2026, les runners forceront Node 24 ; après le 16 septembre 2026, Node 20 sera retiré.
 
 **Action différée (atomicity first, hors scope 8.0)** : bumper les actions vers leurs versions majeures supportant Node 24 (probablement `actions/checkout@v5`, `actions/setup-node@v5`, et versions à jour des actions Pages) dans `ci.yml` **et** `deploy.yml`, en une passe dédiée. Non bloquant pour le go-live.
+
+---
+
+## 2026-06-02 — Phase 8.1 — Le CLI Supabase skippe les migrations nommées « init »
+
+**Contexte** : génération du `prod_migration` (8.1 #1). Tentative d'utiliser `supabase db diff --use-migra --from local --to migrations` pour construire la cible « migrations ».
+
+**Symptôme** : le CLI affiche `Skipping migration 00000000000000_init.sql... (replace "init" with a different file name to apply this migration)`, puis les migrations RLS suivantes échouent (`type role_type does not exist`) car `init.sql` — qui crée l'enum et les tables — n'a pas été rejoué.
+
+**Cause** : comportement délibéré du CLI Supabase — tout fichier de migration dont le **nom contient « init »** est ignoré par `db reset`/`db push`/`db diff --to migrations` (traité comme un seed/placeholder).
+
+**Impact** :
+1. La cible `--to migrations` est inconstructible → pour 8.1 #1 on a comparé `--to local` (base locale vivante) à la place.
+2. **Casse la DoD de Phase 8.6** (« `supabase db reset` rejoue à partir du seul `init.sql` ») : un `db reset` skipperait le fichier consolidé. La base locale actuelle n'a d'ailleurs **jamais** été construite par `db reset` mais par application manuelle `psql` (Phase 2.9).
+
+**Action** : case ajoutée en **Phase 8.6** (2026-06-02) — renommer le fichier consolidé en `00000000000000_baseline.sql` (ou tout nom sans « init ») et amender la DoD pour exiger qu'il soit rejoué **sans skip**.
+
+---
+
+## 2026-06-02 — Phase 8.1 — Migrations `.sql` en CRLF malgré `.gitattributes`
+
+**Contexte** : preuve d'équivalence du `prod_migration` via `migra`. Après assemblage correct, le résiduel migra se réduisait à 19 corps de fonctions **identiques au caractère près sauf les fins de ligne** (`\r` présent côté script appliqué, absent côté cible).
+
+**Cause** : `.gitattributes` déclare `*.sql text eol=lf` (Phase 6.1.2), mais cette règle ne re-normalise **pas** les fichiers déjà versionnés — il faut un `git add --renormalize`, jamais lancé. Résultat : plusieurs migrations (`_archive/*.sql`, RLS actives comme `create_rls_helpers.sql`) sont **CRLF sur disque**, alors que la cible dérivée d'`init.sql` est en LF. D'où des corps de fonctions PL/pgSQL aux fins de ligne hétérogènes.
+
+**Impact fonctionnel** : **nul** — Postgres ignore les fins de ligne dans le code des fonctions (même constat qu'en Phase 2.9 / `audit/23_init_diff.md`). Mais ça pollue tout diff de schéma (`migra`, `pg_dump`) avec du bruit cosmétique.
+
+**Action** : case ajoutée en **Phase 8.6** (2026-06-02) — `git add --renormalize .` + commit `chore: renormalize .sql line endings to LF`.
 

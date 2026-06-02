@@ -90,3 +90,6 @@ benevoles.json
 # et des credentials Auth en clair. À ne JAMAIS commiter ni partager hors du poste de dev.
 backups/
 
+
+# Artefacts one-shot de migration prod (D8 — jamais archivés)
+prod_migration_*.sql
