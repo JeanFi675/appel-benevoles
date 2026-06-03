@@ -143,6 +143,50 @@ Validation navigateur : ouvrir chaque famille de page, console DevTools → aucu
 
 ---
 
+## Monitoring
+
+Le backend tourne sur **Supabase managé** : les logs sont collectés en continu par **Logflare** et exposés dans le dashboard. **Il n'y a rien à « activer »** — les quatre flux ci-dessous sont toujours actifs. La rétention dépend du plan (1 jour sur le plan Free, davantage sur Pro+).
+
+### Où consulter les logs
+
+Dashboard Supabase → projet `pulrflaantftaogvgtnc` → menu **Logs & Analytics** (puis **Logs Explorer** pour le mode SQL, ou clic direct sur une **collection** dans la sidebar pour une vue pré-remplie). Filtre temporel en haut à droite (« Last hour », « Last 5 minutes »…).
+
+| Flux                      | Où                                                                     | Ce qu'on y trouve                                                                                                                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API Gateway**           | Logs → collection **API Gateway**                                      | Toutes les requêtes HTTP entrantes (REST PostgREST `/rest/v1/*`, Auth `/auth/v1/*`, Functions `/functions/v1/*`), méthode, statut, chemin, client. Premier endroit où regarder un 4xx/5xx.                |
+| **Auth**                  | Logs → collection **Auth**                                             | Tentatives de connexion/OTP, créations de compte, erreurs d'authentification (avec `request_id`).                                                                                                         |
+| **Postgres** (= Database) | Logs → collection **Postgres**                                         | Connexions, requêtes lentes, erreurs SQL, logs serveur Postgres (`LOG`/`ERROR`/`FATAL`).                                                                                                                  |
+| **Edge Functions**        | Menu **Edge Functions** → fonction → onglet **Invocations** / **Logs** | Une ligne par invocation (statut, `execution_time_ms`, `execution_id`, version déployée) + sortie `console.*` de la fonction. Vue dédiée par fonction, **plus fiable** que le Logs Explorer pour ce flux. |
+
+> ⚠️ **Invocation Edge sans `Authorization`** : un appel à `/functions/v1/<name>` sans header `Authorization` valide est rejeté **401 par la passerelle** et **n'atteint jamais la fonction** — il n'apparaît donc pas dans les logs d'invocation. Pour tracer une exécution réelle, fournir un JWT valide (la clé anon suffit pour franchir la passerelle).
+
+### Générer une requête de test (vérifier que les logs remontent)
+
+Sondes **read-only** (aucune écriture en base, aucun email, aucun compte créé) :
+
+```bash
+URL="https://pulrflaantftaogvgtnc.supabase.co"
+ANON="<VITE_SUPABASE_ANON_KEY>"
+
+# API Gateway + Postgres : lecture publique d'un feature flag (HTTP 200)
+curl -s "$URL/rest/v1/config?select=key,value&limit=3" \
+  -H "apikey: $ANON" -H "Authorization: Bearer $ANON"
+
+# Auth : OTP vers un email bidon → 422 otp_disabled (aucun compte créé)
+curl -s -X POST "$URL/auth/v1/otp" \
+  -H "apikey: $ANON" -H "Content-Type: application/json" \
+  -d '{"email":"probe@example.com","create_user":false}'
+
+# Edge Functions : invocation avec JWT (la fonction s'exécute, échoue sur sa propre logique)
+curl -s -X POST "$URL/functions/v1/send-planning" \
+  -H "apikey: $ANON" -H "Authorization: Bearer $ANON" \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+Les événements correspondants apparaissent dans le dashboard **sous la minute**. Vérifié le 2026-06-03 sur les quatre flux (cf. `plan_refactoring.md` §8.3).
+
+---
+
 ## Déploiement des Edge Functions
 
 Cinq fonctions Deno dans `supabase/functions/` :
