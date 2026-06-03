@@ -113,9 +113,11 @@ script-src 'self' 'unsafe-eval';
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
 font-src 'self' https://fonts.gstatic.com;
 img-src 'self' data: blob:;
-connect-src 'self' https://pulrflaantftaogvgtnc.supabase.co wss://pulrflaantftaogvgtnc.supabase.co;
+connect-src 'self' <VITE_SUPABASE_URL> <wss://VITE_SUPABASE_URL>;
 object-src 'none'; base-uri 'self'; form-action 'self'
 ```
+
+> Les origines de `connect-src` ne sont **pas en dur** : `vite.config.js` les **injecte au build** depuis `VITE_SUPABASE_URL` (variable `cspConnectSrc`, posée en EJS via `<%- cspConnectSrc %>`), avec la variante WebSocket (`wss://`/`ws://`) dérivée pour le Realtime. La CSP suit donc automatiquement l'environnement : build prod → URL Supabase de prod ; build local (`.env.local`) → `http://127.0.0.1:54321`. **Changer de projet Supabase ne nécessite aucune édition des fichiers HTML** — seul le secret/`.env` change.
 
 Justification des assouplissements :
 
