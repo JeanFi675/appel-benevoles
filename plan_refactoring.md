@@ -566,9 +566,7 @@
 ### 8.3 Monitoring
 
 - [ ] Activer les logs Supabase (Database, Auth, Edge Functions) et vérifier qu'ils sont consultables. **DoD :** une requête de test apparaît dans les logs dans la minute.
-- [ ] Intégrer Sentry (ou équivalent) côté frontend pour capturer les erreurs JS. **DoD :** une erreur volontaire est visible dans le dashboard Sentry.
-- [ ] Configurer une alerte email sur les erreurs critiques. **DoD :** un test d'erreur déclenche un email.
-- [ ] Documenter dans `docs/deployment.md` l'intégration Sentry (DSN, configuration des alertes, procédure d'investigation d'une erreur prod) et les commandes de consultation des logs Supabase. **DoD :** une section "Monitoring" cite Sentry, les alertes configurées et les commandes utiles.
+- [ ] Documenter dans `docs/deployment.md` une section "Monitoring" : où consulter les **logs Supabase** (Database / Auth / Edge Functions) et ce qu'on y trouve. **DoD :** la section "Monitoring" existe et cite les logs Supabase.
 
 ### 8.4 Sauvegardes automatiques
 
@@ -579,8 +577,8 @@
 ### 8.5 Checklist finale de go-live
 
 - [ ] Tous les rôles peuvent se connecter et accéder à leurs pages respectives. **DoD :** validation croisée par au moins un utilisateur réel par rôle.
-- [ ] Aucune erreur n'apparaît dans Sentry sur les 24 premières heures. **DoD :** le dashboard est vide d'erreurs critiques.
-- [ ] Mettre à jour le `CHANGELOG.md` pour la release effective : changer la date de `[1.0.0]` (actuellement `2026-06-01`, anticipée) pour la date réelle de mise en production, intégrer dans `[1.0.0]` les ajouts Phase 8.2-8.4 (en-têtes de sécurité, Sentry/monitoring, backups automatiques + `docs/disaster_recovery.md`), garder `## [Unreleased]` vide pour les futurs hotfix. **DoD :** la section `[1.0.0]` reflète l'état réel mis en prod, `[Unreleased]` est vide, un tag `v1.0.0` est créé sur `master`.
+- [ ] Aucune erreur critique n'apparaît dans les **logs Supabase** sur les 24 premières heures. **DoD :** les logs (Database / Auth / Edge Functions) ne montrent pas d'erreur critique récurrente.
+- [ ] Mettre à jour le `CHANGELOG.md` pour la release effective : changer la date de `[1.0.0]` (actuellement `2026-06-01`, anticipée) pour la date réelle de mise en production, intégrer dans `[1.0.0]` les ajouts Phase 8.2-8.4 (en-têtes de sécurité, monitoring via logs Supabase, backups automatiques + `docs/disaster_recovery.md`), garder `## [Unreleased]` vide pour les futurs hotfix. **DoD :** la section `[1.0.0]` reflète l'état réel mis en prod, `[Unreleased]` est vide, un tag `v1.0.0` est créé sur `master`.
 - [ ] Un email d'annonce est envoyé aux utilisateurs clés. **DoD :** l'email est envoyé (capture archivée dans `docs/launch.md`).
 - [ ] Le mainteneur signe le bon de livraison final. **DoD :** un commit `chore: v1.0.0 release` est mergé sur `master` avec sa signature.
 
