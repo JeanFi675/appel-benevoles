@@ -63,6 +63,13 @@ URL de production : `${{ secrets.VITE_APP_URL_PRODUCTION }}` (configuré dans le
 
 > ⚠️ **Ne jamais** stocker `SUPABASE_SERVICE_ROLE_KEY` comme secret du workflow frontend — elle bypass RLS et doit rester exclusivement côté CLI/Edge Functions.
 
+Secrets consommés par le workflow de sauvegarde [`backup.yml`](../.github/workflows/backup.yml) (cf. [`disaster_recovery.md`](disaster_recovery.md)) :
+
+| Secret                  | Description                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `SUPABASE_DB_URL`       | Chaîne de connexion **Session Pooler IPv4** de la prod (contient le mot de passe DB) |
+| `BACKUP_GPG_PASSPHRASE` | Passphrase de chiffrement AES256 des dumps (à conserver hors GitHub)                 |
+
 ### Build manuel de fallback
 
 Si GitHub Actions est indisponible :
