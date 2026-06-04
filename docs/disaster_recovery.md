@@ -150,6 +150,11 @@ Bonne pratique : **déclencher un backup manuel avant toute migration** (`gh wor
 
 ## 6. Compte-rendu des tests de restauration
 
-> Section alimentée par la tâche 8.4 #3 du plan (test de restauration partielle sur l'instance locale).
+### 2026-06-04 — Restauration partielle de `inscriptions` (local)
 
-_(à compléter)_
+- **Backup source** : artifact `db-backup-20260604_101009` (run `26945294614`, dump du jour), téléchargé via `gh run download` puis déchiffré (`gpg --decrypt`) → `backup.sql` (1 296 828 o).
+- **Cible** : instance Supabase **locale** (conteneur `supabase_db_appel-benevoles`), base **scratch jetable `dr_test`** (les données de travail locales et la prod ne sont jamais touchées).
+- **Procédure** : extraction `awk` du `CREATE TABLE public.inscriptions` (sans FK) + du bloc `COPY public.inscriptions … \.` du dump, puis application dans `dr_test` via `… | docker exec -i … psql -d dr_test`.
+- **Résultat** : `CREATE TABLE` OK, `COPY 308`. Vérifications : **308 lignes restaurées** (= comptage du dump = comptes prod), **0 valeur NULL** sur `id`/`poste_id`/`benevole_id`, `created_at` cohérents (min `2026-03-09`, max `2026-05-24`), UUID valides (spot-check 2 lignes).
+- **Nettoyage** : `DROP DATABASE dr_test` + suppression du `.sql` déchiffré et du dossier de travail.
+- **Conclusion** : ✅ le backup chiffré est **intègre et restaurable**. La chaîne complète (artifact → `gh run download` → `gpg --decrypt` → `psql`) est validée de bout en bout.
