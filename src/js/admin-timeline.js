@@ -499,23 +499,19 @@ export function initAdminTimelineApp() {
         console.error('Erreur chargement postes:', err);
         this.addToast('Erreur lors du chargement des postes', 'error');
       }
-      await this.loadInscriptionCounts();
+      this.loadInscriptionCounts();
     },
 
-    async loadInscriptionCounts() {
-      try {
-        const { data, error } = await ApiService.fetch('inscriptions', {
-          select: 'poste_id',
-        });
-        if (error) throw error;
-        const counts = {};
-        (data || []).forEach((i) => {
-          counts[i.poste_id] = (counts[i.poste_id] || 0) + 1;
-        });
-        this.inscriptionCounts = counts;
-      } catch (err) {
-        console.error('Erreur chargement inscriptions:', err);
-      }
+    loadInscriptionCounts() {
+      // Compte d'occupation dérivé de public_planning.liste_benevoles (liste anonymisée
+      // complète, déjà chargée dans loadPostes et accessible à TOUS les rôles). On
+      // n'interroge pas la table `inscriptions` : protégée par RLS, elle renverrait 0
+      // pour un non-admin → tous les postes en rouge (cf. audit/notes.md 2026-06-04).
+      const counts = {};
+      this.postes.forEach((p) => {
+        counts[p.id] = (p.liste_benevoles || []).length;
+      });
+      this.inscriptionCounts = counts;
     },
   }));
 }
