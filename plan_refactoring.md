@@ -578,7 +578,7 @@
 
 ### 8.5 Checklist finale de go-live
 
-- [ ] Tous les rôles peuvent se connecter et accéder à leurs pages respectives. **DoD :** validation croisée par au moins un utilisateur réel par rôle.
+- [x] Tous les rôles peuvent se connecter et accéder à leurs pages respectives. **DoD :** validation croisée par au moins un utilisateur réel par rôle. — **2026-06-04 : VALIDÉ** par le mainteneur en prod (compte test par rôle). `benevole` 4/4, `referent` 4/4, `admin` 5/5, outil de stand public `debit.html` OK ; redirections de protection (`admin.html`/`admin-connexions.html` → `index.html` pour non-admin) fonctionnelles. Matrice d'accès (dérivée du code) + recette détaillée + sign-off consignés dans `docs/launch.md`. **Défaut d'affichage relevé en recette (hors périmètre accès, suivi séparé)** : `besoins.html` ne colore les postes selon le nombre d'inscrits que pour `admin` (cf. `audit/notes.md` 2026-06-04).
 - [ ] Aucune erreur critique n'apparaît dans les **logs Supabase** sur les 24 premières heures. **DoD :** les logs (Database / Auth / Edge Functions) ne montrent pas d'erreur critique récurrente.
 - [ ] Mettre à jour le `CHANGELOG.md` pour la release effective : changer la date de `[1.0.0]` (actuellement `2026-06-01`, anticipée) pour la date réelle de mise en production, intégrer dans `[1.0.0]` les ajouts Phase 8.2-8.4 (en-têtes de sécurité, monitoring via logs Supabase, backups automatiques + `docs/disaster_recovery.md`), garder `## [Unreleased]` vide pour les futurs hotfix. **DoD :** la section `[1.0.0]` reflète l'état réel mis en prod, `[Unreleased]` est vide, un tag `v1.0.0` est créé sur `master`.
 - [ ] Un email d'annonce est envoyé aux utilisateurs clés. **DoD :** l'email est envoyé (capture archivée dans `docs/launch.md`).
