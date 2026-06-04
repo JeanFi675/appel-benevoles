@@ -895,3 +895,15 @@ Build PASS. Reste : test manuel des pages scanner et debit (avec/sans utilisateu
 **Mitigation immédiate (8.2 #3)** : CSP en deux variantes — stricte pour les pages `head.html`, + `cdn.tailwindcss.com` pour `debit`/`scanner-tshirt`. Documenté dans `docs/deployment.md` §En-têtes de sécurité.
 
 **Action** : case ajoutée en **Phase 8.6** (2026-06-02) — supprimer le CDN runtime au profit du CSS buildé, puis aligner la CSP de ces pages sur la variante stricte.
+
+## 2026-06-04 — Phase 8.5 #1 (recette) — couleur de remplissage `besoins.html` cassée pour les non-admin
+
+**Contexte** : recette go-live par rôle (8.5 #1). En testant `besoins.html` (timeline des postes), constat que la **couleur de remplissage des postes selon le taux d'inscription** (rouge < nb_min, jaune ≥ nb_min, vert ≥ nb_max) ne s'affiche correctement que pour le rôle `admin`. Pour `benevole`/`referent`, tous les postes apparaissent sous-remplis (rouge).
+
+**Cause racine** : dans `src/js/admin-timeline.js`, `loadInscriptionCounts()` (~ligne 505) lit la table **`inscriptions` protégée par RLS** (`ApiService.fetch('inscriptions', {select:'poste_id'})`). La RLS n'expose à un non-admin que ses propres inscriptions (benevole) ou celles de ses postes (referent) → `inscriptionCounts` partiel/vide. Or `fillColor` (~l.266-286) et `sum_inscrits` (~l.119) dérivent de `inscriptionCounts[poste.id]` → `inscrits = 0` → `bg-red-300` partout.
+
+**Donnée déjà disponible** : la page charge `public_planning` (vue **publique** anonymisée) avec `liste_benevoles` pour **tous** les rôles (~l.484). `poste.liste_benevoles.length` = occupation réelle du poste, accessible sans la table protégée.
+
+**Correctif proposé (atomique, frontend-only, aucun changement RLS/backend)** : calculer le compte d'occupation depuis `public_planning.liste_benevoles` (déjà chargé) au lieu d'interroger la table `inscriptions`. Comportement identique pour tous les rôles. À valider : que `liste_benevoles` reflète bien 100 % des inscrits (et pas une projection filtrée).
+
+**Suivi** : à transformer en case du plan (cf. [[feedback-notes-actionable-must-be-in-plan]]). Découvert hors-périmètre de 8.5 #1 (qui ne concerne que l'accès) ; consigné aussi dans `docs/launch.md` §3.
