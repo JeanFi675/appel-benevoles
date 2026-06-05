@@ -19,7 +19,7 @@ Le schéma s'articule autour de quatre noyaux fonctionnels :
 
 Quatre **vues** complètent l'accès :
 
-- `public_planning` (lecture publique, anonymisée — utilisée par la page d'accueil)
+- `public_planning` (réservée à `authenticated`, anonymisée — utilisée par la page d'accueil et `besoins.html`)
 - `admin_benevoles`, `admin_inscriptions`, `admin_periodes` (agrégats pour l'admin)
 
 > **Support famille** : la contrainte `benevoles_user_prenom_nom_uniq UNIQUE (user_id, prenom, nom)` permet à un même compte `auth.users` d'avoir plusieurs profils `benevoles` (parent + enfants). La sémantique "ligne m'appartient" s'évalue donc via `benevole_id IN (SELECT id FROM benevoles WHERE user_id = auth.uid())` — encapsulée par le helper `is_own_benevole()`.
@@ -296,9 +296,11 @@ Recense les comptes Supabase Auth qui n'ont pas créé leur profil bénévole. S
 
 ## 4. Vues
 
-### `public_planning` (lecture publique, anonymisée)
+### `public_planning` (réservée à `authenticated`, anonymisée)
 
-Source unique du planning grand public. **Les noms des bénévoles inscrits sont anonymisés** via `get_benevole_name()` (prénom + initiale, ex : "Marie D."). Inclut le décompte d'inscrits par poste et les coordonnées du référent (résolues via `get_benevole_full_name/email/phone` SECURITY DEFINER).
+Source unique du planning affiché aux bénévoles connectés (`index.html`, `besoins.html`). **Les noms des bénévoles inscrits sont anonymisés** via `get_benevole_name()` (prénom + initiale, ex : "Marie D."). Inclut le décompte d'inscrits par poste et les coordonnées du référent (résolues via `get_benevole_full_name/email/phone` SECURITY DEFINER).
+
+> **Sécurité (migration `20260605140000`)** : l'accès `anon` à cette vue a été **révoqué**. Les colonnes `referent_nom/email/telephone` ne sont pas anonymisées ; le `GRANT anon` hérité des défauts PostgREST permettait de scraper ces coordonnées via l'API REST avec la clé anon publique. Aucune page ne lisant la vue sans session, la révocation est sans impact. La vue reste volontairement `SECURITY DEFINER` (bypass RLS requis pour les compteurs globaux côté non-admin) — le lint Supabase `security_definer_view` sur cette vue est un faux positif assumé. Ne pas re-`GRANT … TO anon` sans retirer d'abord les colonnes référent.
 
 Colonnes : `poste_id, titre, periode_debut, periode_fin, nb_min, nb_max, periode, periode_ordre, description, referent_id, type_poste_ordre, referent_nom, referent_email, referent_telephone, nb_inscrits_actuels, liste_benevoles (array)`.
 
@@ -422,7 +424,7 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 #### `inscriptions`
 
-- **Pas de lecture publique anonyme** depuis la Phase 3.3 (les vues `public_planning` et la RPC `get_public_inscriptions()` SECURITY DEFINER restent les portes d'accès publiques anonymisées).
+- **Pas de lecture publique anonyme** depuis la Phase 3.3. Les compteurs/listes anonymisés sont servis par la vue `public_planning` (SECURITY DEFINER, désormais réservée à `authenticated` — cf. § Vues) et, pour l'accès réellement anonyme, par la RPC `get_public_inscriptions()` (SECURITY DEFINER).
 - **Bénévole** : `inscriptions_self_select/insert/delete` filtrent par `is_own_benevole(benevole_id)` — couvre les profils famille.
 - **Référent** : `inscriptions_referent_select_managed` autorise SELECT sur les inscriptions des postes dont il est référent (`is_referent_for_poste(poste_id)`).
 - **Admin** : `inscriptions_admin_select/insert/delete` filtrent par `auth_has_role('admin')`.
