@@ -103,10 +103,31 @@ Deno.serve(async (req) => {
 
     const profileIds = profiles.map(p => p.id);
 
-    // 4. Récupération des inscriptions avec jointure periodes
+    // 3bis. Configuration de l'évènement (identité générique + flags QR)
+    //   - event_title / event_address : identité paramétrable (Admin → Configuration)
+    //   - cagnotte_active / tshirt_question_active : pilotent l'envoi des QR codes
+    const { data: configRows, error: configError } = await supabaseClient
+        .from('config')
+        .select('key, value')
+        .in('key', ['event_title', 'event_address', 'cagnotte_active', 'tshirt_question_active']);
+
+    if (configError) throw configError;
+
+    const cfg: Record<string, unknown> = {};
+    (configRows || []).forEach(r => { cfg[r.key] = r.value; });
+
+    const eventTitle = (typeof cfg.event_title === 'string' ? cfg.event_title : '').trim();
+    const eventAddress = (typeof cfg.event_address === 'string' ? cfg.event_address : '').trim();
+    const tshirtQrActive = cfg.tshirt_question_active === true;
+    const cagnotteQrActive = cfg.cagnotte_active === true;
+
+    // Libellé d'évènement générique (repli si non renseigné)
+    const eventLabel = eventTitle || 'l\'évènement';
+
+    // 4. Récupération des inscriptions avec jointures (type_postes pour le titre)
     const { data: inscriptions, error: inscError } = await supabaseClient
       .from('inscriptions')
-      .select('*, postes(*, periodes(nom, ordre)), benevoles(id, prenom, nom)')
+      .select('*, postes(*, type_postes(titre), periodes(nom, ordre)), benevoles(id, prenom, nom)')
       .in('benevole_id', profileIds);
 
     if (inscError) throw inscError;
@@ -129,7 +150,7 @@ Deno.serve(async (req) => {
             periodeOrdre: poste.periodes?.ordre ?? 999,
             debut: new Date(poste.periode_debut),
             fin: new Date(poste.periode_fin),
-            titre: poste.titre,
+            titre: poste.type_postes?.titre || 'Poste',
             benevole: `${benevole.prenom} ${benevole.nom}`,
         };
     }).filter(r => r !== null);
@@ -151,19 +172,29 @@ Deno.serve(async (req) => {
     );
 
     // 6. Construction du HTML des missions
+    //    Les QR codes ne sont inclus que si baseUrl est connu ET que le flag
+    //    correspondant est actif dans Admin → Configuration.
+    const hasBaseUrl = !!baseUrl && baseUrl !== '/';
+    const includeTshirtQr = hasBaseUrl && tshirtQrActive;
+    const includeCagnotteQr = hasBaseUrl && cagnotteQrActive;
+    const includeAnyQr = includeTshirtQr || includeCagnotteQr;
+
+    const escapeHtml = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
     let htmlContent = `
       <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
         <h1 style="text-align: center; border-bottom: 4px solid #000; padding-bottom: 10px;">Votre Planning Bénévole</h1>
         <p>Bonjour,</p>
         <p>
-          Merci de faire partie de l'équipe bénévole du <strong>Championnat de France
-          d'escalade de difficulté jeunes</strong> — votre engagement compte vraiment !
+          Merci de faire partie de l'équipe bénévole de <strong>${escapeHtml(eventLabel)}</strong>
+          — votre engagement compte vraiment !
         </p>
         <p>
-          La compétition approche et nous avons hâte de vous retrouver sur place.
-          Vous trouverez dans ce mail votre planning de missions, vos QR codes,
-          les informations pratiques pour le jour J, ainsi qu'un lien vers
-          la plateforme de covoiturage dédiée à l'événement.
+          L'évènement approche et nous avons hâte de vous retrouver sur place.
+          Vous trouverez dans ce mail votre planning de missions${includeAnyQr ? ', vos QR codes' : ''}
+          ainsi que les informations pratiques pour le jour J.
         </p>
         <p>Voici le récapitulatif de vos missions :</p>
     `;
@@ -200,9 +231,11 @@ Deno.serve(async (req) => {
     }
 
     // 7. Section QR Codes et génération des pièces jointes inline
+    //    Chaque QR n'est généré et affiché que si son flag est actif
+    //    (tshirt_question_active / cagnotte_active dans la table config).
     const attachments: nodemailer.Attachment[] = [];
 
-    if (baseUrl && baseUrl !== '/') {
+    if (includeTshirtQr) {
         // QR T-shirt — un par compte (couvre tous les bénévoles du compte)
         const tshirtUrl = `${baseUrl}scanner-tshirt.html?id=${user.id}`;
         const tshirtBuffer = await generateQRBuffer(tshirtUrl);
@@ -212,7 +245,9 @@ Deno.serve(async (req) => {
             cid: 'qr-tshirt',
             contentType: 'image/png',
         });
+    }
 
+    if (includeCagnotteQr) {
         // QR Cagnotte — un par compte, même ID que le frontend (user.id)
         const cagnotteUrl = `${baseUrl}debit.html?id=${user.id}`;
         const cagnotteBuffer = await generateQRBuffer(cagnotteUrl);
@@ -222,22 +257,22 @@ Deno.serve(async (req) => {
             cid: 'qr-cagnotte',
             contentType: 'image/png',
         });
+    }
 
+    if (includeAnyQr) {
         const tshirtNoms = profiles.map(p => p.prenom).join(', ');
 
-        htmlContent += `
-            <div style="margin-top: 30px; border: 2px solid #000; padding: 15px; background-color: #f0f0f0;">
-                <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">📱 Vos QR Codes</h2>
-                <p style="font-size: 14px; color: #555; margin-bottom: 20px;">Enregistrez cet email sur votre téléphone et présentez ces codes sur place.</p>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
+        const tshirtCard = includeTshirtQr ? `
                         <td style="width: 50%; padding: 10px; text-align: center; vertical-align: top;">
                             <div style="border: 2px solid #000; padding: 10px; background: #fff;">
                                 <p style="font-size: 15px; font-weight: bold; margin: 0 0 6px 0;">👕 Vos T-shirts</p>
                                 <img src="cid:qr-tshirt" alt="QR T-shirt" width="160" height="160" style="display: block; margin: 0 auto;" />
-                                <p style="font-size: 12px; color: #555; margin: 10px 0 0 0;">À présenter au stand T-shirts à votre arrivée. Couvre l'ensemble des bénévoles du compte (${tshirtNoms}).</p>
+                                <p style="font-size: 12px; color: #555; margin: 10px 0 0 0;">À présenter au stand T-shirts à votre arrivée. Couvre l'ensemble des bénévoles du compte (${escapeHtml(tshirtNoms)}).</p>
                             </div>
                         </td>
+        ` : '';
+
+        const cagnotteCard = includeCagnotteQr ? `
                         <td style="width: 50%; padding: 10px; text-align: center; vertical-align: top;">
                             <div style="border: 2px solid #000; padding: 10px; background: #fff;">
                                 <p style="font-size: 15px; font-weight: bold; margin: 0 0 6px 0;">🍕 Buvette / Restauration</p>
@@ -245,74 +280,61 @@ Deno.serve(async (req) => {
                                 <p style="font-size: 12px; color: #555; margin: 10px 0 0 0;">À présenter à la buvette ou à la restauration pour régler vos consommations grâce à votre cagnotte bénévole.</p>
                             </div>
                         </td>
-                    </tr>
+        ` : '';
+
+        htmlContent += `
+            <div style="margin-top: 30px; border: 2px solid #000; padding: 15px; background-color: #f0f0f0;">
+                <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">📱 Vos QR Codes</h2>
+                <p style="font-size: 14px; color: #555; margin-bottom: 20px;">Enregistrez cet email sur votre téléphone et présentez ces codes sur place.</p>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>${tshirtCard}${cagnotteCard}</tr>
                 </table>
             </div>
         `;
     }
 
     // 8. Infos pratiques
+    //    Lieu = config.event_address ; liens site = baseUrl (dynamique).
+    const siteUrl = hasBaseUrl ? baseUrl : '';
+    const lieuRow = eventAddress ? `
+            <tr>
+              <td style="padding: 8px 8px 8px 0; vertical-align: top; width: 30%; font-weight: bold; font-size: 14px;">Lieu</td>
+              <td style="padding: 8px; font-size: 14px;">
+                ${escapeHtml(eventAddress)}<br>
+                <a href="https://maps.google.com/?q=${encodeURIComponent(eventAddress)}" style="color: #000; font-size: 12px;">Voir sur Google Maps →</a>
+              </td>
+            </tr>
+    ` : '';
+
+    const siteLink = (label: string) => siteUrl
+        ? `<br><a href="${escapeHtml(siteUrl)}" style="color: #000; font-size: 12px;">${label} →</a>`
+        : '';
+
     htmlContent += `
         <div style="margin-top: 30px; border: 2px solid #000; padding: 15px; background-color: #f9f9f9;">
           <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">📍 Infos pratiques</h2>
           <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 8px 8px 0; vertical-align: top; width: 30%; font-weight: bold; font-size: 14px;">Lieu</td>
-              <td style="padding: 8px; font-size: 14px;">
-                110 rue des Alpes — 74800 Saint-Pierre-en-Faucigny<br>
-                <a href="https://maps.google.com/?q=110+rue+des+Alpes+74800+Saint-Pierre-en-Faucigny" style="color: #000; font-size: 12px;">Voir sur Google Maps →</a>
-              </td>
-            </tr>
+            ${lieuRow}
             <tr style="border-top: 1px solid #ddd;">
-              <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">À votre arrivée</td>
+              <td style="padding: 8px 8px 8px 0; vertical-align: top; width: 30%; font-weight: bold; font-size: 14px;">À votre arrivée</td>
               <td style="padding: 8px; font-size: 14px;">
-                Présentez-vous au QG bénévole <strong>30 min avant votre 1er créneau</strong> pour récupérer votre t-shirt.<br>
-                <span style="color: #c00; font-weight: bold;">Le programme du weekend est dense et ne laisse pas de place aux imprévus — votre ponctualité est précieuse pour toute l'équipe.</span>
+                Présentez-vous au QG bénévole <strong>30 min avant votre 1er créneau</strong> : l'équipe d'accueil vous orientera vers votre poste.<br>
+                <span style="color: #c00; font-weight: bold;">Le programme est dense et laisse peu de place aux imprévus — votre ponctualité est précieuse pour toute l'équipe.</span>
               </td>
             </tr>
             <tr style="border-top: 1px solid #ddd;">
               <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">Empêchement ?</td>
               <td style="padding: 8px; font-size: 14px;">
-                Si vous ne pouvez finalement pas être présent(e), merci de modifier vos inscriptions directement sur le site et de répondre à ce mail pour nous prévenir.<br>
-                <a href="https://jeanfi675.github.io/appel-benevoles/" style="color: #000; font-size: 12px;">Accéder au site →</a>
+                Si vous ne pouvez finalement pas être présent(e), merci de modifier vos inscriptions directement sur le site et de répondre à ce mail pour nous prévenir.${siteLink('Accéder au site')}
               </td>
             </tr>
             <tr style="border-top: 1px solid #ddd;">
               <td style="padding: 8px 8px 8px 0; vertical-align: top; font-weight: bold; font-size: 14px;">Sur le site</td>
               <td style="padding: 8px; font-size: 14px;">
-                N'hésitez pas à revenir sur le site : vous y trouverez le planning général du weekend ainsi que les coordonnées de votre référent pour chacun de vos postes — pour savoir exactement qui rejoindre dès votre arrivée.<br>
-                <a href="https://jeanfi675.github.io/appel-benevoles/" style="color: #000; font-size: 12px;">Accéder au site →</a>
+                N'hésitez pas à revenir sur le site : vous y trouverez le planning général ainsi que les coordonnées de votre référent pour chacun de vos postes — pour savoir exactement qui rejoindre dès votre arrivée.${siteLink('Accéder au site')}
               </td>
             </tr>
           </table>
-        </div>
-
-        <div style="margin-top: 20px; border: 2px solid #000; padding: 15px; background-color: #f9f9f9;">
-          <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">🚗 Covoiturage</h2>
-          <p style="font-size: 14px; margin: 10px 0;">
-            Une plateforme de covoiturage a été mise en place spécialement pour la compétition.
-            Que vous ayez une place à proposer ou un trajet à trouver, n'hésitez pas à l'utiliser !
-          </p>
-          <p style="text-align: center; margin: 15px 0;">
-            <a href="https://togetzer.com/france-esc-diff-jeunes-2026"
-               style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
-              Accéder à la plateforme de covoiturage →
-            </a>
-          </p>
-        </div>
-
-        <div style="margin-top: 20px; border: 2px solid #000; padding: 15px; background-color: #f9f9f9;">
-          <h2 style="font-size: 18px; text-transform: uppercase; margin-top: 0; border-bottom: 2px solid #000; padding-bottom: 8px;">📸 Partagez vos photos !</h2>
-          <p style="font-size: 14px; margin: 10px 0;">
-            Une plateforme de partage de photos a été mise en place pour la compétition.
-            Partagez vos meilleurs clichés du weekend et retrouvez les photos prises par toute l'équipe !
-          </p>
-          <p style="text-align: center; margin: 15px 0;">
-            <a href="https://app.eventpics.net/IjdXsodJUiLc"
-               style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
-              Voir et partager les photos →
-            </a>
-          </p>
         </div>
 
         <div style="margin-top: 30px; text-align: center; color: #333;">
