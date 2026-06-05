@@ -23,6 +23,17 @@ export function initStore() {
     config: {
       tshirt_question_active: true,
       cagnotte_active: false,
+      event_title: '',
+      event_address: '',
+    },
+
+    /**
+     * Titre de l'évènement avec repli générique.
+     * Source de vérité : clé `event_title` de la table `config`.
+     * @returns {string}
+     */
+    get eventTitle() {
+      return (this.config.event_title || '').trim() || 'Appel aux Bénévoles';
     },
 
     // Auth State
@@ -50,7 +61,9 @@ export function initStore() {
     async loadGlobalConfig() {
       try {
         const { data, error } = await ApiService.fetch('config', {
-          in: { key: ['tshirt_question_active', 'cagnotte_active'] },
+          in: {
+            key: ['tshirt_question_active', 'cagnotte_active', 'event_title', 'event_address'],
+          },
         });
         if (error) throw error;
         if (data && data.length > 0) {
@@ -59,7 +72,15 @@ export function initStore() {
 
           const cagnotte = data.find((d) => d.key === 'cagnotte_active');
           if (cagnotte) this.config.cagnotte_active = cagnotte.value;
+
+          const eventTitle = data.find((d) => d.key === 'event_title');
+          if (eventTitle) this.config.event_title = eventTitle.value || '';
+
+          const eventAddress = data.find((d) => d.key === 'event_address');
+          if (eventAddress) this.config.event_address = eventAddress.value || '';
         }
+        // Reflète le titre de l'évènement dans l'onglet du navigateur.
+        document.title = `${this.eventTitle} — Inscription`;
       } catch (err) {
         console.error('Erreur chargement config globale:', err);
       }

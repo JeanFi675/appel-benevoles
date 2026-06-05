@@ -8,8 +8,13 @@ Le format est basé sur [Keep a Changelog 1.1.0](https://keepachangelog.com/fr/1
 
 ## [Unreleased]
 
+### Added
+
+- **Identité d'évènement paramétrable** : nouvel encart « 🏷️ Identité de l'évènement » dans Admin → Configuration permettant de saisir un **titre** et une **adresse**. Stockés dans `config.event_title` / `config.event_address` (migration `20260605130000_seed_event_identity_config.sql`, idempotente). Le titre alimente dynamiquement le header public (`x-text="eventTitle"`) et le `<title>` des pages (`document.title`), avec repli « Appel aux Bénévoles » si vide.
+
 ### Changed
 
+- **Généralisation du site** : suppression de toute référence en dur à un évènement précis (championnat, escalade, compétition). Le header public, les `<title>` de pages et les libellés admin sont désormais génériques ou alimentés par `event_title`. L'app peut servir n'importe quel évènement nécessitant un appel à bénévoles.
 - **`admin-connexions.html`** : les boutons « 📧 Envoyer relance » des tableaux _Comptes orphelins_ et _Bénévoles (sans inscr.)_ sont remplacés par « 📋 Copier le mail » (copie de l'adresse dans le presse-papier). L'envoi de mail de relance individuel est retiré.
 
 ### Removed

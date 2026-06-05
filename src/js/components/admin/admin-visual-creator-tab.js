@@ -207,6 +207,31 @@ export function adminVisualCreatorTab() {
       }
     },
 
+    /**
+     * Sauvegarde le titre et l'adresse de l'évènement (clés config
+     * `event_title` / `event_address`). Ces valeurs rendent l'application
+     * générique : le titre alimente le header public et le <title> des pages.
+     * @returns {Promise<void>}
+     */
+    async saveEventIdentity() {
+      const title = (this.config.event_title || '').trim();
+      const address = (this.config.event_address || '').trim();
+      this.config.event_title = title;
+      this.config.event_address = address;
+
+      try {
+        const { error } = await ApiService.upsertMany('config', [
+          { key: 'event_title', value: title },
+          { key: 'event_address', value: address },
+        ]);
+        if (error) throw error;
+
+        this.showToast("✅ Identité de l'évènement enregistrée", 'success');
+      } catch (error) {
+        this.showToast('❌ Erreur enregistrement : ' + error.message, 'error');
+      }
+    },
+
     // --- Repas (CRUD) ---
 
     async addRepas() {

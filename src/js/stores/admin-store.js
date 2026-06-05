@@ -64,6 +64,8 @@ export function createAdminStore() {
       cagnotte_active: false,
       tshirt_question_active: true,
       tarif_cagnotte_journee: 15.0,
+      event_title: '',
+      event_address: '',
     },
 
     // --- Dérivés réactifs ---
@@ -537,7 +539,15 @@ export function createAdminStore() {
     async loadConfig() {
       try {
         const { data, error } = await ApiService.fetch('config', {
-          in: { key: ['cagnotte_active', 'tarif_cagnotte_journee', 'tshirt_question_active'] },
+          in: {
+            key: [
+              'cagnotte_active',
+              'tarif_cagnotte_journee',
+              'tshirt_question_active',
+              'event_title',
+              'event_address',
+            ],
+          },
         });
         if (error) throw error;
 
@@ -550,6 +560,12 @@ export function createAdminStore() {
 
           const tarifJournee = data.find((c) => c.key === 'tarif_cagnotte_journee');
           if (tarifJournee) this.config.tarif_cagnotte_journee = parseFloat(tarifJournee.value);
+
+          const eventTitle = data.find((c) => c.key === 'event_title');
+          if (eventTitle) this.config.event_title = eventTitle.value || '';
+
+          const eventAddress = data.find((c) => c.key === 'event_address');
+          if (eventAddress) this.config.event_address = eventAddress.value || '';
         }
       } catch (error) {
         console.error('Error loading config:', error);
