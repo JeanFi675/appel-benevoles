@@ -32,6 +32,20 @@ export function adminReferentsTab() {
       return Alpine.store('admin').posteTitres;
     },
 
+    // Titres proposables dans une liste déroulante : on ne garde que les types
+    // ayant **au moins un créneau sans référent** (sinon inutile de les
+    // proposer — tout est déjà attribué). Le titre déjà sélectionné sur la
+    // ligne courante est toujours conservé pour ne pas vider le `<select>`.
+    getAvailablePosteTitres(currentTitre) {
+      const store = Alpine.store('admin');
+      const titresAvecCreneauLibre = new Set(
+        store.postes.filter((p) => !p.referent_id).map((p) => p.titre)
+      );
+      return this.uniquePosteTitres.filter(
+        (titre) => titre === currentTitre || titresAvecCreneauLibre.has(titre)
+      );
+    },
+
     getReferents() {
       return Alpine.store('admin').getReferents();
     },

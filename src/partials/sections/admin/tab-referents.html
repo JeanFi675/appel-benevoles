@@ -65,7 +65,7 @@
                     class="brutal-input w-full px-3 py-2 text-sm font-bold bg-white"
                   >
                     <option value="">— Sélectionner —</option>
-                    <template x-for="titre in uniquePosteTitres" :key="titre">
+                    <template x-for="titre in getAvailablePosteTitres(assign.titre)" :key="titre">
                       <option :value="titre" x-text="titre"></option>
                     </template>
                   </select>

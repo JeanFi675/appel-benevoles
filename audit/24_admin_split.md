@@ -125,7 +125,7 @@ Chaque composant consomme `$store.visualProgram.dbProgramme` et appelle `$store.
 ### 3.5 `Alpine.data('adminReferentsTab', () => ({ ... }))`
 
 State : `referentAssignments`, `uniquePosteTitres`.
-Méthodes : `initReferentAssignments()`, `addReferentAssignmentLine()`, `removeReferentAssignmentLine()`, `getPeriodesForTitre()`, `getOrphanPostes()`, `saveReferentAssignments()`.
+Méthodes : `initReferentAssignments()`, `addReferentAssignmentLine()`, `removeReferentAssignmentLine()`, `getAvailablePosteTitres()`, `getPeriodesForTitre()`, `getOrphanPostes()`, `saveReferentAssignments()`.
 
 ### 3.6 `Alpine.data('adminCagnotteTab', () => ({ ... }))`
 
