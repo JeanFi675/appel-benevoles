@@ -387,6 +387,16 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 > **Pourquoi `SECURITY DEFINER`** : les RPC publiques et helpers doivent lire ou écrire `benevoles`/`cagnotte_transactions` (tables RLS-forcées). Sans DEFINER, l'utilisateur ne pourrait même pas vérifier son propre rôle (deadlock RLS). Toutes ces fonctions fixent `SET search_path = public` pour éviter le hijack de schéma (cf. `audit/16_rls.md` historique).
 
+> **Durcissement EXECUTE (migration `20260605150000`)** suite à l'audit du linter Supabase (lints `0028`/`0029`) :
+>
+> - `get_benevole_email/phone/full_name/name` : `EXECUTE` **révoqué de `PUBLIC`/`anon`** (empêche l'énumération de PII par UUID via `/rpc`). `authenticated` est **conservé** car la **vue** definer `public_planning` vérifie le droit des fonctions internes contre l'_appelant_ (≠ une fonction definer, qui les exécute en tant que propriétaire) — sans ce grant la vue casse.
+> - `get_auth_users_without_benevole()` : garde `is_admin()` **interne** ajoutée (exposait emails/téléphones des comptes Auth orphelins) + `EXECUTE` révoqué d'`anon`.
+> - **Non modifiés (faux positifs / par design)** : helpers RLS (`is_admin`, `auth_has_role`, `is_own_benevole`, `is_referent_*`) — exécutables car référencés dans les policies ; RPC borne/QR (`debit_cagnotte_public`, `get_public_benevole_info`, `get_public_inscriptions`, `get_public_tshirt_info`).
+>
+> **Risque assumé — scanner T-shirt** : `scanner-tshirt.html` est un **kiosque QR sans authentification** (scan par des bénévoles non connectés, choix produit). `update_tshirt_status` et `get_family_tshirt_info_smart` restent donc exécutables par `anon` : avec l'UUID d'un bénévole, on peut lire son nom/taille et modifier son statut de retrait T-shirt. La protection repose sur l'obscurité de l'UUID (porté par le QR). **Ne pas verrouiller derrière un login sans revoir le workflow du stand.** Données opérationnelles non financières (la cagnotte, elle, est bornée et immuable).
+
+> **Note `extension_in_public`** (lint `0014`) : `citext` et `btree_gist` sont dans le schéma `public`. Non déplacées : `benevoles.email` est typée `public.citext` (déplacer le type casserait la colonne). Avertissement assumé.
+
 ---
 
 ## 7. Matrice RLS — qui peut faire quoi ?
