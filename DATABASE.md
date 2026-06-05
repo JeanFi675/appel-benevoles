@@ -454,7 +454,30 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 ---
 
-## 8. Liens utiles
+## 8. Index & performance
+
+Toutes les colonnes de filtre/jointure chaudes sont déjà indexées (FK, `poste_id`,
+`benevole_id`, `user_id`, `role`, …). C'est pourquoi l'`index_advisor` Supabase ne
+suggère **aucun** index sur les requêtes du dashboard _Query Performance_.
+
+### Index signalés « inutilisés » (lint `0005_unused_index`) — **conservés volontairement**
+
+Le linter Supabase signale 3 index en `INFO` comme « never used » (`idx_scan = 0`).
+Décision (2026-06-05) : **on ne les supprime pas**.
+
+| Index                                       | Raison de le garder                                                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `idx_benevole_cagnotte_periodes_periode_id` | **Couvre la FK** `periode_id → periodes(id) ON DELETE CASCADE`. PostgreSQL n'indexe pas automatiquement les FK ; sans cet index, supprimer une période force un seq-scan + verrou sur la table enfant. |
+| `idx_benevole_repas_repas_id`               | **Couvre la FK** `repas_id → repas(id) ON DELETE CASCADE` (même raison).                                                                                                                               |
+| `idx_benevoles_email`                       | Recherche admin par email / réconciliation des comptes orphelins. `idx_scan = 0` non fiable (`pg_stat_database.stats_reset = NULL`) ; coût de stockage négligeable à cette échelle.                    |
+
+> Le `idx_scan = 0` reflète l'absence de **SELECT** s'en servant, pas l'inutilité : les 2
+> index de FK servent aux opérations `DELETE`/`UPDATE` sur la table parente, pas aux lectures.
+> Les supprimer serait un anti-pattern (régression sur les cascades). Faux positifs `INFO` assumés.
+
+---
+
+## 9. Liens utiles
 
 - [`supabase/migrations/00000000000000_init.sql`](supabase/migrations/00000000000000_init.sql) — schéma dumped depuis prod (2026-05-27), source de vérité tables/fonctions/triggers
 - [`supabase/migrations/20260527100000_enable_force_rls.sql`](supabase/migrations/20260527100000_enable_force_rls.sql) — Phase 3.1, FORCE RLS partout
