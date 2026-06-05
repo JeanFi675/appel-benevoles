@@ -131,23 +131,11 @@
                     </div>
                     <div class="mt-2 flex items-center gap-2 flex-wrap">
                       <button
-                        @click.stop="sendRelanceOrphelin(user)"
-                        :disabled="sendingRelanceOrphelinIds.includes(user.id)"
-                        class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black"
-                        :class="sendingRelanceOrphelinIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300'"
+                        @click.stop="copyEmail(user.email)"
+                        class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-blue-300 hover:bg-blue-200"
                       >
-                        <span x-show="!sendingRelanceOrphelinIds.includes(user.id)">📧 Envoyer relance</span>
-                        <span x-show="sendingRelanceOrphelinIds.includes(user.id)">⏳ Envoi...</span>
+                        📋 Copier le mail
                       </button>
-                      <span
-                        x-show="user.relance_sent_at"
-                        class="text-xs font-bold text-green-700"
-                        x-text="'✅ Relancé le ' + formatDate(user.relance_sent_at)"
-                      ></span>
-                      <span
-                        x-show="!user.relance_sent_at"
-                        class="text-xs text-gray-400 italic"
-                      >Jamais envoyé</span>
                     </div>
                     <div class="mt-2 flex items-center gap-1 flex-wrap">
                       <input
@@ -217,7 +205,7 @@
                     Date de création du compte <span x-text="sortIcon('created_at')"></span>
                   </th>
                   <th class="p-3 border-white select-none">
-                    Relance
+                    Contact
                   </th>
                 </tr>
               </thead>
@@ -247,23 +235,11 @@
                     <td class="p-3" @click.stop>
                       <div class="flex flex-col gap-1">
                         <button
-                          @click="sendRelanceOrphelin(user)"
-                          :disabled="sendingRelanceOrphelinIds.includes(user.id)"
-                          class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black whitespace-nowrap"
-                          :class="sendingRelanceOrphelinIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300'"
+                          @click="copyEmail(user.email)"
+                          class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black whitespace-nowrap bg-blue-300 hover:bg-blue-200"
                         >
-                          <span x-show="!sendingRelanceOrphelinIds.includes(user.id)">📧 Envoyer relance</span>
-                          <span x-show="sendingRelanceOrphelinIds.includes(user.id)">⏳ Envoi...</span>
+                          📋 Copier le mail
                         </button>
-                        <span
-                          x-show="user.relance_sent_at"
-                          class="text-xs font-bold text-green-700 whitespace-nowrap"
-                          x-text="'✅ ' + formatDate(user.relance_sent_at)"
-                        ></span>
-                        <span
-                          x-show="!user.relance_sent_at"
-                          class="text-xs text-gray-400 italic"
-                        >Jamais envoyé</span>
                         <div class="flex items-center gap-1 mt-1">
                           <input
                             type="tel"
@@ -374,13 +350,11 @@
                     </div>
                     <div class="mt-2 flex items-center gap-2 flex-wrap">
                       <button
-                        @click.stop="sendRelance(user)"
-                        :disabled="sendingRelanceIds.includes(user.id)"
-                        class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black"
-                        :class="sendingRelanceIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300'"
+                        @click.stop="copyEmail(user.email)"
+                        x-show="user.email"
+                        class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-blue-300 hover:bg-blue-200"
                       >
-                        <span x-show="!sendingRelanceIds.includes(user.id)">📧 Envoyer relance</span>
-                        <span x-show="sendingRelanceIds.includes(user.id)">⏳ Envoi...</span>
+                        📋 Copier le mail
                       </button>
                       <a
                         x-show="user.telephone"
@@ -390,15 +364,6 @@
                         class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300 whitespace-nowrap"
                         @click.stop
                       >📱 <span x-text="user.telephone"></span></a>
-                      <span
-                        x-show="user.relance_sent_at"
-                        class="text-xs font-bold text-green-700"
-                        x-text="'✅ Relancé le ' + formatDate(user.relance_sent_at)"
-                      ></span>
-                      <span
-                        x-show="!user.relance_sent_at"
-                        class="text-xs text-gray-400 italic"
-                      >Jamais envoyé</span>
                     </div>
                   </div>
                 </label>
@@ -446,7 +411,7 @@
                     Mis à jour <span x-text="sortIconBenevoles('updated_at')"></span>
                   </th>
                   <th class="p-3 border-white select-none">
-                    Relance
+                    Contact
                   </th>
                 </tr>
               </thead>
@@ -480,13 +445,11 @@
                     <td class="p-3" @click.stop>
                       <div class="flex flex-col gap-1">
                         <button
-                          @click="sendRelance(user)"
-                          :disabled="sendingRelanceIds.includes(user.id)"
-                          class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black whitespace-nowrap"
-                          :class="sendingRelanceIds.includes(user.id) ? 'bg-gray-300 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-300'"
+                          @click="copyEmail(user.email)"
+                          x-show="user.email"
+                          class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black whitespace-nowrap bg-blue-300 hover:bg-blue-200"
                         >
-                          <span x-show="!sendingRelanceIds.includes(user.id)">📧 Envoyer relance</span>
-                          <span x-show="sendingRelanceIds.includes(user.id)">⏳ Envoi...</span>
+                          📋 Copier le mail
                         </button>
                         <a
                           x-show="user.telephone"
@@ -495,15 +458,6 @@
                           rel="noopener noreferrer"
                           class="brutal-btn text-xs py-1 px-3 border-2 border-brutal-black font-black bg-green-400 hover:bg-green-300 whitespace-nowrap text-center"
                         >📱 <span x-text="user.telephone"></span></a>
-                        <span
-                          x-show="user.relance_sent_at"
-                          class="text-xs font-bold text-green-700 whitespace-nowrap"
-                          x-text="'✅ ' + formatDate(user.relance_sent_at)"
-                        ></span>
-                        <span
-                          x-show="!user.relance_sent_at"
-                          class="text-xs text-gray-400 italic"
-                        >Jamais envoyé</span>
                       </div>
                     </td>
                   </tr>

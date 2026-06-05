@@ -181,7 +181,7 @@ repas / benevole_repas  -- Repas proposés + jonction (vegetarien ou normal)
 cagnotte_transactions   -- Crédit/débit cagnotte (immuable : UPDATE/DELETE = DENY)
 benevole_cagnotte_periodes -- Cagnotte forcée par période
 config                  -- Feature flags et paramètres (clé/valeur)
-orphan_relances         -- Tracking des relances pour comptes auth sans bénévole
+orphan_relances         -- Comptes auth sans profil bénévole (stocke le téléphone saisi par l'admin)
 ```
 
 ### Rôles utilisateurs
@@ -297,15 +297,13 @@ Voir avertissement critique #1. Si `.env.local` est absent/désactivé, les insc
 
 ## Edge Functions
 
-Cinq fonctions Deno dans `supabase/functions/` (toutes utilisent `SUPABASE_SERVICE_ROLE_KEY` via `supabase secrets set` — jamais en clair dans le repo) :
+Trois fonctions Deno dans `supabase/functions/` (toutes utilisent `SUPABASE_SERVICE_ROLE_KEY` via `supabase secrets set` — jamais en clair dans le repo) :
 
-| Fonction                | Usage                                                          |
-| ----------------------- | -------------------------------------------------------------- |
-| `create-benevole`       | Création d'un compte Auth + profil bénévole par un admin       |
-| `send-planning`         | Envoie le planning personnalisé par email (SMTP)               |
-| `send-rappel-all`       | Rappel global à tous les bénévoles inscrits                    |
-| `send-relance`          | Relance ciblée d'un bénévole                                   |
-| `send-relance-orphelin` | Relance d'un compte `auth.users` sans profil bénévole rattaché |
+| Fonction          | Usage                                                    |
+| ----------------- | -------------------------------------------------------- |
+| `create-benevole` | Création d'un compte Auth + profil bénévole par un admin |
+| `send-planning`   | Envoie le planning personnalisé par email (SMTP)         |
+| `send-rappel-all` | Rappel global à tous les bénévoles inscrits              |
 
 Secrets requis : `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SUPABASE_SERVICE_ROLE_KEY`. Ne jamais exposer la Service Role Key au frontend.
 
