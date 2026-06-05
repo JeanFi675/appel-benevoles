@@ -1,8 +1,8 @@
 # appel-benevoles
 
-Système de gestion de bénévoles pour le **Championnat de France d'escalade de difficulté jeunes**.
+Système **générique** de gestion de bénévoles pour tout évènement nécessitant un appel à bénévoles.
 
-Application mono-édition en production active : inscription des bénévoles, attribution des postes/créneaux, gestion des rôles (référent, juge, officiel, admin), cagnotte buvette, envoi des plannings par email, suivi t-shirts via QR code.
+Le titre et l'adresse de l'évènement se configurent dans Admin → Configuration (« Identité de l'évènement ») — aucun nom d'évènement n'est écrit en dur. Initialement créé pour le **Championnat de France d'escalade de difficulté jeunes 2026**, puis généralisé. Application en production active : inscription des bénévoles, attribution des postes/créneaux, gestion des rôles (bénévole, référent, admin), cagnotte buvette, envoi des plannings par email, suivi t-shirts via QR code.
 
 ---
 
@@ -199,4 +199,4 @@ supabase secrets set SMTP_HOST=... SMTP_PORT=... SMTP_USER=... SMTP_PASS=...
 
 ## Licence
 
-Projet privé, usage interne dans le cadre de l'organisation du Championnat de France d'escalade de difficulté jeunes.
+Projet privé, usage interne pour l'organisation d'évènements faisant appel à des bénévoles.

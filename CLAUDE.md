@@ -43,7 +43,7 @@ Tu es un développeur Full-Stack Senior spécialisé dans la création d'applica
 
 ## Contexte du projet
 
-Système de gestion de bénévoles pour le **Championnat de France d'escalade de difficulté jeunes**. Projet **mono-édition** (pas de multi-événements prévus). Application **en production active** au moment de la lecture de ce fichier.
+Système **générique** de gestion de bénévoles pour n'importe quel évènement nécessitant un appel à bénévoles. Initialement créé pour le **Championnat de France d'escalade de difficulté jeunes 2026** (édition réussie), il est en cours de généralisation : l'identité de l'évènement (titre, adresse) est désormais paramétrable dans Admin → Configuration (`config.event_title` / `config.event_address`) plutôt qu'écrite en dur. Application **en production active** au moment de la lecture de ce fichier. Une seule instance d'évènement à la fois (pas de multi-évènements simultanés).
 
 ---
 
@@ -199,6 +199,10 @@ Les rôles historiques `juge`, `admin-juge` et `officiel` ont été supprimés e
 - `cagnotte_active` : active/désactive l'affichage cagnotte côté bénévole.
 - `tshirt_question_active` : active/désactive la question taille T-shirt dans le wizard.
 - `tarif_cagnotte_journee` : montant crédité par journée de cagnotte forcée (défaut 15.00 €).
+- `event_title` : titre de l'évènement (clé d'**identité générique**). Alimente le header public (`x-text="eventTitle"`) et le `<title>` des pages via `document.title`. Repli `« Appel aux Bénévoles »` si vide. Édité dans Admin → Configuration → « Identité de l'évènement ».
+- `event_address` : adresse / lieu de l'évènement. Stocké en config (affichage dans les emails prévu ultérieurement).
+
+> **Application générique** : le site ne référence plus aucun évènement précis (ni championnat, ni escalade). Tout libellé d'évènement provient de `event_title`. Ne pas réintroduire de nom d'évènement en dur dans le code.
 
 ---
 

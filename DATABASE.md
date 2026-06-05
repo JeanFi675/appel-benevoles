@@ -275,7 +275,13 @@ Sélection des périodes pour lesquelles un bénévole reçoit automatiquement l
 | `value`      | jsonb       |   ✅    | Valeur arbitraire |
 | `updated_at` | timestamptz |   ✅    | Défaut `now()`    |
 
-**Clés connues** : `cagnotte_active` (bool — toggle de l'affichage cagnotte côté UI).
+**Clés connues** :
+
+- `cagnotte_active` (bool) — toggle de l'affichage cagnotte côté UI.
+- `tshirt_question_active` (bool) — toggle de la question taille T-shirt dans le wizard.
+- `tarif_cagnotte_journee` (number) — montant crédité par journée de cagnotte forcée (défaut 15.00).
+- `event_title` (string) — titre de l'évènement (identité générique). Alimente le header public et le `<title>` des pages. Repli front « Appel aux Bénévoles » si vide. Semée par `20260605130000_seed_event_identity_config.sql`.
+- `event_address` (string) — adresse / lieu de l'évènement. Stockée ; affichage emails prévu ultérieurement.
 
 ### `orphan_relances` — comptes Auth sans profil bénévole
 

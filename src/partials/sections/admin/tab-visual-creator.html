@@ -33,6 +33,55 @@
     </div>
   </div>
 
+  <!-- IDENTITÉ DE L'ÉVÈNEMENT -->
+  <div class="brutal-card bg-white p-8">
+    <h3 class="text-2xl font-black mb-2">🏷️ Identité de l'évènement</h3>
+    <p class="text-sm font-bold text-gray-500 mb-4">
+      Le titre s'affiche dans l'en-tête du site et l'onglet du navigateur. Laissé vide, un titre
+      générique « Appel aux Bénévoles » est utilisé.
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <label for="event-title" class="block text-lg font-black uppercase text-gray-500 mb-2">
+          📛 Titre de l'évènement
+        </label>
+        <input
+          id="event-title"
+          type="text"
+          x-model="config.event_title"
+          maxlength="120"
+          placeholder="ex: Festival des Associations 2026"
+          class="w-full p-3 border-2 border-brutal-black font-bold shadow-brutal-sm focus:outline-none focus:shadow-brutal"
+        />
+      </div>
+
+      <div>
+        <label for="event-address" class="block text-lg font-black uppercase text-gray-500 mb-2">
+          📍 Adresse / lieu
+        </label>
+        <input
+          id="event-address"
+          type="text"
+          x-model="config.event_address"
+          maxlength="250"
+          placeholder="ex: Salle des fêtes, 12 rue de la Mairie, 75000 Paris"
+          class="w-full p-3 border-2 border-brutal-black font-bold shadow-brutal-sm focus:outline-none focus:shadow-brutal"
+        />
+      </div>
+    </div>
+
+    <div class="mt-4 flex justify-end">
+      <button
+        type="button"
+        @click="saveEventIdentity()"
+        class="brutal-btn bg-yellow-400 text-brutal-black px-6 py-3 font-black border-2 border-brutal-black shadow-brutal-sm hover:shadow-brutal transition-shadow"
+      >
+        💾 Enregistrer l'identité
+      </button>
+    </div>
+  </div>
+
   <!-- 0. CONFIGURATION DES FORMULAIRES (T-Shirt & Repas) -->
   <div class="brutal-card bg-white p-8">
     <h3 class="text-2xl font-black mb-4">⚙️ 0. Configuration des Formulaires d'Inscription</h3>
@@ -605,7 +654,7 @@
     >
       <h3 class="text-2xl font-black mb-4">📅 Ajouter un nouveau jour</h3>
       <p class="text-sm font-bold text-gray-600 mb-4">
-        Saisissez la date du nouveau jour de compétition à planifier.
+        Saisissez la date du nouveau jour de l'évènement à planifier.
       </p>
       <div class="mb-6">
         <label class="block text-xs font-black uppercase text-gray-500 mb-2">Date</label>
