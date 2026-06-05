@@ -8,7 +8,14 @@ Le format est basé sur [Keep a Changelog 1.1.0](https://keepachangelog.com/fr/1
 
 ## [Unreleased]
 
-_(rien pour le moment — la Phase 8 du refactoring documentera ici les ajustements post-go-live.)_
+### Changed
+
+- **`admin-connexions.html`** : les boutons « 📧 Envoyer relance » des tableaux _Comptes orphelins_ et _Bénévoles (sans inscr.)_ sont remplacés par « 📋 Copier le mail » (copie de l'adresse dans le presse-papier). L'envoi de mail de relance individuel est retiré.
+
+### Removed
+
+- **Edge Functions `send-relance` et `send-relance-orphelin`** supprimées (plus d'envoi de mail de relance).
+- **Colonnes `relance_sent_at`** supprimées de `benevoles` et `orphan_relances` (migration `20260605120000_remove_relance_feature.sql`). La vue `admin_benevoles` et la RPC `get_auth_users_without_benevole()` ne projettent plus cette colonne. La table `orphan_relances` est conservée (stockage du téléphone des comptes orphelins).
 
 ---
 

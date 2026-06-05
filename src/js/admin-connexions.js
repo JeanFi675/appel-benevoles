@@ -17,8 +17,6 @@ function initAdminConnexionsApp() {
     selectedBenevolesIds: [],
     sortFieldBenevoles: 'updated_at',
     sortDirBenevoles: 'desc',
-    sendingRelanceIds: [],
-    sendingRelanceOrphelinIds: [],
     editingPhones: {},
     savingPhoneIds: [],
 
@@ -195,77 +193,20 @@ function initAdminConnexionsApp() {
         });
     },
 
-    async sendRelance(benevole) {
-      if (this.sendingRelanceIds.includes(benevole.id)) return;
-      this.sendingRelanceIds = [...this.sendingRelanceIds, benevole.id];
-
-      try {
-        const { data, error } = await ApiService.invoke('send-relance', {
-          body: { benevole_id: benevole.id },
-        });
-
-        if (error) {
-          let msg = error.message || 'Erreur inconnue';
-          try {
-            const body = await error.context?.json?.();
-            if (body?.error) msg = body.error;
-          } catch {}
-          throw new Error(msg);
-        }
-        if (data?.error) throw new Error(data.error);
-
-        const idx = this.benevolesSansInscr.findIndex((u) => u.id === benevole.id);
-        if (idx !== -1) {
-          this.benevolesSansInscr[idx] = {
-            ...this.benevolesSansInscr[idx],
-            relance_sent_at: data.relance_sent_at,
-          };
-          this.benevolesSansInscr = [...this.benevolesSansInscr];
-        }
-
-        this.showToast(`✅ Relance envoyée à ${benevole.email}`);
-      } catch (err) {
-        console.error('[sendRelance] Erreur:', err);
-        this.showToast(`❌ ${err.message}`, 'error');
-      } finally {
-        this.sendingRelanceIds = this.sendingRelanceIds.filter((id) => id !== benevole.id);
+    copyEmail(email) {
+      if (!email) {
+        this.showToast('❌ Aucune adresse email pour ce profil', 'error');
+        return;
       }
-    },
-
-    async sendRelanceOrphelin(user) {
-      if (this.sendingRelanceOrphelinIds.includes(user.id)) return;
-      this.sendingRelanceOrphelinIds = [...this.sendingRelanceOrphelinIds, user.id];
-
-      try {
-        const { data, error } = await ApiService.invoke('send-relance-orphelin', {
-          body: { auth_user_id: user.id },
+      navigator.clipboard
+        .writeText(email)
+        .then(() => {
+          this.showToast(`✅ Email copié dans le presse-papier !`);
+        })
+        .catch((err) => {
+          console.error('Erreur copie presse-papier:', err);
+          this.showToast("❌ Erreur lors de la copie de l'email", 'error');
         });
-
-        if (error) {
-          let msg = error.message || 'Erreur inconnue';
-          try {
-            const body = await error.context?.json?.();
-            if (body?.error) msg = body.error;
-          } catch {}
-          throw new Error(msg);
-        }
-        if (data?.error) throw new Error(data.error);
-
-        const idx = this.users.findIndex((u) => /** @type {any} */ (u).id === user.id);
-        if (idx !== -1) {
-          this.users[idx] = { ...this.users[idx], relance_sent_at: data.relance_sent_at };
-          this.users = [...this.users];
-        }
-
-        this.showToast(`✅ Relance envoyée à ${user.email}`);
-      } catch (err) {
-        console.error('[sendRelanceOrphelin] Erreur:', err);
-        this.showToast(`❌ ${err.message}`, 'error');
-      } finally {
-        this.sendingRelanceOrphelinIds = this.sendingRelanceOrphelinIds.filter(
-          (id) => id !== user.id
-        );
-      }
     },
 
     copyBenevolesEmails() {

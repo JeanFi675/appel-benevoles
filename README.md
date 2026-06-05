@@ -170,15 +170,13 @@ Les migrations vivent dans `supabase/migrations/` (nommage chronologique, jamais
 
 ### Edge Functions
 
-Cinq fonctions Deno dans `supabase/functions/` :
+Trois fonctions Deno dans `supabase/functions/` :
 
-| Fonction                | Rôle                                                          |
-| ----------------------- | ------------------------------------------------------------- |
-| `send-planning`         | Envoie son planning à un bénévole par email                   |
-| `send-rappel-all`       | Rappel groupé à tous les bénévoles                            |
-| `send-relance`          | Relance ciblée                                                |
-| `send-relance-orphelin` | Relance des bénévoles sans inscription                        |
-| `create-benevole`       | Création de compte par un admin (utilise la Service Role Key) |
+| Fonction          | Rôle                                                          |
+| ----------------- | ------------------------------------------------------------- |
+| `send-planning`   | Envoie son planning à un bénévole par email                   |
+| `send-rappel-all` | Rappel groupé à tous les bénévoles                            |
+| `create-benevole` | Création de compte par un admin (utilise la Service Role Key) |
 
 Déploiement individuel :
 

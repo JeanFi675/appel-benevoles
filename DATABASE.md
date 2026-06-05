@@ -43,7 +43,7 @@ erDiagram
     REPAS ||--o{ BENEVOLE_REPAS : "est choisi"
     BENEVOLES ||--o{ BENEVOLE_CAGNOTTE_PERIODES : "ciblé par"
     PERIODES ||--o{ BENEVOLE_CAGNOTTE_PERIODES : "ciblé par"
-    AUTH_USERS ||--o| ORPHAN_RELANCES : "relance email"
+    AUTH_USERS ||--o| ORPHAN_RELANCES : "téléphone orphelin"
 
     BENEVOLES {
         uuid id PK
@@ -58,7 +58,6 @@ erDiagram
         bool is_cagnotte_forcee
         cagnotte_forced_type cagnotte_forcee_type "journee|periode"
         text_array cagnotte_forcee_jours
-        timestamptz relance_sent_at
     }
     POSTES {
         uuid id PK
@@ -126,7 +125,6 @@ erDiagram
     }
     ORPHAN_RELANCES {
         uuid user_id PK_FK
-        timestamptz relance_sent_at
         text telephone
     }
 ```
@@ -154,7 +152,6 @@ Profil enrichi d'un utilisateur Supabase Auth. **Un même `user_id` peut posséd
 | `is_cagnotte_forcee`       | bool                          |   ✅    | Active l'auto-crédit (défaut `false`)                                                       |
 | `cagnotte_forcee_type`     | `cagnotte_forced_type` (enum) |         | `journee` ou `periode`. Cohérent avec `is_cagnotte_forcee` (CHECK)                          |
 | `cagnotte_forcee_jours`    | text[]                        |   ✅    | Dates retenues si type = `journee`. Cardinalité > 0 obligatoire si type = `journee` (CHECK) |
-| `relance_sent_at`          | timestamptz                   |         | Timestamp de la dernière relance email                                                      |
 | `created_at`, `updated_at` | timestamptz                   |   ✅    | Défaut `now()`                                                                              |
 
 **Contraintes notables** :
@@ -282,13 +279,12 @@ Sélection des périodes pour lesquelles un bénévole reçoit automatiquement l
 
 ### `orphan_relances` — comptes Auth sans profil bénévole
 
-Traque les comptes Supabase Auth qui n'ont pas créé leur profil bénévole, pour relance ciblée.
+Recense les comptes Supabase Auth qui n'ont pas créé leur profil bénévole. Stocke le téléphone saisi par l'admin (via la RPC `save_orphelin_phone`) pour pouvoir les contacter (WhatsApp / copie du mail depuis `admin-connexions.html`).
 
-| Colonne           | Type         | NotNull | Description       |
-| ----------------- | ------------ | :-----: | ----------------- |
-| `user_id`         | uuid (PK,FK) |   ✅    | → `auth.users.id` |
-| `relance_sent_at` | timestamptz  |         |                   |
-| `telephone`       | text         |         |                   |
+| Colonne     | Type         | NotNull | Description                  |
+| ----------- | ------------ | :-----: | ---------------------------- |
+| `user_id`   | uuid (PK,FK) |   ✅    | → `auth.users.id`            |
+| `telephone` | text         |         | Téléphone saisi manuellement |
 
 ---
 

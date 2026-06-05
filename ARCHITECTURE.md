@@ -64,11 +64,9 @@ Toute la logique backend critique (autorisations, contraintes métier) vit dans 
 │  │ OTP 6 ch.│  │  + RLS policies   │  │      (Deno 2)      │   │
 │  │  (email) │  │  + Triggers       │  │  • send-planning   │   │
 │  └──────────┘  │  + Fonctions RPC  │  │  • send-rappel-all │   │
-│                │  + Vues publiques │  │  • send-relance    │   │
-│                └───────────────────┘  │  • send-relance-   │   │
-│                                       │      orphelin      │   │
-│                                       │  • create-benevole │   │
-│                                       └────────────────────┘   │
+│                │  + Vues publiques │  │  • create-benevole │   │
+│                └───────────────────┘  └────────────────────┘   │
+│                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -287,8 +285,6 @@ supabase/
 │   ├── deno.json
 │   ├── send-planning/
 │   ├── send-rappel-all/
-│   ├── send-relance/
-│   ├── send-relance-orphelin/
 │   └── create-benevole/
 └── snippets/                            # Snippets SQL utilitaires
 ```
