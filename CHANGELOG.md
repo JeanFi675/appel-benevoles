@@ -18,6 +18,7 @@ Le format est basé sur [Keep a Changelog 1.1.0](https://keepachangelog.com/fr/1
 
 ### Changed
 
+- **Admin → Référents — liste « Type de poste » filtrée** : la liste déroulante de sélection d'un type de poste ne propose désormais que les types ayant **au moins un créneau sans référent**. Dès que tous les créneaux d'un type sont attribués, il disparaît des propositions (le titre déjà sélectionné sur une ligne reste affiché pour ne pas vider le `<select>`). Nouvelle méthode `getAvailablePosteTitres()` dans `adminReferentsTab`.
 - **Généralisation du site** : suppression de toute référence en dur à un évènement précis (championnat, escalade, compétition). Le header public, les `<title>` de pages et les libellés admin sont désormais génériques ou alimentés par `event_title`. L'app peut servir n'importe quel évènement nécessitant un appel à bénévoles.
 - **Email de planning (`send-planning`) généralisé** :
   - Texte d'introduction générique alimenté par `config.event_title` (repli « l'évènement ») — plus aucune mention de championnat/escalade/compétition.
