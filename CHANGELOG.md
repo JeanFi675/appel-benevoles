@@ -12,9 +12,18 @@ Le format est basé sur [Keep a Changelog 1.1.0](https://keepachangelog.com/fr/1
 
 - **Identité d'évènement paramétrable** : nouvel encart « 🏷️ Identité de l'évènement » dans Admin → Configuration permettant de saisir un **titre** et une **adresse**. Stockés dans `config.event_title` / `config.event_address` (migration `20260605130000_seed_event_identity_config.sql`, idempotente). Le titre alimente dynamiquement le header public (`x-text="eventTitle"`) et le `<title>` des pages (`document.title`), avec repli « Appel aux Bénévoles » si vide.
 
+### Fixed
+
+- **Edge Function `send-planning`** : le titre des postes s'affichait « undefined » dans l'email de planning. La requête lisait `postes.titre` (colonne inexistante) au lieu de joindre `type_postes(titre)` ; corrigé via la jointure `postes(*, type_postes(titre), …)` et le repli `'Poste'`.
+
 ### Changed
 
 - **Généralisation du site** : suppression de toute référence en dur à un évènement précis (championnat, escalade, compétition). Le header public, les `<title>` de pages et les libellés admin sont désormais génériques ou alimentés par `event_title`. L'app peut servir n'importe quel évènement nécessitant un appel à bénévoles.
+- **Email de planning (`send-planning`) généralisé** :
+  - Texte d'introduction générique alimenté par `config.event_title` (repli « l'évènement ») — plus aucune mention de championnat/escalade/compétition.
+  - **QR codes conditionnels** : le QR T-shirt n'est inclus que si `tshirt_question_active` est actif, le QR cagnotte que si `cagnotte_active` est actif (Admin → Configuration). Si aucun QR n'est actif, la section et la mention dans l'intro disparaissent.
+  - **Infos pratiques** : le « Lieu » provient de `config.event_address` (avec lien Google Maps dynamique, masqué si l'adresse est vide) ; « À votre arrivée » reformulé pour ne plus dépendre du QR/T-shirt ; les liens « Accéder au site » utilisent l'URL d'origine (`baseUrl`) au lieu d'un domaine en dur.
+  - Suppression des sections **Covoiturage** et **Partagez vos photos** (liens propres à l'édition escalade 2026).
 - **`admin-connexions.html`** : les boutons « 📧 Envoyer relance » des tableaux _Comptes orphelins_ et _Bénévoles (sans inscr.)_ sont remplacés par « 📋 Copier le mail » (copie de l'adresse dans le presse-papier). L'envoi de mail de relance individuel est retiré.
 
 ### Removed
