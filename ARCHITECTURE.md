@@ -190,7 +190,7 @@ src/js/
 ├── services/              # Accès Supabase — passage obligé pour tout JS
 │   ├── api.js             #   CRUD métier (benevoles, postes, inscriptions, cagnotte)
 │   ├── auth.js            #   OTP, session, rôle utilisateur courant
-│   └── public-api.js      #   Accès anonyme (planning public sans login)
+│   └── public-api.js      #   RPC anonymes via client isolé (ex: debit.html scanné par QR)
 │
 ├── stores/                # Alpine.store() — état partagé global
 │   └── admin-store.js     #   (seul store actuel — autres domaines encore inline)

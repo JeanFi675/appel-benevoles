@@ -275,37 +275,52 @@ export function createAdminStore() {
 
         if (error) throw error;
 
-        const postesWithCounts = await Promise.all(
-          (data || []).map(async (poste) => {
-            const { data: inscriptions } = await ApiService.fetch('inscriptions', {
-              select: '*, benevoles(prenom, nom)',
-              eq: { poste_id: poste.id },
-            });
-            const count = inscriptions ? inscriptions.length : 0;
-            const inscrits_ids = (inscriptions || []).map((i) => i.benevole_id);
-            const inscrits_noms = (inscriptions || [])
-              .map((i) => (i.benevoles ? `${i.benevoles.prenom} ${i.benevoles.nom}` : ''))
-              .filter(Boolean);
-
-            let referentIdentite = '-';
-            if (poste.benevoles) {
-              referentIdentite = `${poste.benevoles.prenom} ${poste.benevoles.nom}`;
-            }
-
-            return {
-              ...poste,
-              titre: poste.type_postes?.titre || '',
-              description: poste.type_postes?.description || '',
-              ordre: poste.type_postes?.ordre || 0,
-              periode_nom: poste.periodes?.nom || '-',
-              periode_ordre: poste.periodes?.ordre || 999,
-              inscrits_actuels: count,
-              inscrits_ids,
-              inscrits_noms,
-              referent_identite: referentIdentite,
-            };
-          })
+        // Une SEULE requête pour toutes les inscriptions, puis regroupement par poste
+        // en mémoire. Auparavant : une requête par poste (~114 appels lancés en rafale
+        // = ~3,8 s de chargement à cause de la limite de connexions du navigateur). Le
+        // count + la liste des inscrits sont désormais dérivés côté client.
+        const { data: inscriptionsData, error: inscriptionsError } = await ApiService.fetch(
+          'inscriptions',
+          { select: '*, benevoles(prenom, nom)' }
         );
+        if (inscriptionsError) throw inscriptionsError;
+
+        const inscriptionsByPoste = new Map();
+        for (const inscription of inscriptionsData || []) {
+          const existing = inscriptionsByPoste.get(inscription.poste_id);
+          if (existing) {
+            existing.push(inscription);
+          } else {
+            inscriptionsByPoste.set(inscription.poste_id, [inscription]);
+          }
+        }
+
+        const postesWithCounts = (data || []).map((poste) => {
+          const inscriptions = inscriptionsByPoste.get(poste.id) || [];
+          const count = inscriptions.length;
+          const inscrits_ids = inscriptions.map((i) => i.benevole_id);
+          const inscrits_noms = inscriptions
+            .map((i) => (i.benevoles ? `${i.benevoles.prenom} ${i.benevoles.nom}` : ''))
+            .filter(Boolean);
+
+          let referentIdentite = '-';
+          if (poste.benevoles) {
+            referentIdentite = `${poste.benevoles.prenom} ${poste.benevoles.nom}`;
+          }
+
+          return {
+            ...poste,
+            titre: poste.type_postes?.titre || '',
+            description: poste.type_postes?.description || '',
+            ordre: poste.type_postes?.ordre || 0,
+            periode_nom: poste.periodes?.nom || '-',
+            periode_ordre: poste.periodes?.ordre || 999,
+            inscrits_actuels: count,
+            inscrits_ids,
+            inscrits_noms,
+            referent_identite: referentIdentite,
+          };
+        });
 
         this.postes = postesWithCounts.sort((a, b) => {
           if (a.periode_ordre !== b.periode_ordre) {

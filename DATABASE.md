@@ -19,7 +19,7 @@ Le schéma s'articule autour de quatre noyaux fonctionnels :
 
 Quatre **vues** complètent l'accès :
 
-- `public_planning` (lecture publique, anonymisée — utilisée par la page d'accueil)
+- `public_planning` (réservée à `authenticated`, anonymisée — utilisée par la page d'accueil et `besoins.html`)
 - `admin_benevoles`, `admin_inscriptions`, `admin_periodes` (agrégats pour l'admin)
 
 > **Support famille** : la contrainte `benevoles_user_prenom_nom_uniq UNIQUE (user_id, prenom, nom)` permet à un même compte `auth.users` d'avoir plusieurs profils `benevoles` (parent + enfants). La sémantique "ligne m'appartient" s'évalue donc via `benevole_id IN (SELECT id FROM benevoles WHERE user_id = auth.uid())` — encapsulée par le helper `is_own_benevole()`.
@@ -296,9 +296,11 @@ Recense les comptes Supabase Auth qui n'ont pas créé leur profil bénévole. S
 
 ## 4. Vues
 
-### `public_planning` (lecture publique, anonymisée)
+### `public_planning` (réservée à `authenticated`, anonymisée)
 
-Source unique du planning grand public. **Les noms des bénévoles inscrits sont anonymisés** via `get_benevole_name()` (prénom + initiale, ex : "Marie D."). Inclut le décompte d'inscrits par poste et les coordonnées du référent (résolues via `get_benevole_full_name/email/phone` SECURITY DEFINER).
+Source unique du planning affiché aux bénévoles connectés (`index.html`, `besoins.html`). **Les noms des bénévoles inscrits sont anonymisés** via `get_benevole_name()` (prénom + initiale, ex : "Marie D."). Inclut le décompte d'inscrits par poste et les coordonnées du référent (résolues via `get_benevole_full_name/email/phone` SECURITY DEFINER).
+
+> **Sécurité (migration `20260605140000`)** : l'accès `anon` à cette vue a été **révoqué**. Les colonnes `referent_nom/email/telephone` ne sont pas anonymisées ; le `GRANT anon` hérité des défauts PostgREST permettait de scraper ces coordonnées via l'API REST avec la clé anon publique. Aucune page ne lisant la vue sans session, la révocation est sans impact. La vue reste volontairement `SECURITY DEFINER` (bypass RLS requis pour les compteurs globaux côté non-admin) — le lint Supabase `security_definer_view` sur cette vue est un faux positif assumé. Ne pas re-`GRANT … TO anon` sans retirer d'abord les colonnes référent.
 
 Colonnes : `poste_id, titre, periode_debut, periode_fin, nb_min, nb_max, periode, periode_ordre, description, referent_id, type_poste_ordre, referent_nom, referent_email, referent_telephone, nb_inscrits_actuels, liste_benevoles (array)`.
 
@@ -385,6 +387,16 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 > **Pourquoi `SECURITY DEFINER`** : les RPC publiques et helpers doivent lire ou écrire `benevoles`/`cagnotte_transactions` (tables RLS-forcées). Sans DEFINER, l'utilisateur ne pourrait même pas vérifier son propre rôle (deadlock RLS). Toutes ces fonctions fixent `SET search_path = public` pour éviter le hijack de schéma (cf. `audit/16_rls.md` historique).
 
+> **Durcissement EXECUTE (migration `20260605150000`)** suite à l'audit du linter Supabase (lints `0028`/`0029`) :
+>
+> - `get_benevole_email/phone/full_name/name` : `EXECUTE` **révoqué de `PUBLIC`/`anon`** (empêche l'énumération de PII par UUID via `/rpc`). `authenticated` est **conservé** car la **vue** definer `public_planning` vérifie le droit des fonctions internes contre l'_appelant_ (≠ une fonction definer, qui les exécute en tant que propriétaire) — sans ce grant la vue casse.
+> - `get_auth_users_without_benevole()` : garde `is_admin()` **interne** ajoutée (exposait emails/téléphones des comptes Auth orphelins) + `EXECUTE` révoqué d'`anon`.
+> - **Non modifiés (faux positifs / par design)** : helpers RLS (`is_admin`, `auth_has_role`, `is_own_benevole`, `is_referent_*`) — exécutables car référencés dans les policies ; RPC borne/QR (`debit_cagnotte_public`, `get_public_benevole_info`, `get_public_inscriptions`, `get_public_tshirt_info`).
+>
+> **Risque assumé — scanner T-shirt** : `scanner-tshirt.html` est un **kiosque QR sans authentification** (scan par des bénévoles non connectés, choix produit). `update_tshirt_status` et `get_family_tshirt_info_smart` restent donc exécutables par `anon` : avec l'UUID d'un bénévole, on peut lire son nom/taille et modifier son statut de retrait T-shirt. La protection repose sur l'obscurité de l'UUID (porté par le QR). **Ne pas verrouiller derrière un login sans revoir le workflow du stand.** Données opérationnelles non financières (la cagnotte, elle, est bornée et immuable).
+
+> **Note `extension_in_public`** (lint `0014`) : `citext` et `btree_gist` sont dans le schéma `public`. Non déplacées : `benevoles.email` est typée `public.citext` (déplacer le type casserait la colonne). Avertissement assumé.
+
 ---
 
 ## 7. Matrice RLS — qui peut faire quoi ?
@@ -422,7 +434,7 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 #### `inscriptions`
 
-- **Pas de lecture publique anonyme** depuis la Phase 3.3 (les vues `public_planning` et la RPC `get_public_inscriptions()` SECURITY DEFINER restent les portes d'accès publiques anonymisées).
+- **Pas de lecture publique anonyme** depuis la Phase 3.3. Les compteurs/listes anonymisés sont servis par la vue `public_planning` (SECURITY DEFINER, désormais réservée à `authenticated` — cf. § Vues) et, pour l'accès réellement anonyme, par la RPC `get_public_inscriptions()` (SECURITY DEFINER).
 - **Bénévole** : `inscriptions_self_select/insert/delete` filtrent par `is_own_benevole(benevole_id)` — couvre les profils famille.
 - **Référent** : `inscriptions_referent_select_managed` autorise SELECT sur les inscriptions des postes dont il est référent (`is_referent_for_poste(poste_id)`).
 - **Admin** : `inscriptions_admin_select/insert/delete` filtrent par `auth_has_role('admin')`.
@@ -442,7 +454,30 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 ---
 
-## 8. Liens utiles
+## 8. Index & performance
+
+Toutes les colonnes de filtre/jointure chaudes sont déjà indexées (FK, `poste_id`,
+`benevole_id`, `user_id`, `role`, …). C'est pourquoi l'`index_advisor` Supabase ne
+suggère **aucun** index sur les requêtes du dashboard _Query Performance_.
+
+### Index signalés « inutilisés » (lint `0005_unused_index`) — **conservés volontairement**
+
+Le linter Supabase signale 3 index en `INFO` comme « never used » (`idx_scan = 0`).
+Décision (2026-06-05) : **on ne les supprime pas**.
+
+| Index                                       | Raison de le garder                                                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `idx_benevole_cagnotte_periodes_periode_id` | **Couvre la FK** `periode_id → periodes(id) ON DELETE CASCADE`. PostgreSQL n'indexe pas automatiquement les FK ; sans cet index, supprimer une période force un seq-scan + verrou sur la table enfant. |
+| `idx_benevole_repas_repas_id`               | **Couvre la FK** `repas_id → repas(id) ON DELETE CASCADE` (même raison).                                                                                                                               |
+| `idx_benevoles_email`                       | Recherche admin par email / réconciliation des comptes orphelins. `idx_scan = 0` non fiable (`pg_stat_database.stats_reset = NULL`) ; coût de stockage négligeable à cette échelle.                    |
+
+> Le `idx_scan = 0` reflète l'absence de **SELECT** s'en servant, pas l'inutilité : les 2
+> index de FK servent aux opérations `DELETE`/`UPDATE` sur la table parente, pas aux lectures.
+> Les supprimer serait un anti-pattern (régression sur les cascades). Faux positifs `INFO` assumés.
+
+---
+
+## 9. Liens utiles
 
 - [`supabase/migrations/00000000000000_init.sql`](supabase/migrations/00000000000000_init.sql) — schéma dumped depuis prod (2026-05-27), source de vérité tables/fonctions/triggers
 - [`supabase/migrations/20260527100000_enable_force_rls.sql`](supabase/migrations/20260527100000_enable_force_rls.sql) — Phase 3.1, FORCE RLS partout

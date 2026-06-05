@@ -270,7 +270,7 @@ Les triggers `trg_check_capacity` et `trg_check_time_conflict` (fonctions `check
 
 ### Anonymisation des données publiques
 
-La vue `public_planning` affiche "Prénom + Initiale" (ex: "Marie D."). Ne jamais exposer les noms complets dans une vue ou requête publique. La RPC `get_public_inscriptions()` (`SECURITY DEFINER`) est le seul autre point d'accès anonyme.
+La vue `public_planning` anonymise les bénévoles inscrits en "Prénom + Initiale" (ex: "Marie D.", via `get_benevole_name()`). Ne jamais exposer les noms complets dans une vue ou requête réellement publique. **Attention** : `public_planning` expose aussi les coordonnées non anonymisées du référent (`referent_nom/email/telephone`) ; depuis la migration `20260605140000`, l'accès `anon` à cette vue a été **révoqué** — elle n'est lisible que par `authenticated` (les deux consommateurs, `index.html` et `besoins.html`, exigent une session). Ne pas re-`GRANT … TO anon` sans retirer au préalable les colonnes référent. Le seul point d'accès **anonyme** restant est la RPC `get_public_inscriptions()` (`SECURITY DEFINER`, ne renvoie que `poste_id` + nom anonymisé).
 
 ### Récursion RLS
 
