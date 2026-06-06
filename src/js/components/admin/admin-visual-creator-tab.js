@@ -374,11 +374,6 @@ export function adminVisualCreatorTab() {
         }
       }
 
-      if (days.size === 0) {
-        days.add('2026-05-16');
-        days.add('2026-05-17');
-      }
-
       this.visualDays = Array.from(days).sort();
 
       if (this.visualDays.length > 0) {
