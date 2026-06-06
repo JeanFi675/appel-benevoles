@@ -93,7 +93,7 @@ git checkout -b fix/xxx       →  modifs  →  PR  →  merge sur master
 
 Les autres composants (migrations SQL, Edge Functions) se déploient manuellement via la CLI Supabase, **hors** du pipeline frontend.
 
-➡️ **Procédure complète** : [`docs/deployment.md`](docs/deployment.md) — secrets GitHub Actions, déploiement Edge Functions, application des migrations en prod (avec le garde-fou `--force-prod` + `PHASE=8`), rollback.
+➡️ **Procédure complète** : [`docs/deployment.md`](docs/deployment.md) — secrets GitHub Actions, déploiement Edge Functions, application des migrations en prod (avec le garde-fou `--force-prod`), rollback.
 
 ---
 
@@ -164,7 +164,7 @@ Le hook `pre-commit` (Husky + lint-staged) applique `eslint --fix` et `prettier 
 npm run db:push            # Cible locale par défaut (tant que .env.local pointe sur 127.0.0.1)
 ```
 
-Le script passe par `scripts/check-env.js` qui **bloque** par défaut toute opération ciblant la prod : pousser en prod nécessite `--force-prod` + `PHASE=8` (voir `docs/deployment.md` § Migrations).
+Le script passe par `scripts/check-env.js` qui **bloque** par défaut toute opération ciblant la prod : pousser en prod nécessite `--force-prod` (voir `docs/deployment.md` § Migrations).
 
 Les migrations vivent dans `supabase/migrations/` (nommage chronologique, jamais modifiées après application en prod). Voir `DATABASE.md` pour le schéma, les policies RLS et les triggers.
 

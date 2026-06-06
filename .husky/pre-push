@@ -1,8 +1,4 @@
-# Garde-fou Phase 0.4 — refactor/production-hardening
-# - Bloc dur : push direct sur master interdit (toutes phases).
-# - Avertissement : tout push hors Phase 8 rappelle qu'aucun push n'est attendu.
-#
-# Lit la PHASE depuis .env.local puis .env (override Vite-like).
+# Garde-fou — push direct sur master interdit (toute modification passe par une PR).
 
 protected_branch="master"
 
@@ -12,29 +8,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     refs/heads/"$protected_branch")
       echo ""
       echo "BLOCKED: direct push to '$protected_branch' is forbidden."
-      echo "  Use a PR from refactor/production-hardening (Phase 8.1)."
+      echo "  Use a Pull Request to merge into '$protected_branch'."
       echo ""
       exit 1
       ;;
   esac
 done
-
-read_phase() {
-  local file="$1"
-  [ -f "$file" ] || return
-  grep -E '^[[:space:]]*PHASE[[:space:]]*=' "$file" 2>/dev/null \
-    | tail -n 1 \
-    | sed -E 's/^[[:space:]]*PHASE[[:space:]]*=[[:space:]]*"?([^"#[:space:]]*)"?.*/\1/'
-}
-
-phase="$(read_phase .env)"
-phase_local="$(read_phase .env.local)"
-[ -n "$phase_local" ] && phase="$phase_local"
-
-if [ "$phase" != "8" ]; then
-  echo ""
-  echo "WARNING: PHASE=${phase:-unset} (.env.local prioritaire)."
-  echo "  Aucun push n'est attendu hors Phase 8.0 du refactoring."
-  echo "  Si ce push est volontaire (sauvegarde, partage), continue."
-  echo ""
-fi

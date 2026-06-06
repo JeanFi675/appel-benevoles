@@ -142,9 +142,7 @@ Impact: zero migration. Affects src/js/services/inscriptions.js only.
    ```bash
    git push -u origin fix/ma-correction
    ```
-   Le hook `pre-push` :
-   - **bloque** tout push direct sur `master` ;
-   - **avertit** si `PHASE ≠ 8`.
+   Le hook `pre-push` **bloque** tout push direct sur `master`.
 5. **Ouvrir une Pull Request** sur GitHub vers `master`.
 
 ### Cas du hotfix urgent

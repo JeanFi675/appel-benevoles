@@ -239,10 +239,9 @@ curl -i -X POST "https://<project-ref>.supabase.co/functions/v1/send-planning" \
 > ⚠️ Le `.env` du projet pointe sur la **prod**. Si `.env.local` existe et pointe sur `127.0.0.1`, `npm run db:push` cible le local. Pour pousser en prod, il faut :
 >
 > 1. désactiver `.env.local` (`mv .env.local .env.local.disabled`) afin que `VITE_SUPABASE_URL` redevienne celle de prod,
-> 2. ajouter `PHASE=8` dans le `.env`,
-> 3. lancer `npm run db:push -- --force-prod`.
+> 2. lancer `npm run db:push -- --force-prod`.
 >
-> Sans ces trois conditions, le garde-fou `scripts/check-env.js` **bloque l'opération**. Voir `CLAUDE.md` §1.
+> Sans ces conditions, le garde-fou `scripts/check-env.js` **bloque l'opération**. Voir `CLAUDE.md` §1.
 
 ### Pré-vol obligatoire
 
@@ -257,14 +256,14 @@ Cible **locale** (par défaut tant que `.env.local` est actif et pointe sur `127
 
 ```bash
 npm run db:push
-# check-env: OK (target=local, phase=n/a)
+# check-env: OK (target=local)
 ```
 
-Cible **production** (après les 3 conditions ci-dessus) :
+Cible **production** (après les conditions ci-dessus) :
 
 ```bash
 npm run db:push -- --force-prod
-# check-env: OK (target=prod, phase=8)
+# check-env: OK (target=prod)
 ```
 
 > ⚠️ **Ne jamais** appeler `supabase db push` directement sans passer par `npm run db:push` — le garde-fou serait court-circuité.

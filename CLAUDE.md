@@ -67,7 +67,7 @@ Les politiques RLS sur toutes les tables `public.*` sont en `FORCE ROW LEVEL SEC
 
 ### 4. Garde-fou prod : `scripts/check-env.js`
 
-Toute opération `npm run db:push` ou équivalente ciblant la production est bloquée tant que (a) `.env.local` n'a pas été désactivé ET (b) la variable `PHASE=8` n'est pas active ET (c) le flag `--force-prod` n'est pas passé. Le hook `.husky/pre-push` bloque également tout push direct sur `master`. Ces garde-fous existent pour éviter une régression accidentelle — ne jamais les contourner via `--no-verify`.
+Toute opération `npm run db:push` ou équivalente ciblant la production est bloquée tant que (a) `.env.local` n'a pas été désactivé ET (b) le flag `--force-prod` n'est pas passé. Le hook `.husky/pre-push` bloque également tout push direct sur `master`. Ces garde-fous existent pour éviter une régression accidentelle — ne jamais les contourner via `--no-verify`.
 
 ---
 
@@ -153,7 +153,7 @@ npx eslint src/           # Linter
 npx prettier --check src/ # Vérifier le formatage
 npx knip                  # Détecter le code mort
 
-# Supabase (prod = nécessite PHASE=8 + --force-prod, cf. avertissement #4)
+# Supabase (prod = nécessite --force-prod, cf. avertissement #4)
 supabase start                                  # Démarrer l'instance locale (Docker)
 supabase db push --linked --force-prod          # Appliquer les migrations en prod (nécessite --force-prod)
 supabase functions deploy <nom>                 # Déployer une Edge Function
@@ -290,7 +290,7 @@ Voir avertissement critique #1. Si `.env.local` est absent/désactivé, les insc
 | Policies RLS sur `cagnotte_transactions`                                                  | Solde altéré ou exposé                       | `UPDATE`/`DELETE` = DENY immuable ; corriger via transactions compensatoires     |
 | Helpers RLS `SECURITY DEFINER`                                                            | Récursion ou bypass                          | Toujours `SET search_path = public` ; ne pas appeler une RLS-table dans le corps |
 | `src/js/config.js` — singleton refresh                                                    | Race conditions d'authentification           | Ne pas simplifier sans comprendre                                                |
-| Garde-fou `scripts/check-env.js`                                                          | Migration prod accidentelle                  | Ne pas contourner — exiger `PHASE=8` + `--force-prod`                            |
+| Garde-fou `scripts/check-env.js`                                                          | Migration prod accidentelle                  | Ne pas contourner — exiger `--force-prod`                                        |
 | Table `config` — `cagnotte_active`                                                        | Désactiver la cagnotte en production         | Confirmer avec le mainteneur                                                     |
 | Schema `auth.users` (Supabase)                                                            | Casse l'authentification                     | Ne jamais modifier directement                                                   |
 | `vite.config.js` — `base: "./"`                                                           | Chemins cassés sur GitHub Pages              | Garder `"./"` pour déploiement relatif                                           |
