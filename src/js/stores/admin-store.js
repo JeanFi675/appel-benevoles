@@ -130,7 +130,13 @@ export function createAdminStore() {
 
       const repasStats = {};
       this.repasList.forEach((r) => {
-        repasStats[r.id] = { nom: r.nom, total: 0, normal: 0, vege: 0 };
+        repasStats[r.id] = {
+          nom: r.nom,
+          total: 0,
+          normal: 0,
+          vege: 0,
+          question_vege_active: r.question_vege_active !== false,
+        };
       });
 
       this.benevoles.forEach((b) => {
@@ -152,6 +158,7 @@ export function createAdminStore() {
                 total: 0,
                 normal: 0,
                 vege: 0,
+                question_vege_active: true,
               };
             }
             repasStats[ur.repas_id].total++;
