@@ -1,4 +1,0 @@
-Unused dependencies (1)
-html5-qrcode  package.json:19:6
-Unused devDependencies (1)
-depcheck  package.json:24:6
