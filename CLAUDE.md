@@ -51,7 +51,7 @@ Système **générique** de gestion de bénévoles pour n'importe quel évèneme
 
 ### 1. `.env` pointe sur la prod ; le local n'est actif que via `.env.local`
 
-Le fichier `.env` versionné référence la **base Supabase de production** (il n'existe pas d'environnement de staging). Le défaut depuis le refactoring est que `.env.local` (non versionné) override `.env` et fait pointer `npm run dev` sur l'instance Supabase locale (Docker). Mais si `.env.local` est absent, renommé ou désactivé, **`npm run dev` repointe immédiatement sur la prod**. Avant toute opération d'écriture en dev :
+Le fichier `.env` versionné référence la **base Supabase de production** (il n'existe pas d'environnement de staging). Le défaut est que `.env.local` (non versionné) override `.env` et fait pointer `npm run dev` sur l'instance Supabase locale (Docker). Mais si `.env.local` est absent, renommé ou désactivé, **`npm run dev` repointe immédiatement sur la prod**. Avant toute opération d'écriture en dev :
 
 - Vérifier que `supabase status` retourne les URLs locales et que `.env.local` existe (`ls .env.local`).
 - Ne jamais lancer de migration destructive, vider une table ou tester une insertion massive sans confirmation explicite du mainteneur.
@@ -59,11 +59,11 @@ Le fichier `.env` versionné référence la **base Supabase de production** (il 
 
 ### 2. Logique métier dans les triggers PostgreSQL
 
-Les règles de capacité et de conflits horaires sont dans les triggers SQL `trg_check_capacity` et `trg_check_time_conflict` (cf. `-- Purpose:` en en-tête des fonctions dans `supabase/migrations/00000000000000_init.sql`), **pas dans le frontend**. Ne pas les contourner côté JS. Ne pas les dupliquer non plus.
+Les règles de capacité et de conflits horaires sont dans les triggers SQL `trg_check_capacity` et `trg_check_time_conflict` (cf. `-- Purpose:` en en-tête des fonctions dans `supabase/migrations/00000000000000_baseline.sql`), **pas dans le frontend**. Ne pas les contourner côté JS. Ne pas les dupliquer non plus.
 
 ### 3. Ne pas modifier les politiques RLS sans expertise
 
-Les politiques RLS sur toutes les tables `public.*` sont en `FORCE ROW LEVEL SECURITY` (Phase 3.1) et s'appuient sur 5 helpers `SECURITY DEFINER` (`auth_has_role`, `is_admin`, `is_own_benevole`, `is_referent_for_poste`, `is_referent_for_benevole`) pour éviter toute récursion. Source de vérité : les 4 migrations `supabase/migrations/20260527*.sql` (enable force, helpers, policies, postgrest grants). Une mauvaise policy peut exposer des données personnelles ou bloquer les utilisateurs — toute modification doit être testée avec un compte non-admin **en plus** d'un compte admin.
+Les politiques RLS sur toutes les tables `public.*` sont en `FORCE ROW LEVEL SECURITY` et s'appuient sur 5 helpers `SECURITY DEFINER` (`auth_has_role`, `is_admin`, `is_own_benevole`, `is_referent_for_poste`, `is_referent_for_benevole`) pour éviter toute récursion. Source de vérité : `supabase/migrations/00000000000000_baseline.sql` (schéma consolidé : activation FORCE, helpers, ~37 policies, GRANTs PostgREST). Une mauvaise policy peut exposer des données personnelles ou bloquer les utilisateurs — toute modification doit être testée avec un compte non-admin **en plus** d'un compte admin.
 
 ### 4. Garde-fou prod : `scripts/check-env.js`
 
@@ -111,13 +111,12 @@ docker exec -i supabase_db_appel-benevoles psql -U postgres -d postgres -v ON_ER
 
 ### État des migrations
 
-Le dossier `supabase/migrations/` actif contient :
+Le dossier `supabase/migrations/` actif contient un **unique fichier baseline** :
 
-- `00000000000000_init.sql` — consolidation complète du schéma (dump prod du 2026-05-27, idempotent, sectionné).
-- `20260527100000_enable_force_rls.sql` → `20260527120000_restore_postgrest_grants.sql` — 4 migrations Phase 3 (FORCE RLS, helpers DEFINER, ~37 policies, restauration des GRANTs PostgREST).
-- `_archive/` — migrations atomiques Phase 2 (drop tables/colonnes, contraintes, typages, index, renames) — conservées pour traçabilité, hors du chemin actif.
+- `00000000000000_baseline.sql` — schéma complet consolidé (dump de la prod, schéma `public` : extensions, types, tables, vues, fonctions, triggers, policies RLS en `FORCE`, GRANTs PostgREST). Source de vérité unique, rejouable from-scratch via `supabase db reset`.
+- `_archive/` — migrations atomiques historiques (toutes consolidées dans le baseline), conservées pour traçabilité, hors du chemin actif.
 
-Le dossier `supabase/migrations_archive_pre_refactor/` (à la racine de `supabase/`) contient les 30+ migrations historiques pré-refacto. **Ces migrations ne sont pas reproductibles from-scratch** (la migration 006 référence une colonne `user_id` jamais créée par une migration antérieure) — elles sont conservées en archive uniquement, ne jamais les rejouer.
+Le dossier `supabase/migrations_archive_pre_refactor/` (à la racine de `supabase/`) contient les 30+ migrations historiques antérieures. **Ces migrations ne sont pas reproductibles from-scratch** (la migration 006 référence une colonne `user_id` jamais créée par une migration antérieure) — elles sont conservées en archive uniquement, ne jamais les rejouer.
 
 ---
 
@@ -156,7 +155,7 @@ npx knip                  # Détecter le code mort
 
 # Supabase (prod = nécessite PHASE=8 + --force-prod, cf. avertissement #4)
 supabase start                                  # Démarrer l'instance locale (Docker)
-supabase db push --linked --force-prod          # Appliquer les migrations en prod (Phase 8 only)
+supabase db push --linked --force-prod          # Appliquer les migrations en prod (nécessite --force-prod)
 supabase functions deploy <nom>                 # Déployer une Edge Function
 supabase secrets set CLE=valeur                 # Configurer secrets Edge Functions
 ```
@@ -192,7 +191,7 @@ orphan_relances         -- Comptes auth sans profil bénévole (stocke le télé
 - `referent` — voir les inscriptions de ses postes (`postes.referent_id`)
 - `admin` — accès complet
 
-Les rôles historiques `juge`, `admin-juge` et `officiel` ont été supprimés en Phase 2.3 (cf. CHANGELOG `[1.0.0]`).
+Les rôles historiques `juge`, `admin-juge` et `officiel` ont été supprimés (cf. CHANGELOG `[1.0.0]`).
 
 ### Feature flags (table `config`)
 
@@ -200,7 +199,7 @@ Les rôles historiques `juge`, `admin-juge` et `officiel` ont été supprimés e
 - `tshirt_question_active` : active/désactive la question taille T-shirt dans le wizard.
 - `tarif_cagnotte_journee` : montant crédité par journée de cagnotte forcée (défaut 15.00 €).
 - `event_title` : titre de l'évènement (clé d'**identité générique**). Alimente le header public (`x-text="eventTitle"`) et le `<title>` des pages via `document.title`. Repli `« Appel aux Bénévoles »` si vide. Édité dans Admin → Configuration → « Identité de l'évènement ».
-- `event_address` : adresse / lieu de l'évènement. Stocké en config (affichage dans les emails prévu ultérieurement).
+- `event_address` : adresse / lieu de l'évènement, stocké en config.
 
 > **Application générique** : le site ne référence plus aucun évènement précis (ni championnat, ni escalade). Tout libellé d'évènement provient de `event_title`. Ne pas réintroduire de nom d'évènement en dur dans le code.
 
@@ -295,7 +294,7 @@ Voir avertissement critique #1. Si `.env.local` est absent/désactivé, les insc
 | Table `config` — `cagnotte_active`                                                        | Désactiver la cagnotte en production         | Confirmer avec le mainteneur                                                     |
 | Schema `auth.users` (Supabase)                                                            | Casse l'authentification                     | Ne jamais modifier directement                                                   |
 | `vite.config.js` — `base: "./"`                                                           | Chemins cassés sur GitHub Pages              | Garder `"./"` pour déploiement relatif                                           |
-| `supabase/migrations/00000000000000_init.sql`                                             | Schéma divergent prod ↔ local                | Ne pas éditer manuellement après go-live — créer une nouvelle migration          |
+| `supabase/migrations/00000000000000_baseline.sql`                                         | Schéma divergent prod ↔ local                | Ne pas éditer manuellement après go-live — créer une nouvelle migration          |
 
 ---
 
