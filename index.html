@@ -2,7 +2,9 @@
 <html lang="fr">
   <%- include('/src/partials/layout/head.html', { title: 'Appel aux Bénévoles - Inscription' }) %>
 
-  <body class="bg-brutal-ice min-h-screen overflow-x-hidden" x-data="app()" x-init="init()">
+  <!-- Pas de x-init="init()" : Alpine appelle automatiquement la méthode init() du composant.
+       L'ajouter ici la déclencherait deux fois (double chargement des données). -->
+  <body class="bg-brutal-ice min-h-screen overflow-x-hidden" x-data="app()">
     <%- include('/src/partials/components/toast.html') %> <%-
     include('/src/partials/components/confirm-modal.html') %> <%-
     include('/src/partials/layout/header.html') %>
