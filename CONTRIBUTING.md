@@ -49,7 +49,7 @@ Dossiers ignorés par ESLint : `dist/`, `node_modules/`, `supabase/`, `archive/`
 
 ### Conventions de nommage
 
-Issues du refactoring Phase 4-5 (cf. [`CLAUDE.md`](CLAUDE.md) §"Conventions de code à respecter") :
+Conventions à respecter (cf. [`CLAUDE.md`](CLAUDE.md) §"Conventions de code à respecter") :
 
 | Élément                           | Convention                                               |
 | --------------------------------- | -------------------------------------------------------- |
@@ -78,7 +78,6 @@ Voir [`ARCHITECTURE.md`](ARCHITECTURE.md) pour la structure complète.
 ### Branches
 
 - **`master`** : branche de production. Protégée par [`.husky/pre-push`](.husky/pre-push) — **push direct interdit**, uniquement via PR.
-- **`refactor/production-hardening`** : branche de travail principale (refactoring 2026 en cours).
 - **Branches feature/fix** : nommage `<type>/<description-courte>`, par exemple :
   - `fix/scanner-tshirt-multiple-profils`
   - `feat/admin-bulk-export-csv`
@@ -106,9 +105,9 @@ Format obligatoire : `type(scope): description courte`.
 
 - `feat(admin): add bulk export CSV`
 - `fix(scanner-tshirt): handle multiple family profiles`
-- `refactor(5.3): DRY/SOLID — toast/confirm helpers, SRP services, no direct Supabase`
+- `refactor: DRY/SOLID — toast/confirm helpers, SRP services, no direct Supabase`
 - `chore(5.5): ESLint + Prettier + Husky/lint-staged + reformat src/`
-- `docs(database): rewrite DATABASE.md to match init.sql + RLS migrations`
+- `docs(database): rewrite DATABASE.md to match baseline.sql`
 
 **Description** : impérative, minuscule, sans point final. < 72 caractères pour la ligne d'en-tête.
 
@@ -132,7 +131,7 @@ Impact: zero migration. Affects src/js/services/inscriptions.js only.
 
 ### Flux de travail standard
 
-1. **Créer une branche** depuis `master` (ou `refactor/production-hardening` pendant le refactoring) :
+1. **Créer une branche** depuis `master` :
    ```bash
    git checkout master && git pull
    git checkout -b fix/ma-correction
@@ -143,10 +142,8 @@ Impact: zero migration. Affects src/js/services/inscriptions.js only.
    ```bash
    git push -u origin fix/ma-correction
    ```
-   Le hook `pre-push` :
-   - **bloque** tout push direct sur `master` ;
-   - **avertit** si `PHASE ≠ 8` (le refactoring est encore en cours).
-5. **Ouvrir une Pull Request** sur GitHub vers `master` (ou la branche de refactoring active).
+   Le hook `pre-push` **bloque** tout push direct sur `master`.
+5. **Ouvrir une Pull Request** sur GitHub vers `master`.
 
 ### Cas du hotfix urgent
 

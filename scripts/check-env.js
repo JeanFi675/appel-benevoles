@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-// Garde-fou Phase 0.4 — bloque les opérations Supabase ciblant la prod
-// hors Phase 8 ou sans flag --force-prod.
+// Garde-fou — bloque les opérations Supabase ciblant la prod sans --force-prod.
 //
 // Charge .env puis .env.local (override, comme Vite).
 // Détermine la cible (local vs prod) via VITE_SUPABASE_URL.
-// Règles de blocage :
-//   - cible == prod && pas de --force-prod         → BLOCKED
-//   - cible == prod && --force-prod && PHASE !== 8 → BLOCKED
+// Règle de blocage :
+//   - cible == prod && pas de --force-prod → BLOCKED
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -47,18 +45,11 @@ const target = isLocal ? 'local' : 'prod';
 
 const args = process.argv.slice(2);
 const forceProd = args.includes('--force-prod');
-const phase = env.PHASE || '';
 
 if (target === 'prod' && !forceProd) {
-  console.error('BLOCKED: production target requires --force-prod (Phase 8 only)');
+  console.error('BLOCKED: production target requires --force-prod');
   console.error(`  Active VITE_SUPABASE_URL: ${url || '(unset)'}`);
   process.exit(1);
 }
 
-if (target === 'prod' && forceProd && phase !== '8') {
-  console.error('BLOCKED: production operations require PHASE=8 in active .env');
-  console.error(`  Active PHASE: ${phase || '(unset)'}`);
-  process.exit(1);
-}
-
-console.log(`check-env: OK (target=${target}, phase=${phase || 'n/a'})`);
+console.log(`check-env: OK (target=${target})`);

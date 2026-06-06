@@ -1,8 +1,8 @@
 # Architecture — appel-benevoles
 
-Document de référence décrivant l'architecture **réelle** du projet à la date d'écriture (2026-06-01, fin Phase 6 du refactoring). Il documente ce qui existe aujourd'hui ; les écarts résiduels par rapport à la cible sont signalés explicitement.
+Document de référence décrivant l'architecture **réelle** du projet : ce qui existe aujourd'hui. Les limitations connues sont signalées en section 4.
 
-> **Portée** : frontend (Vite + Alpine.js) et intégration backend (Supabase managé). Le schéma de base de données détaillé (tables, RLS, triggers) est documenté dans `DATABASE.md` (Phase 7.3).
+> **Portée** : frontend (Vite + Alpine.js) et intégration backend (Supabase managé). Le schéma de base de données détaillé (tables, RLS, triggers) est documenté dans `DATABASE.md`.
 
 ---
 
@@ -168,7 +168,7 @@ src/
 ├── js/             # tout le JavaScript
 ├── partials/       # fragments HTML (EJS)
 ├── styles/         # CSS / Tailwind entrypoints (main.css)
-├── css/            # CSS spécifiques par page (extraits des styles inline en Phase 6)
+├── css/            # CSS spécifiques par page
 └── data/           # (vide actuellement)
 ```
 
@@ -200,7 +200,7 @@ src/js/
 │   │                      #     heures, mailing, recap, referents, visual-creator)
 │   └── user/              #   Widgets côté bénévole (cagnotte, t-shirt)
 │
-├── modules/               # (legacy) — à dissoudre vers components/stores/utils (Phase 5.2)
+├── modules/               # (legacy) logique métier héritée de certaines pages
 │   ├── store.js
 │   └── user/              #   planning.js, profiles.js, wizard.js
 │
@@ -208,7 +208,7 @@ src/js/
     ├── admin-shift-validation.js
     ├── admin-time.js
     ├── confirm.js         #   Helper modale de confirmation
-    ├── format-date.js     #   Formatage de dates (extrait de l'ancien utils.js en Phase 6)
+    ├── format-date.js     #   Formatage de dates
     └── toast.js           #   Helper toast (succès/erreur)
 ```
 
@@ -262,7 +262,7 @@ src/css/
 └── scanner-tshirt.css   # CSS spécifique au scanner de QR codes t-shirt
 ```
 
-Ces feuilles ont été extraites des blocs `<style>` inline en Phase 6 et sont importées par leur entrypoint JS respectif (`src/js/debit.js`, `src/js/scanner-tshirt.js`).
+Ces feuilles sont importées par leur entrypoint JS respectif (`src/js/debit.js`, `src/js/scanner-tshirt.js`).
 
 ### `src/data/`
 
@@ -273,14 +273,10 @@ Vide actuellement. Réservé à d'éventuelles données statiques importées au 
 ```
 supabase/
 ├── config.toml                          # Config CLI Supabase locale (ports, auth, edge runtime)
-├── migrations/                          # Migrations actives (post-consolidation Phase 2.8)
-│   ├── 00000000000000_init.sql                       # Consolidation complète du schéma
-│   ├── 20260527100000_enable_force_rls.sql           # Active FORCE ROW LEVEL SECURITY
-│   ├── 20260527110000_create_rls_helpers.sql         # Helpers SECURITY DEFINER pour RLS
-│   ├── 20260527110100_rls_policies.sql               # Policies RLS définitives
-│   ├── 20260527120000_restore_postgrest_grants.sql   # Grants nécessaires à PostgREST
-│   └── _archive/                                     # Migrations correctives obsolètes
-├── migrations_archive_pre_refactor/     # Ancien historique pré-refactoring (non rejouable from scratch)
+├── migrations/                          # Schéma actif
+│   ├── 00000000000000_baseline.sql      # Schéma complet consolidé (source de vérité)
+│   └── _archive/                        # Migrations atomiques historiques (consolidées)
+├── migrations_archive_pre_refactor/     # Ancien historique (non rejouable from scratch)
 ├── functions/                           # Edge Functions Deno
 │   ├── deno.json
 │   ├── send-planning/
@@ -289,7 +285,7 @@ supabase/
 └── snippets/                            # Snippets SQL utilitaires
 ```
 
-La consolidation de Phase 2.8 (`00000000000000_init.sql`) rend l'historique reproductible from scratch sur une instance Supabase locale fraîche. Les migrations postérieures correspondent aux durcissements RLS de Phase 2.9-2.10.
+Le fichier `00000000000000_baseline.sql` (tables, vues, fonctions, triggers, policies RLS en `FORCE`, GRANTs PostgREST) est la source de vérité unique : il reconstruit l'intégralité du schéma `public` from-scratch via `supabase db reset`.
 
 ### `scripts/`
 
@@ -312,30 +308,28 @@ scripts/
 
 ---
 
-## 4. État vs cible (écarts résiduels)
+## 4. Limitations connues
 
-Éléments transitoires encore présents après Phase 6 — à jour au 2026-06-01 :
+Caractéristiques résiduelles de l'architecture, sans impact fonctionnel :
 
-| Élément actuel                                  | Statut                          | Phase de résolution |
-| ----------------------------------------------- | ------------------------------- | ------------------- |
-| Entrypoints à plat dans `src/js/` (vs `pages/`) | Cible déplacement vers `pages/` | Phase 5.4           |
-| `src/js/modules/` (legacy)                      | À dissoudre                     | Phase 5.2           |
-| `src/js/constants.js`                           | À rapatrier dans `config.js`    | Phase 5.3           |
-| Stores limités à `admin-store.js`               | Création progressive            | Phase 5.2           |
-| `admin-timeline.js` hors `vite.config.js`       | À investiguer                   | Hors phase actuelle |
+| Élément                                         | Note                                      |
+| ----------------------------------------------- | ----------------------------------------- |
+| Entrypoints à plat dans `src/js/` (vs `pages/`) | Organisation à plat conservée             |
+| `src/js/modules/` (legacy)                      | Logique métier héritée de certaines pages |
+| `src/js/constants.js`                           | Séparé de `config.js`                     |
+| Stores limités à `admin-store.js`               | Un seul store partagé                     |
+| `admin-timeline.js` hors `vite.config.js`       | Chargé hors entrypoint Rollup déclaré     |
 
 ---
 
 ## 5. Documents liés
 
-| Sujet                                          | Document                                              |
-| ---------------------------------------------- | ----------------------------------------------------- |
-| Installation, dev, build local                 | [`README.md`](README.md)                              |
-| Déploiement (CI/CD, secrets, rollback)         | [`docs/deployment.md`](docs/deployment.md)            |
-| Schéma DB, RLS, triggers, fonctions PL/pgSQL   | [`DATABASE.md`](DATABASE.md) (à valider en 7.3)       |
-| Conventions de code, workflow Git, revue PR    | [`CONTRIBUTING.md`](CONTRIBUTING.md) (à créer en 7.4) |
-| Historique des versions                        | [`CHANGELOG.md`](CHANGELOG.md) (à créer en 7.5)       |
-| Avertissements critiques (prod, RLS, triggers) | [`CLAUDE.md`](CLAUDE.md)                              |
-| Plan de refactoring (source de vérité)         | [`plan_refactoring.md`](plan_refactoring.md)          |
-| Audit DB existant                              | [`audit_db.md`](audit_db.md)                          |
-| Notes hors-scope & arbitrages en cours         | [`audit/notes.md`](audit/notes.md)                    |
+| Sujet                                          | Document                                                 |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| Installation, dev, build local                 | [`README.md`](README.md)                                 |
+| Déploiement (CI/CD, secrets, rollback)         | [`docs/deployment.md`](docs/deployment.md)               |
+| Schéma DB, RLS, triggers, fonctions PL/pgSQL   | [`DATABASE.md`](DATABASE.md)                             |
+| Conventions de code, workflow Git, revue PR    | [`CONTRIBUTING.md`](CONTRIBUTING.md)                     |
+| Historique des versions                        | [`CHANGELOG.md`](CHANGELOG.md)                           |
+| Avertissements critiques (prod, RLS, triggers) | [`CLAUDE.md`](CLAUDE.md)                                 |
+| Reprise après sinistre (backups)               | [`docs/disaster_recovery.md`](docs/disaster_recovery.md) |

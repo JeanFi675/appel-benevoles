@@ -105,14 +105,7 @@ Deux directives sont posées dans le `<head>` de chaque page :
 - **`Content-Security-Policy`** (`<meta http-equiv>`) — appliquée par le navigateur (mais **invisible** aux scanners type `securityheaders.com`, qui ne lisent que les en-têtes HTTP).
 - **`Referrer-Policy`** (`<meta name="referrer" content="strict-origin-when-cross-origin">`).
 
-La CSP existe en **deux variantes** :
-
-| Pages                                           | Source CSP                       | Particularité                                            |
-| ----------------------------------------------- | -------------------------------- | -------------------------------------------------------- |
-| `index`, `admin`, `admin-connexions`, `besoins` | `src/partials/layout/head.html`  | CSP stricte (pas de CDN externe)                         |
-| `debit`, `scanner-tshirt`                       | `<head>` propre à chaque fichier | + `https://cdn.tailwindcss.com` autorisé en `script-src` |
-
-CSP standard (pages partageant `head.html`) :
+La CSP est **unique et stricte** pour toutes les pages (aucun CDN externe) : les pages partageant `src/partials/layout/head.html` (`index`, `admin`, `admin-connexions`, `besoins`) et les pages à `<head>` propre (`debit`, `scanner-tshirt`) appliquent la même politique :
 
 ```
 default-src 'self';
@@ -128,10 +121,9 @@ object-src 'none'; base-uri 'self'; form-action 'self'
 
 Justification des assouplissements :
 
-- **`script-src 'unsafe-eval'`** : Alpine.js v3 (build standard) évalue les expressions `x-data`/`x-on` via un mécanisme type `eval`. Sans cette directive, toute l'interactivité casse. _(Mitigation possible : passer au build CSP d'Alpine — voir `plan_refactoring.md`.)_
-- **`style-src 'unsafe-inline'`** : Alpine pose des styles inline (`x-show` → `style="display:none"`, bindings `:style`) et le CDN Tailwind injecte un `<style>` runtime.
+- **`script-src 'unsafe-eval'`** : Alpine.js v3 (build standard) évalue les expressions `x-data`/`x-on` via un mécanisme type `eval`. Sans cette directive, toute l'interactivité casse. _(Mitigation possible : passer au build CSP d'Alpine.)_
+- **`style-src 'unsafe-inline'`** : Alpine pose des styles inline (`x-show` → `style="display:none"`, bindings `:style`).
 - **`connect-src`** : REST, Auth et Realtime (`wss://`) du projet Supabase de production.
-- **`script-src https://cdn.tailwindcss.com`** (pages `debit`/`scanner-tshirt` uniquement) : ces deux pages chargent le Tailwind runtime CDN au lieu du CSS compilé par Vite. _(Anti-pattern à corriger — voir `plan_refactoring.md` ; sa suppression permettrait de durcir la CSP de ces pages.)_
 
 ### Limitations connues
 
@@ -190,7 +182,7 @@ curl -s -X POST "$URL/functions/v1/send-planning" \
   -H "Content-Type: application/json" -d '{}'
 ```
 
-Les événements correspondants apparaissent dans le dashboard **sous la minute**. Vérifié le 2026-06-03 sur les quatre flux (cf. `plan_refactoring.md` §8.3).
+Les événements correspondants apparaissent dans le dashboard **sous la minute**. Vérifié le 2026-06-03 sur les quatre flux.
 
 ---
 
@@ -244,13 +236,12 @@ curl -i -X POST "https://<project-ref>.supabase.co/functions/v1/send-planning" \
 
 ## Migrations de base de données
 
-> ⚠️ Le `.env` du projet pointe sur la **prod**. Depuis la Phase 0.3, si `.env.local` existe et pointe sur `127.0.0.1`, `npm run db:push` cible le local. Pour pousser en prod, il faut :
+> ⚠️ Le `.env` du projet pointe sur la **prod**. Si `.env.local` existe et pointe sur `127.0.0.1`, `npm run db:push` cible le local. Pour pousser en prod, il faut :
 >
 > 1. désactiver `.env.local` (`mv .env.local .env.local.disabled`) afin que `VITE_SUPABASE_URL` redevienne celle de prod,
-> 2. ajouter `PHASE=8` dans le `.env`,
-> 3. lancer `npm run db:push -- --force-prod`.
+> 2. lancer `npm run db:push -- --force-prod`.
 >
-> Sans ces trois conditions, le garde-fou `scripts/check-env.js` (Phase 0.4) **bloque l'opération**. Voir `CLAUDE.md` §1.
+> Sans ces conditions, le garde-fou `scripts/check-env.js` **bloque l'opération**. Voir `CLAUDE.md` §1.
 
 ### Pré-vol obligatoire
 
@@ -265,14 +256,14 @@ Cible **locale** (par défaut tant que `.env.local` est actif et pointe sur `127
 
 ```bash
 npm run db:push
-# check-env: OK (target=local, phase=n/a)
+# check-env: OK (target=local)
 ```
 
-Cible **production** (Phase 8 uniquement, après les 3 conditions ci-dessus) :
+Cible **production** (après les conditions ci-dessus) :
 
 ```bash
 npm run db:push -- --force-prod
-# check-env: OK (target=prod, phase=8)
+# check-env: OK (target=prod)
 ```
 
 > ⚠️ **Ne jamais** appeler `supabase db push` directement sans passer par `npm run db:push` — le garde-fou serait court-circuité.

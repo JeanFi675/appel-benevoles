@@ -1,3 +1,4 @@
+import '../styles/main.css';
 import '../css/scanner-tshirt.css';
 import Alpine from 'alpinejs';
 import { ApiService } from './services/api.js';
