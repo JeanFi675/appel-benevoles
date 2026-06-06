@@ -95,7 +95,10 @@
               <td class="py-4 font-bold text-lg" x-text="repStat.nom"></td>
               <td class="py-4 text-right">
                 <span class="font-black text-2xl" x-text="repStat.total"></span>
-                <div class="text-sm text-gray-600 font-bold mt-1">
+                <div
+                  class="text-sm text-gray-600 font-bold mt-1"
+                  x-show="repStat.question_vege_active !== false"
+                >
                   <span x-text="repStat.normal"></span> normaux,
                   <span class="text-green-600" x-text="repStat.vege"></span> végé
                 </div>

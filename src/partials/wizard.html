@@ -115,10 +115,10 @@
                         ></label>
                       </div>
 
-                      <!-- Option végé par repas -->
+                      <!-- Option végé par repas (masquée si désactivée pour ce repas) -->
                       <div
                         class="flex items-center gap-2 pl-7"
-                        x-show="isWizardRepasSelected(repas.id)"
+                        x-show="repas.question_vege_active !== false && isWizardRepasSelected(repas.id)"
                       >
                         <input
                           type="checkbox"
