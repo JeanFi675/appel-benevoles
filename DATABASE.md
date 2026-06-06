@@ -1,8 +1,8 @@
 # Base de données — appel-benevoles
 
-Schéma PostgreSQL 17 du projet, hébergé sur Supabase managé. Toutes les tables sont dans le schéma `public`, toutes ont **RLS activée ET forcée** (Phase 3.1 — `FORCE ROW LEVEL SECURITY`).
+Schéma PostgreSQL 17 du projet, hébergé sur Supabase managé. Toutes les tables sont dans le schéma `public`, toutes ont **RLS activée ET forcée** (`FORCE ROW LEVEL SECURITY`).
 
-> **Source de vérité** : `supabase/migrations/00000000000000_init.sql` (dump prod du 2026-05-27) + les 4 migrations RLS de la Phase 3.3 (`20260527*.sql`). Ce document est la version humainement lisible de ces fichiers. En cas de divergence, c'est le SQL qui fait foi.
+> **Source de vérité** : `supabase/migrations/00000000000000_baseline.sql` (schéma complet consolidé depuis la prod). Ce document est la version humainement lisible de ce fichier. En cas de divergence, c'est le SQL qui fait foi.
 
 ---
 
@@ -281,7 +281,7 @@ Sélection des périodes pour lesquelles un bénévole reçoit automatiquement l
 - `tshirt_question_active` (bool) — toggle de la question taille T-shirt dans le wizard.
 - `tarif_cagnotte_journee` (number) — montant crédité par journée de cagnotte forcée (défaut 15.00).
 - `event_title` (string) — titre de l'évènement (identité générique). Alimente le header public et le `<title>` des pages. Repli front « Appel aux Bénévoles » si vide. Semée par `20260605130000_seed_event_identity_config.sql`.
-- `event_address` (string) — adresse / lieu de l'évènement. Stockée ; affichage emails prévu ultérieurement.
+- `event_address` (string) — adresse / lieu de l'évènement, stockée en config.
 
 ### `orphan_relances` — comptes Auth sans profil bénévole
 
@@ -326,7 +326,7 @@ tshirt_size          : SANS | XS | S | M | L | XL | XXL
 cagnotte_forced_type : journee | periode
 ```
 
-> **Historique** : les rôles `juge`, `admin-juge`, `officiel` mentionnés dans certains commentaires de `CLAUDE.md` ont été retirés lors de la consolidation Phase 2.8. Seuls 3 rôles applicatifs subsistent en base.
+> **Historique** : les rôles `juge`, `admin-juge`, `officiel` ont été retirés. Seuls 3 rôles applicatifs subsistent en base (`benevole`, `referent`, `admin`).
 
 ---
 
@@ -346,7 +346,7 @@ cagnotte_forced_type : journee | periode
 - `check_time_conflict()` — appelée par `trg_check_time_conflict`.
 - `prevent_role_change()` — appelée par `trg_prevent_role_change`. La règle exacte : `NEW.role IS DISTINCT FROM OLD.role AND auth.role() = 'authenticated' AND auth.uid() = OLD.user_id`.
 
-### Helpers d'autorisation RLS (Phase 3.3)
+### Helpers d'autorisation RLS
 
 Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **brique unique** utilisée par les policies pour éviter la récursion (une policy ne lit jamais directement une table à RLS — elle passe par un helper DEFINER).
 
@@ -358,7 +358,7 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 | `is_referent_for_poste(poste_id)`   | bool   | `true` si `auth.uid()` est le référent de ce poste                                           |
 | `is_referent_for_benevole(uuid)`    | bool   | `true` si `auth.uid()` est référent d'un poste auquel le bénévole cible est inscrit          |
 
-> La fonction `check_referent_access(uuid)` (helper historique) a été **supprimée** en Phase 3.3 (drop explicite dans `20260527110100_rls_policies.sql`).
+> La fonction `check_referent_access(uuid)` (helper historique) a été **supprimée** ; elle n'existe plus dans le schéma.
 
 ### Helpers de présentation (utilisés dans `public_planning` et RPC publiques)
 
@@ -401,9 +401,9 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 ## 7. Matrice RLS — qui peut faire quoi ?
 
-> **Note (Phase 3.1)** : toutes les tables ont RLS **activée ET forcée** (`relrowsecurity = true`, `relforcerowsecurity = true`). Les rôles propriétaires (postgres) sont eux-mêmes soumis aux policies — le bypass ne reste possible qu'au travers des fonctions `SECURITY DEFINER`. Le `service_role` (utilisé par les Edge Functions) conserve `BYPASSRLS`.
+> **Note** : toutes les tables ont RLS **activée ET forcée** (`relrowsecurity = true`, `relforcerowsecurity = true`). Les rôles propriétaires (postgres) sont eux-mêmes soumis aux policies — le bypass ne reste possible qu'au travers des fonctions `SECURITY DEFINER`. Le `service_role` (utilisé par les Edge Functions) conserve `BYPASSRLS`.
 
-> **Note (Phase 3.4)** : `20260527120000_restore_postgrest_grants.sql` ré-applique `GRANT ALL` sur toutes les tables à `anon`, `authenticated`, `service_role` (convention Supabase). Sans ces GRANTs, RLS n'est même pas évalué — c'est pire qu'une policy permissive.
+> **Note** : le baseline applique `GRANT ALL` sur toutes les tables à `anon`, `authenticated`, `service_role` (convention Supabase). Sans ces GRANTs, RLS n'est même pas évalué — c'est pire qu'une policy permissive.
 
 **Symboles** : ✅ = autorisé, ⛔ = refusé (pas de policy → DENY implicite sous FORCE RLS), 👁️ = SELECT public (anon + authenticated).
 
@@ -434,7 +434,7 @@ Toutes en `STABLE SECURITY DEFINER SET search_path = public`. Elles sont la **br
 
 #### `inscriptions`
 
-- **Pas de lecture publique anonyme** depuis la Phase 3.3. Les compteurs/listes anonymisés sont servis par la vue `public_planning` (SECURITY DEFINER, désormais réservée à `authenticated` — cf. § Vues) et, pour l'accès réellement anonyme, par la RPC `get_public_inscriptions()` (SECURITY DEFINER).
+- **Pas de lecture publique anonyme.** Les compteurs/listes anonymisés sont servis par la vue `public_planning` (SECURITY DEFINER, désormais réservée à `authenticated` — cf. § Vues) et, pour l'accès réellement anonyme, par la RPC `get_public_inscriptions()` (SECURITY DEFINER).
 - **Bénévole** : `inscriptions_self_select/insert/delete` filtrent par `is_own_benevole(benevole_id)` — couvre les profils famille.
 - **Référent** : `inscriptions_referent_select_managed` autorise SELECT sur les inscriptions des postes dont il est référent (`is_referent_for_poste(poste_id)`).
 - **Admin** : `inscriptions_admin_select/insert/delete` filtrent par `auth_has_role('admin')`.
@@ -479,10 +479,7 @@ Décision (2026-06-05) : **on ne les supprime pas**.
 
 ## 9. Liens utiles
 
-- [`supabase/migrations/00000000000000_init.sql`](supabase/migrations/00000000000000_init.sql) — schéma dumped depuis prod (2026-05-27), source de vérité tables/fonctions/triggers
-- [`supabase/migrations/20260527100000_enable_force_rls.sql`](supabase/migrations/20260527100000_enable_force_rls.sql) — Phase 3.1, FORCE RLS partout
-- [`supabase/migrations/20260527110000_create_rls_helpers.sql`](supabase/migrations/20260527110000_create_rls_helpers.sql) — Phase 3.3.1, helpers `auth_has_role`, `is_own_benevole`, `is_referent_for_poste`
-- [`supabase/migrations/20260527110100_rls_policies.sql`](supabase/migrations/20260527110100_rls_policies.sql) — Phase 3.3.2, policies uniformisées (~37 policies)
-- [`supabase/migrations/20260527120000_restore_postgrest_grants.sql`](supabase/migrations/20260527120000_restore_postgrest_grants.sql) — Phase 3.4, restauration des GRANTs PostgREST
+- [`supabase/migrations/00000000000000_baseline.sql`](supabase/migrations/00000000000000_baseline.sql) — schéma complet consolidé (source de vérité unique) : extensions, types, tables, vues, fonctions, triggers, helpers et policies RLS (`FORCE`), GRANTs PostgREST.
+- `supabase/migrations/_archive/` — migrations atomiques historiques (consolidées dans le baseline), conservées pour traçabilité.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — vue d'ensemble et flux applicatifs
 - [`CLAUDE.md`](CLAUDE.md) — avertissements critiques sur les triggers et RLS
