@@ -34,8 +34,10 @@ export function adminVisualCreatorTab() {
   return {
     // --- State local ---
     newRepasName: '',
+    newRepasVege: true,
     editingRepasId: null,
     editingRepasName: '',
+    editingRepasVege: true,
 
     visualDaySelected: '',
     visualProgramEvents: [],
@@ -240,11 +242,13 @@ export function adminVisualCreatorTab() {
       try {
         const { error } = await ApiService.insert('repas', {
           nom: this.newRepasName.trim(),
+          question_vege_active: this.newRepasVege,
         });
         if (error) throw error;
 
         this.showToast('✅ Repas ajouté avec succès !', 'success');
         this.newRepasName = '';
+        this.newRepasVege = true;
         await this.loadRepas();
         await this.loadBenevolesAndStats();
       } catch (error) {
@@ -278,11 +282,13 @@ export function adminVisualCreatorTab() {
     startEditRepas(repas) {
       this.editingRepasId = repas.id;
       this.editingRepasName = repas.nom;
+      this.editingRepasVege = repas.question_vege_active !== false;
     },
 
     cancelEditRepas() {
       this.editingRepasId = null;
       this.editingRepasName = '';
+      this.editingRepasVege = true;
     },
 
     async saveEditRepas(id) {
@@ -293,6 +299,7 @@ export function adminVisualCreatorTab() {
           'repas',
           {
             nom: this.editingRepasName.trim(),
+            question_vege_active: this.editingRepasVege,
           },
           { id }
         );
@@ -302,6 +309,7 @@ export function adminVisualCreatorTab() {
         this.showToast('✅ Repas mis à jour avec succès !', 'success');
         this.editingRepasId = null;
         this.editingRepasName = '';
+        this.editingRepasVege = true;
         await this.loadRepas();
         await this.loadBenevolesAndStats();
       } catch (error) {

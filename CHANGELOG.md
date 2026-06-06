@@ -10,6 +10,7 @@ Le format est basé sur [Keep a Changelog 1.1.0](https://keepachangelog.com/fr/1
 
 ### Added
 
+- **Question végétarien configurable par repas** : chaque repas créé dans Admin → Configuration → « Options Repas » possède désormais une case « 🥬 Proposer la question "Repas Végétarien" » (à l'ajout **et** à l'édition). Lorsqu'elle est décochée, le wizard d'inscription masque la case végé pour ce repas et force `is_vegetarien = false` à la sauvegarde. Nouvelle colonne `repas.question_vege_active` (défaut `true`, rétrocompatible) — migration `20260606100000_repas_question_vege_active.sql` (idempotente). Un badge « 🥬 Végé » / « Sans végé » récapitule l'état de chaque repas dans la liste admin.
 - **Identité d'évènement paramétrable** : nouvel encart « 🏷️ Identité de l'évènement » dans Admin → Configuration permettant de saisir un **titre** et une **adresse**. Stockés dans `config.event_title` / `config.event_address` (migration `20260605130000_seed_event_identity_config.sql`, idempotente). Le titre alimente dynamiquement le header public (`x-text="eventTitle"`) et le `<title>` des pages (`document.title`), avec repli « Appel aux Bénévoles » si vide.
 
 ### Fixed

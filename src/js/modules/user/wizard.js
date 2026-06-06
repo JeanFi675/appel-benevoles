@@ -317,11 +317,17 @@ export const WizardModule = {
           if (f.repas && f.repas.length > 0) {
             const repasPayload = f.repas
               .filter((r) => activeRepasIds.includes(r.repas_id))
-              .map((r) => ({
-                benevole_id: benevoleId,
-                repas_id: r.repas_id,
-                is_vegetarien: r.is_vegetarien,
-              }));
+              .map((r) => {
+                // Si la question végé est désactivée pour ce repas, on force false
+                // (la case est masquée côté UI ; on évite de persister un ancien true).
+                const repasDef = (this.repasList || []).find((rl) => rl.id === r.repas_id);
+                const vegeAllowed = !repasDef || repasDef.question_vege_active !== false;
+                return {
+                  benevole_id: benevoleId,
+                  repas_id: r.repas_id,
+                  is_vegetarien: vegeAllowed ? r.is_vegetarien : false,
+                };
+              });
 
             if (repasPayload.length > 0) {
               const { error: insertError } = await ApiService.insert(
