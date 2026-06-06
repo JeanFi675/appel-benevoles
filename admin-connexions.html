@@ -3,7 +3,9 @@
   <%- include('/src/partials/layout/head.html', { title: 'Admin Connexions - Appel aux Bénévoles' })
   %>
 
-  <body class="bg-brutal-ice min-h-screen" x-data="adminConnexionsApp()" x-init="init()">
+  <!-- Pas de x-init="init()" : Alpine appelle automatiquement la méthode init() du composant.
+       L'ajouter ici la déclencherait deux fois (double chargement des données). -->
+  <body class="bg-brutal-ice min-h-screen" x-data="adminConnexionsApp()">
     <%- include('/src/partials/components/toast.html') %>
 
     <!-- Header -->
