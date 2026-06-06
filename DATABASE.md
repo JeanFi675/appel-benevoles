@@ -102,6 +102,7 @@ erDiagram
     REPAS {
         uuid id PK
         text nom "non vide"
+        bool question_vege_active "défaut true"
     }
     BENEVOLE_REPAS {
         uuid benevole_id PK_FK
@@ -244,10 +245,11 @@ Crédits (positifs) et débits (négatifs). Solde d'un utilisateur = `SUM(montan
 
 ### `repas` — catalogue des repas
 
-| Colonne | Type      | NotNull | Description   |
-| ------- | --------- | :-----: | ------------- |
-| `id`    | uuid (PK) |   ✅    |               |
-| `nom`   | text      |   ✅    | Trim non vide |
+| Colonne                | Type      | NotNull | Description                                                                                                                                                               |
+| ---------------------- | --------- | :-----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | uuid (PK) |   ✅    |                                                                                                                                                                           |
+| `nom`                  | text      |   ✅    | Trim non vide                                                                                                                                                             |
+| `question_vege_active` | bool      |   ✅    | Défaut `true`. Si `false`, le wizard masque la case « Repas Végétarien » pour ce repas (`is_vegetarien` forcé à false). Édité dans Admin → Configuration → Options Repas. |
 
 ### `benevole_cagnotte_periodes` — périodes cagnotte forcée par bénévole
 

@@ -157,7 +157,21 @@
               <!-- Mode lecture -->
               <template x-if="editingRepasId !== repas.id">
                 <div class="flex items-center justify-between w-full">
-                  <span class="font-bold text-sm" x-text="repas.nom"></span>
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="font-bold text-sm truncate" x-text="repas.nom"></span>
+                    <span
+                      x-show="repas.question_vege_active !== false"
+                      class="shrink-0 text-[10px] font-black uppercase px-1.5 py-0.5 bg-green-100 text-green-800 border border-green-400"
+                      title="La case « Repas Végétarien » est proposée pour ce repas"
+                      >🥬 Végé</span
+                    >
+                    <span
+                      x-show="repas.question_vege_active === false"
+                      class="shrink-0 text-[10px] font-black uppercase px-1.5 py-0.5 bg-gray-100 text-gray-500 border border-gray-300"
+                      title="La question végétarien est masquée pour ce repas"
+                      >Sans végé</span
+                    >
+                  </div>
                   <div class="flex items-center gap-2">
                     <button
                       type="button"
@@ -181,33 +195,45 @@
 
               <!-- Mode édition -->
               <template x-if="editingRepasId === repas.id">
-                <div class="flex items-center gap-2 w-full">
-                  <input
-                    type="text"
-                    x-model="editingRepasName"
-                    class="brutal-input flex-1 px-2 py-1 text-sm font-bold bg-white"
-                    @keydown.enter="saveEditRepas(repas.id)"
-                    @keydown.escape="cancelEditRepas()"
-                    required
-                  />
-                  <div class="flex items-center gap-1">
-                    <button
-                      type="button"
-                      @click="saveEditRepas(repas.id)"
-                      class="text-green-600 hover:text-green-800 font-black text-xs p-1 animate-pulse"
-                      title="Enregistrer"
-                    >
-                      💾
-                    </button>
-                    <button
-                      type="button"
-                      @click="cancelEditRepas()"
-                      class="text-gray-500 hover:text-gray-700 font-black text-xs p-1"
-                      title="Annuler"
-                    >
-                      ❌
-                    </button>
+                <div class="flex flex-col gap-2 w-full">
+                  <div class="flex items-center gap-2 w-full">
+                    <input
+                      type="text"
+                      x-model="editingRepasName"
+                      class="brutal-input flex-1 px-2 py-1 text-sm font-bold bg-white"
+                      @keydown.enter="saveEditRepas(repas.id)"
+                      @keydown.escape="cancelEditRepas()"
+                      required
+                    />
+                    <div class="flex items-center gap-1">
+                      <button
+                        type="button"
+                        @click="saveEditRepas(repas.id)"
+                        class="text-green-600 hover:text-green-800 font-black text-xs p-1 animate-pulse"
+                        title="Enregistrer"
+                      >
+                        💾
+                      </button>
+                      <button
+                        type="button"
+                        @click="cancelEditRepas()"
+                        class="text-gray-500 hover:text-gray-700 font-black text-xs p-1"
+                        title="Annuler"
+                      >
+                        ❌
+                      </button>
+                    </div>
                   </div>
+                  <label class="flex items-center gap-2 cursor-pointer pl-1">
+                    <input
+                      type="checkbox"
+                      x-model="editingRepasVege"
+                      class="w-4 h-4 accent-green-600 cursor-pointer"
+                    />
+                    <span class="text-xs font-bold text-gray-600"
+                      >🥬 Proposer la question « Repas Végétarien »</span
+                    >
+                  </label>
                 </div>
               </template>
             </div>
@@ -220,20 +246,32 @@
         </div>
 
         <!-- Formulaire d'ajout de repas -->
-        <form @submit.prevent="addRepas()" class="flex gap-2">
-          <input
-            type="text"
-            x-model="newRepasName"
-            placeholder="Ex: Samedi midi, Buffet dimanche..."
-            class="brutal-input flex-1 px-3 py-2 text-sm font-bold bg-white"
-            required
-          />
-          <button
-            type="submit"
-            class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm"
-          >
-            ➕ Ajouter
-          </button>
+        <form @submit.prevent="addRepas()" class="space-y-2">
+          <div class="flex gap-2">
+            <input
+              type="text"
+              x-model="newRepasName"
+              placeholder="Ex: Samedi midi, Buffet dimanche..."
+              class="brutal-input flex-1 px-3 py-2 text-sm font-bold bg-white"
+              required
+            />
+            <button
+              type="submit"
+              class="brutal-btn bg-brutal-ice px-4 py-2 font-black shadow-brutal-sm text-sm"
+            >
+              ➕ Ajouter
+            </button>
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer pl-1">
+            <input
+              type="checkbox"
+              x-model="newRepasVege"
+              class="w-4 h-4 accent-green-600 cursor-pointer"
+            />
+            <span class="text-xs font-bold text-gray-600"
+              >🥬 Proposer la question « Repas Végétarien » pour ce repas</span
+            >
+          </label>
         </form>
       </div>
     </div>
