@@ -67,11 +67,23 @@ Le hook `prepare` (Husky) installe les hooks Git automatiquement après `npm ins
 
 ### Trois périmètres de variables (voir `.env.example` pour le détail)
 
-| Préfixe                | Périmètre                     | Exemples                                            |
-| ---------------------- | ----------------------------- | --------------------------------------------------- |
-| `VITE_*`               | Injecté dans le bundle public | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`       |
-| (sans préfixe)         | Scripts Node / CLI Supabase   | `SUPABASE_SERVICE_ROLE_KEY` — **jamais côté front** |
-| Secrets Edge Functions | `supabase secrets set ...`    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`  |
+| Préfixe                | Périmètre                     | Exemples                                                        |
+| ---------------------- | ----------------------------- | --------------------------------------------------------------- |
+| `VITE_*`               | Injecté dans le bundle public | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`                   |
+| (sans préfixe)         | Scripts Node / CLI Supabase   | `SUPABASE_SERVICE_ROLE_KEY` — **jamais côté front**             |
+| Secrets Edge Functions | `supabase secrets set ...`    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`              |
+| Secrets GitHub Actions | Settings → Secrets → Actions  | `SUPABASE_DB_URL`, `BACKUP_GPG_PASSPHRASE` (cron de sauvegarde) |
+
+> 🗄️ **Cron de sauvegarde** — le workflow [`.github/workflows/backup.yml`](.github/workflows/backup.yml) dumpe la prod chaque nuit (03:00 UTC), chiffre le dump en GPG AES256 et le stocke en artifact privé. Il exige deux secrets repo à configurer dans **Settings → Secrets and variables → Actions** :
+>
+> | Secret                  | Description                                                                          |
+> | ----------------------- | ------------------------------------------------------------------------------------ |
+> | `SUPABASE_DB_URL`       | Chaîne de connexion **Session Pooler IPv4** de la prod (contient le mot de passe DB) |
+> | `BACKUP_GPG_PASSPHRASE` | Passphrase de chiffrement AES256 des dumps (à conserver **hors** GitHub)             |
+>
+> Sans `BACKUP_GPG_PASSPHRASE`, les dumps sont inexploitables. Détail complet : [`docs/deployment.md`](docs/deployment.md) et [`docs/disaster_recovery.md`](docs/disaster_recovery.md).
+>
+> 💡 **Effet de bord utile** : ce dump quotidien ouvre une vraie connexion DB chaque jour, ce qui constitue une « activité » au sens du plan **Supabase Free** et **évite la mise en pause automatique du projet** après une semaine d'inactivité.
 
 ### Override `.env.local` vs `.env`
 
